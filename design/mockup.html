@@ -1,0 +1,1806 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>VillageRoots — Infinite Heritage Graph · Potidaneia, Fokida</title>
+<style>
+/* ═══ tokens — Airbnb (design system contract, pasted verbatim) ═══ */
+:root {
+  /* ─── Surface (3 levels) ──────────────────────────────────────── */
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-warm: #f7f7f7;
+
+  /* ─── Foreground ramp (4 levels) ──────────────────────────────── */
+  --fg: #222222;
+  --fg-2: #3f3f3f;
+  --muted: #6a6a6a;
+  --meta: #929292;
+
+  /* ─── Border (2 levels) ───────────────────────────────────────── */
+  --border: #dddddd;
+  --border-soft: #ebebeb;
+
+  /* ─── Accent ──────────────────────────────────────────────────── */
+  --accent: #ff385c;
+  --accent-on: #ffffff;
+  --accent-hover: #e31c5f;
+  --accent-active: #e00b41;
+
+  /* ─── Semantic ────────────────────────────────────────────────── */
+  --success: #008a05;
+  --warn: #c47700;
+  --danger: #c13515;
+
+  /* ─── Typography — fonts ──────────────────────────────────────── */
+  --font-display:
+    "Airbnb Cereal VF", "Airbnb Cereal App", Circular,
+    -apple-system, system-ui, "Helvetica Neue", Roboto, sans-serif;
+  --font-body:
+    "Airbnb Cereal VF", "Airbnb Cereal App", Circular,
+    -apple-system, system-ui, "Helvetica Neue", Roboto, sans-serif;
+  --font-mono:
+    ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Monaco,
+    Consolas, monospace;
+
+  /* ─── Typography — type scale (px) ────────────────────────────── */
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 20px;
+  --text-xl: 22px;
+  --text-2xl: 28px;
+  --text-3xl: 44px;
+  --text-4xl: 56px;
+
+  /* ─── Typography — leading & tracking ─────────────────────────── */
+  --leading-body: 1.43;
+  --leading-tight: 1.2;
+  --tracking-display: -0.02em;
+
+  /* ─── Spacing — base scale ────────────────────────────────────── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  /* ─── Section rhythm ──────────────────────────────────────────── */
+  --section-y-desktop: 64px;
+  --section-y-tablet: 48px;
+  --section-y-phone: 32px;
+
+  /* ─── Radius ──────────────────────────────────────────────────── */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-pill: 9999px;
+
+  /* ─── Elevation ───────────────────────────────────────────────── */
+  --elev-flat: none;
+  --elev-ring: 0 0 0 1px var(--border);
+  --elev-raised:
+    rgba(0, 0, 0, 0.02) 0 0 0 1px,
+    rgba(0, 0, 0, 0.04) 0 2px 6px 0,
+    rgba(0, 0, 0, 0.1) 0 4px 8px 0;
+
+  /* ─── Focus ring ──────────────────────────────────────────────── */
+  --focus-ring: 0 0 0 2px var(--fg);
+
+  /* ─── Motion ──────────────────────────────────────────────────── */
+  --motion-fast: 150ms;
+  --motion-base: 200ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  /* ─── Layout ──────────────────────────────────────────────────── */
+  --container-max: 1280px;
+  --container-gutter-desktop: 40px;
+  --container-gutter-tablet: 24px;
+  --container-gutter-phone: 16px;
+
+  /* ── app-level derived tokens (resolve against the Airbnb contract) ── */
+  --topbar-h: 64px;
+  --panel-w: 400px;
+  --accent-soft: color-mix(in oklab, var(--accent) 10%, var(--surface));
+  --fg-soft: color-mix(in oklab, var(--fg) 5%, var(--surface));
+  --fg-soft-2: color-mix(in oklab, var(--fg) 9%, var(--surface));
+  --grid-line: color-mix(in oklab, var(--fg) 6%, transparent);
+  --grid-line-strong: color-mix(in oklab, var(--fg) 13%, transparent);
+  --elev-1: 0 1px 2px rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  color: var(--fg);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+button { font-family: inherit; cursor: pointer; }
+input, select, textarea { font-family: inherit; }
+a { color: var(--fg); }
+kbd {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+  background: var(--surface-warm); border: 1px solid var(--border-soft); border-bottom-width: 2px;
+  border-radius: 6px; padding: 1px 6px; color: var(--muted);
+}
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.num { font-variant-numeric: tabular-nums; }
+:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* ── app shell ── */
+.app { position: relative; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ── topbar ── */
+.topbar {
+  position: relative; z-index: 40;
+  height: var(--topbar-h); flex: 0 0 auto;
+  display: flex; align-items: center; gap: 20px;
+  padding: 0 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-mark { display: inline-flex; color: var(--accent); }
+.brand-name { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; color: var(--accent); }
+.crumb { display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); font-weight: 600; color: var(--fg); }
+.crumb svg { color: var(--muted); }
+.crumb-sep { color: var(--muted); }
+.crumb-region { color: var(--muted); font-weight: 500; }
+.top-actions { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+.icon-btn {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  transition: background var(--motion-fast) var(--ease-standard), transform var(--motion-fast) var(--ease-standard);
+}
+.icon-btn:hover { background: var(--fg-soft); }
+.icon-btn:active { transform: scale(0.92); }
+.count-badge {
+  position: absolute; top: -3px; right: -3px;
+  min-width: 18px; height: 18px; padding: 0 4px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 999px;
+  background: var(--accent); color: var(--accent-on);
+  font-size: 11px; font-weight: 700; line-height: 1;
+}
+.count-badge.zero { display: none; }
+.avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--surface-warm); border: 1px solid var(--border);
+  color: var(--fg); font-size: 12px; font-weight: 700;
+}
+
+/* ── workspace / canvas ── */
+.workspace { position: relative; flex: 1 1 auto; min-height: 0; }
+.stage {
+  position: absolute; inset: 0;
+  overflow: hidden;
+  background: var(--bg);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.stage.panning { cursor: grabbing; }
+.world { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+.world svg, .world .node-layer { position: absolute; left: 0; top: 0; }
+.grid-layer, .edge-layer { width: 2600px; height: 1800px; pointer-events: none; }
+.node-layer { width: 2600px; height: 1800px; }
+
+.cluster-blob { fill: var(--fg-soft); stroke: color-mix(in oklab, var(--fg) 8%, transparent); stroke-width: 1; }
+.cluster-label { font-size: 11px; font-weight: 600; letter-spacing: 0.02em; fill: var(--muted); }
+
+#edgeLayer line { stroke: var(--fg); stroke-opacity: 0.45; stroke-width: 1.4; }
+#edgeLayer line.e-geo { stroke: var(--success); stroke-opacity: 0.55; }
+#edgeLayer line.e-hist { stroke: var(--warn); stroke-opacity: 0.55; }
+#edgeLayer line.e-suggest { stroke: var(--accent); stroke-dasharray: 5 4; stroke-opacity: 0.8; }
+#edgeLayer line.e-lit { stroke: var(--accent); stroke-opacity: 1; stroke-width: 2.4; }
+.sug-dot { fill: var(--accent); }
+
+.node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex; align-items: center; gap: 9px;
+  padding: 6px 14px 6px 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: grab;
+  text-align: left;
+  transition: border-color var(--motion-fast) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard);
+}
+.node:active { cursor: grabbing; }
+.node:hover { border-color: var(--fg-2); }
+.node.sel { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); z-index: 6; }
+.node.lit { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+.node.flash { border-color: var(--warn); box-shadow: 0 0 0 4px color-mix(in oklab, var(--warn) 40%, transparent); }
+.n-mark {
+  flex: 0 0 auto;
+  width: 26px; height: 26px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  font-size: 12px; font-weight: 700; color: var(--accent-on);
+  background: var(--accent);
+}
+.node.n-family { padding: 4px 14px 4px 4px; }
+.node.n-family .n-mark { width: auto; height: auto; padding: 4px 10px; border-radius: 999px; background: var(--surface-warm); border: 1px solid var(--fg); color: var(--fg); font-size: 11px; }
+.node.n-landmark .n-mark { background: var(--success); border-radius: 7px; }
+.node.n-toponym .n-mark { background: var(--surface); border: 1px solid var(--fg-2); color: var(--fg-2); }
+.node.n-event .n-mark { background: var(--warn); }
+.node.n-path .n-mark { background: var(--surface-warm); border: 1px solid var(--fg-2); color: var(--fg-2); border-radius: 7px; }
+.n-text { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.n-label { font-size: 13px; font-weight: 600; color: var(--fg); white-space: nowrap; }
+.n-sub { font-size: 11px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+
+.sug-chip {
+  position: absolute; transform: translate(-50%, -50%);
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 6px 5px 10px;
+  background: var(--surface);
+  border: 1.5px dashed color-mix(in oklab, var(--accent) 55%, transparent);
+  border-radius: 999px;
+  font-size: 12px; font-weight: 600; color: var(--fg);
+  z-index: 5;
+  transition: background var(--motion-fast) var(--ease-standard);
+}
+.sug-chip:hover { background: var(--fg-soft); }
+.ai-tag { font-size: 10px; font-weight: 700; color: var(--accent); }
+.sug-chip .confirm { background: var(--accent); color: var(--accent-on); padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; margin-left: 4px; }
+
+/* ── legend card (top-right of canvas) ── */
+.canvas-legend {
+  position: absolute; top: 20px; right: 20px;
+  width: 212px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--elev-1);
+  padding: 14px;
+  z-index: 20;
+}
+.lg-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.lg-head h2 { font-size: 13px; font-weight: 700; }
+.lg-count { font-size: 12px; font-weight: 600; color: var(--muted); background: var(--surface-warm); border-radius: 999px; padding: 2px 8px; }
+.legend { list-style: none; display: flex; flex-direction: column; gap: 2px; }
+.legend li { display: flex; align-items: center; gap: 8px; padding: 5px 0; }
+.lg-mark { width: 26px; flex: 0 0 auto; display: inline-flex; justify-content: center; align-items: center; }
+.lg-name { flex: 1 1 auto; font-size: 13px; font-weight: 500; color: var(--fg); }
+.legend .count { font-size: 11px; color: var(--muted); }
+
+/* ── control dock (bottom-right) ── */
+.control-dock {
+  position: absolute; right: 20px; bottom: 20px;
+  display: flex; flex-direction: row; align-items: center; gap: 10px;
+  z-index: 20;
+}
+.dock-btn {
+  width: 48px; height: 48px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  box-shadow: var(--elev-1);
+  transition: background var(--motion-fast) var(--ease-standard), transform var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard);
+}
+.dock-btn:hover { background: var(--fg-soft); }
+.dock-btn:active { transform: scale(0.92); }
+.dock-btn.on { background: var(--accent); border-color: var(--accent); color: var(--accent-on); }
+
+/* ── popovers ── */
+.search-pop, .layers-pop {
+  position: absolute; right: 20px; bottom: 84px;
+  width: 320px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--elev-raised);
+  padding: 14px;
+  z-index: 25;
+  opacity: 0; visibility: hidden; transform: translateY(8px);
+  transition: opacity var(--motion-base) var(--ease-standard), transform var(--motion-base) var(--ease-standard), visibility var(--motion-base);
+  pointer-events: none;
+}
+.search-pop.show, .layers-pop.show { opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto; }
+.layers-pop { width: 236px; }
+.pop-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.pop-head span { font-size: 13px; font-weight: 700; }
+.search-pill {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 14px;
+  height: 44px;
+  color: var(--muted);
+}
+.search-pill:focus-within { border-color: var(--fg); box-shadow: 0 0 0 2px var(--fg); }
+.search-input { flex: 1 1 auto; min-width: 0; border: none; background: transparent; font-size: 14px; font-weight: 500; color: var(--fg); outline: none; }
+.search-input::placeholder { color: var(--muted); }
+.pop-hint { margin-top: 10px; font-size: 11px; color: var(--muted); }
+
+.layers-pop .rel-toggle {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%;
+  background: transparent; border: none;
+  padding: 7px 2px;
+  font-size: 13px; font-weight: 500; color: var(--fg);
+  border-radius: 6px;
+}
+.layers-pop .rel-toggle:hover { background: var(--fg-soft); }
+.layers-pop .rel-toggle .st {
+  margin-left: auto;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--fg);
+  transition: background var(--motion-fast) var(--ease-standard);
+}
+.layers-pop .rel-toggle.off .st { background: var(--border); }
+.swatch { width: 10px; height: 10px; border-radius: 3px; flex: 0 0 auto; }
+.sw-social { background: var(--fg); }
+.sw-geo { background: var(--success); }
+.sw-hist { background: var(--warn); }
+.switch-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 10px 2px 4px;
+  margin-top: 6px;
+  border-top: 1px solid var(--border-soft);
+  font-size: 13px; font-weight: 500; color: var(--fg);
+  cursor: pointer;
+}
+.switch { position: relative; display: inline-flex; flex: 0 0 auto; }
+.switch input { position: absolute; opacity: 0; pointer-events: none; }
+.switch .track { width: 40px; height: 24px; border-radius: 999px; background: var(--border); position: relative; transition: background var(--motion-base) var(--ease-standard); }
+.switch .track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--surface); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); transition: transform var(--motion-base) var(--ease-standard); }
+.switch input:checked + .track { background: var(--fg); }
+.switch input:checked + .track::after { transform: translateX(16px); }
+.switch input:focus-visible + .track { box-shadow: var(--focus-ring); }
+.pop-about { display: block; margin-top: 10px; font-size: 12px; font-weight: 600; color: var(--accent); }
+.pop-about:hover { text-decoration: underline; }
+
+/* ── stage chrome ── */
+.stage-ui { position: absolute; left: 20px; bottom: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 15; }
+.zoomctl {
+  display: flex; align-items: center; gap: 2px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: var(--elev-1);
+  padding: 4px;
+}
+.zoomctl button {
+  width: 44px; height: 44px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: none; border-radius: 50%;
+  color: var(--fg); font-size: 18px; font-weight: 500;
+}
+.zoomctl button:hover { background: var(--fg-soft); }
+.zoomctl button:active { transform: scale(0.92); }
+.zoomctl .zval { font-size: 12px; color: var(--muted); min-width: 46px; text-align: center; }
+.zoomctl .fit { font-size: 12px; font-weight: 600; color: var(--fg); padding: 0 10px; width: auto; }
+.coord { font-size: 11px; color: var(--muted); padding-left: 6px; }
+
+.welcome {
+  position: absolute; top: 20px; left: 20px;
+  width: min(340px, calc(100vw - 40px));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--elev-1);
+  padding: 16px 40px 16px 16px;
+  font-size: 13px; line-height: 1.5; color: var(--fg-2);
+  z-index: 15;
+  transition: opacity 0.6s ease;
+}
+.welcome b { color: var(--fg); font-weight: 700; }
+.welcome .close {
+  position: absolute; top: 10px; right: 10px;
+  width: 44px; height: 44px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: none; color: var(--muted);
+}
+.welcome .close:hover { background: var(--fg-soft); color: var(--fg); }
+.hint-chip {
+  position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: var(--surface-warm);
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 12px; color: var(--muted);
+  z-index: 12;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  white-space: nowrap;
+}
+
+/* ── sidepanel (right) ── */
+.sidepanel {
+  position: absolute; top: 0; right: 0; bottom: 0;
+  width: var(--panel-w);
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  transform: translateX(102%);
+  transition: transform 280ms var(--ease-standard);
+  z-index: 30;
+}
+.sidepanel.open { transform: translateX(0); }
+.sp-head {
+  flex: 0 0 auto; height: 58px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+}
+.tabs { display: flex; gap: 4px; height: 100%; align-items: flex-end; }
+.tab {
+  background: transparent; border: none;
+  padding: 0 12px 16px;
+  font-size: 14px; font-weight: 600; color: var(--muted);
+  border-bottom: 2px solid transparent;
+  transition: color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard);
+}
+.tab:hover { color: var(--fg); }
+.tab.on { color: var(--fg); border-bottom-color: var(--fg); }
+.sp-close { width: 36px; height: 36px; }
+.sp-body { flex: 1 1 auto; overflow-y: auto; padding: 20px; overscroll-behavior: contain; }
+.sp-foot {
+  flex: 0 0 auto; height: 64px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 16px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.sp-foot .st { flex: 1 1 auto; font-size: 12px; color: var(--muted); }
+
+.doc-cover {
+  position: relative;
+  height: 132px;
+  border-radius: var(--radius-md);
+  background: var(--surface-warm);
+  border: 1px solid var(--border-soft);
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.doc-cover .cap { position: absolute; left: 14px; bottom: 12px; font-size: 11px; color: var(--muted); max-width: 60%; }
+.doc-cover .tag {
+  position: absolute; top: 12px; right: 12px;
+  font-size: 11px; font-weight: 700; color: var(--fg);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 999px; padding: 3px 10px;
+}
+.doc-badge { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.pill {
+  font-size: 12px; font-weight: 600;
+  border-radius: 999px; padding: 4px 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-warm);
+  color: var(--fg-2);
+}
+.pill.ok { background: color-mix(in oklab, var(--success) 10%, var(--surface)); border-color: color-mix(in oklab, var(--success) 30%, transparent); color: var(--success); }
+.pill.wait { background: color-mix(in oklab, var(--warn) 12%, var(--surface)); border-color: color-mix(in oklab, var(--warn) 35%, transparent); color: var(--warn); }
+.doc-title { font-size: 22px; font-weight: 700; letter-spacing: var(--tracking-display); line-height: var(--leading-tight); color: var(--fg); margin-bottom: 2px; }
+.doc-meta { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+.doc-facts { margin: 0 0 18px; border-top: 1px solid var(--border-soft); }
+.fact-row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border-soft); }
+.fact-row dt { font-size: 12px; font-weight: 500; color: var(--muted); flex: 0 0 auto; }
+.fact-row dd { font-size: 13px; font-weight: 600; color: var(--fg); text-align: right; }
+.sec-title { font-size: 12px; font-weight: 700; color: var(--fg); margin: 20px 0 8px; }
+.md-toolbar { display: flex; gap: 2px; border: 1px solid var(--border); border-radius: 8px 8px 0 0; padding: 4px; background: var(--surface-warm); }
+.md-btn {
+  width: 30px; height: 30px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: none; border-radius: 6px;
+  background: transparent; color: var(--fg); font-size: 13px;
+}
+.md-btn:hover { background: var(--border-soft); }
+.md-body {
+  min-height: 150px;
+  border: 1px solid var(--border); border-top: none;
+  border-radius: 0 0 8px 8px;
+  padding: 12px;
+  font-size: 13px; line-height: 1.6; color: var(--fg);
+  outline: none;
+}
+.md-body:focus-visible { box-shadow: var(--focus-ring); }
+.md-body h1 { font-size: 18px; font-weight: 700; margin-bottom: 8px; letter-spacing: var(--tracking-display); }
+.md-body p { margin-bottom: 8px; }
+.md-body blockquote { border-left: 2px solid var(--fg); padding-left: 12px; color: var(--muted); margin: 8px 0; font-style: italic; }
+.md-body .ph-line { color: var(--muted); }
+.md-note { font-size: 11px; color: var(--muted); margin-top: 6px; }
+.rel-list { display: flex; flex-direction: column; gap: 2px; }
+.rel-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  font-size: 12px;
+}
+.rel-row.await { border-color: color-mix(in oklab, var(--warn) 40%, transparent); }
+.rel-row.await .rel-verb { color: var(--warn); font-weight: 700; }
+.rel-verb { font-weight: 700; color: var(--fg); }
+.rel-row .to { flex: 1 1 auto; color: var(--fg-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rel-row .kind { font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
+.rel-form { display: none; gap: 8px; margin-top: 8px; }
+.rel-form.show { display: flex; flex-wrap: wrap; }
+.rel-form select, .rel-form input { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 13px; color: var(--fg); background: var(--surface); }
+.rel-form select:focus-visible, .rel-form input:focus-visible { box-shadow: var(--focus-ring); }
+.rel-form input { flex: 1 1 120px; }
+.embed { border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 10px; }
+.embed-bar { display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: var(--surface-warm); border-bottom: 1px solid var(--border-soft); color: var(--muted); }
+.eurl { font-size: 11px; font-family: var(--font-mono); color: var(--muted); }
+.embed-body { padding: 12px; }
+.embed-title { font-size: 14px; font-weight: 700; color: var(--fg); margin-bottom: 4px; }
+.embed-body p { font-size: 12px; line-height: 1.5; color: var(--fg-2); }
+.embed-note { font-size: 11px; color: var(--muted); }
+.map-mock {
+  height: 88px; border-radius: 10px;
+  background: var(--surface-warm);
+  border: 1px solid var(--border-soft);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--muted);
+}
+
+/* ── buttons ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 500;
+  padding: 0 18px; height: 44px;
+  border: 1px solid transparent;
+  transition: background var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard), transform var(--motion-fast) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard);
+}
+.btn:active { transform: scale(0.96); }
+.btn:focus-visible { box-shadow: var(--focus-ring); }
+.btn-primary { background: var(--accent); color: var(--accent-on); }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-secondary { background: var(--surface); border-color: var(--border); color: var(--fg); }
+.btn-secondary:hover { border-color: var(--fg-2); background: var(--fg-soft); }
+.btn-ghost { background: transparent; color: var(--fg); }
+.btn-ghost:hover { background: var(--fg-soft); }
+.btn-sm { height: 38px; padding: 0 14px; font-size: 13px; border-radius: 999px; }
+
+/* ── chat ── */
+.chat {
+  position: absolute; right: 20px; bottom: 84px;
+  width: 372px; height: min(560px, calc(100vh - 190px));
+  display: flex; flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elev-raised);
+  overflow: hidden;
+  z-index: 28;
+  transition: transform 260ms var(--ease-standard), height 260ms var(--ease-standard);
+}
+.chat[hidden] { display: none; }
+.chat.collapsed { height: 60px; }
+.chat.shift { transform: translateX(calc(-1 * var(--panel-w))); }
+.chat-head { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.chat-ai-mark { font-size: 11px; font-weight: 700; color: var(--fg-2); background: var(--fg-soft); border-radius: 8px; padding: 4px 8px; }
+.chat-head h2 { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; line-height: var(--leading-tight); }
+.chat-head .meta { font-size: 12px; color: var(--muted); }
+.head-right { margin-left: auto; }
+.chat-body { flex: 1 1 auto; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.msg { max-width: 88%; font-size: 13px; line-height: 1.5; }
+.msg.ai { align-self: flex-start; background: var(--surface-warm); border: 1px solid var(--border-soft); border-radius: 14px 14px 14px 4px; padding: 10px 12px; color: var(--fg-2); }
+.msg.user { align-self: flex-end; background: var(--fg); color: var(--surface); border-radius: 14px 14px 4px 14px; padding: 9px 13px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 12px; font-weight: 500; color: var(--fg);
+  transition: border-color var(--motion-fast) var(--ease-standard), background var(--motion-fast) var(--ease-standard);
+}
+.chip:hover { border-color: var(--fg-2); background: var(--fg-soft); }
+.path-btn { margin-top: 8px; background: var(--accent-soft); color: var(--accent); border: none; border-radius: 999px; padding: 7px 12px; font-size: 12px; font-weight: 600; }
+.path-btn:hover { background: color-mix(in oklab, var(--accent) 16%, var(--surface)); }
+.chat-input { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--border); }
+.chat-input input {
+  flex: 1 1 auto; min-width: 0; height: 44px;
+  border: 1px solid var(--border); border-radius: 999px;
+  padding: 0 16px;
+  font-size: 13px; color: var(--fg); background: var(--surface);
+}
+.chat-input input::placeholder { color: var(--muted); }
+.chat-input input:focus-visible { box-shadow: var(--focus-ring); }
+.send { width: 44px; height: 44px; padding: 0; border-radius: 50%; flex: 0 0 auto; }
+.chat-fab {
+  position: absolute; right: 20px; bottom: 84px;
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--accent); color: var(--accent-on);
+  border: none; border-radius: 999px;
+  padding: 0 18px; height: 46px;
+  font-size: 14px; font-weight: 600;
+  box-shadow: var(--elev-raised);
+  z-index: 27;
+  transition: background var(--motion-fast) var(--ease-standard), transform var(--motion-fast) var(--ease-standard);
+}
+.chat-fab:hover { background: var(--accent-hover); }
+.chat-fab:active { transform: scale(0.96); }
+.chat-fab.pop-open { visibility: hidden; opacity: 0; pointer-events: none; }
+.chat-fab .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--surface); }
+
+/* ── review queue ── */
+.review-view {
+  position: absolute; inset: 0;
+  background: var(--bg);
+  overflow-y: auto;
+  z-index: 35;
+  padding: 40px 48px 64px;
+}
+.review-view[hidden] { display: none; }
+.review-head { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 24px; }
+.review-head h1 { font-size: 24px; font-weight: 700; letter-spacing: var(--tracking-display); line-height: var(--leading-tight); }
+.review-head .sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.review-head .back { margin-left: auto; }
+.review-filters { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+.filter-chip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 13px; font-weight: 500; color: var(--fg);
+  transition: background var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard);
+}
+.filter-chip:hover { border-color: var(--fg-2); }
+.filter-chip.on { background: var(--fg); border-color: var(--fg); color: var(--surface); }
+.review-list { display: flex; flex-direction: column; gap: 12px; max-width: 760px; }
+.review-card {
+  display: flex; align-items: flex-start; gap: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+.rv-kind {
+  flex: 0 0 auto;
+  font-size: 11px; font-weight: 700;
+  background: var(--surface-warm);
+  border: 1px solid var(--border);
+  color: var(--fg-2);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+.review-card h3 { font-size: 15px; font-weight: 700; color: var(--fg); margin-bottom: 4px; letter-spacing: -0.01em; }
+.review-card p { font-size: 13px; color: var(--fg-2); }
+.review-card .who { display: block; margin-top: 6px; font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
+.review-card .acts { margin-left: auto; display: flex; gap: 8px; flex: 0 0 auto; }
+.review-empty { padding: 80px 0; text-align: center; color: var(--muted); }
+.review-empty .mark { width: 56px; height: 56px; margin: 0 auto 16px; border-radius: 50%; background: var(--fg-soft); display: flex; align-items: center; justify-content: center; font-size: 24px; color: var(--fg); }
+
+/* ── modals ── */
+.scrim {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.34);
+  z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.scrim[hidden] { display: none; }
+.modal {
+  width: min(540px, 100%);
+  max-height: 86vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elev-raised);
+  padding: 24px;
+}
+.modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.modal-head h2 { font-size: 20px; font-weight: 700; letter-spacing: var(--tracking-display); line-height: var(--leading-tight); }
+.modal-head .icon-btn { width: 44px; height: 44px; }
+.modal .sub { font-size: 12px; color: var(--muted); margin-bottom: 18px; }
+.modal-body .field { margin-bottom: 14px; }
+.field label { display: block; font-size: 12px; font-weight: 600; color: var(--fg); margin-bottom: 6px; }
+.input, .textarea, .field select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--fg);
+  font-size: 14px; font-weight: 500;
+  padding: 11px 14px;
+}
+.textarea { resize: vertical; min-height: 80px; }
+.input:focus-visible, .textarea:focus-visible, .field select:focus-visible { box-shadow: var(--focus-ring); border-color: var(--fg); }
+.input::placeholder, .textarea::placeholder { color: var(--muted); }
+.modal-acts { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.drop-zone {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+  gap: 8px;
+  min-height: 200px;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-md);
+  padding: 28px;
+  color: var(--fg);
+  font-size: 14px;
+  background: var(--surface);
+  transition: border-color var(--motion-fast) var(--ease-standard), background var(--motion-fast) var(--ease-standard);
+}
+.drop-zone:hover, .drop-zone:focus-visible { border-color: var(--fg-2); background: var(--fg-soft); }
+.drop-zone svg { color: var(--muted); }
+.ocr-step { display: none; }
+.ocr-step.show { display: block; }
+.doc-preview { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; background: var(--surface-warm); font-size: 13px; color: var(--fg-2); }
+.progress { height: 6px; background: var(--border-soft); border-radius: 999px; overflow: hidden; margin: 16px 0 8px; }
+.progress i { display: block; height: 100%; width: 0; background: var(--fg); border-radius: 999px; transition: width 0.15s linear; }
+.conf-row { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--fg-2); }
+.conf-bar { flex: 1 1 auto; height: 6px; border-radius: 999px; background: var(--border-soft); overflow: hidden; }
+.conf-bar i { display: block; height: 100%; background: var(--success); border-radius: 999px; }
+.conf-row .num { font-size: 12px; font-weight: 600; color: var(--success); }
+.phase-row {
+  display: grid; grid-template-columns: 40px 1fr auto;
+  gap: 14px; align-items: start;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.phase-row:last-child { border-bottom: none; }
+.ph-num { font-size: 16px; font-weight: 700; color: var(--muted); font-family: var(--font-mono); }
+.phase-row h3 { font-size: 15px; font-weight: 700; color: var(--fg); margin-bottom: 3px; }
+.phase-row p { font-size: 13px; color: var(--fg-2); line-height: 1.5; }
+.ph-status { font-size: 12px; font-weight: 600; border-radius: 999px; padding: 4px 10px; }
+.ph-status.live { background: color-mix(in oklab, var(--success) 10%, var(--surface)); color: var(--success); }
+.ph-status.beta { background: color-mix(in oklab, var(--warn) 12%, var(--surface)); color: var(--warn); }
+
+.toast {
+  position: fixed; bottom: 28px; left: 50%; transform: translate(-50%, 16px);
+  background: var(--fg); color: var(--surface);
+  font-size: 13px; font-weight: 500;
+  padding: 11px 18px;
+  border-radius: 999px;
+  box-shadow: var(--elev-raised);
+  z-index: 200;
+  opacity: 0; pointer-events: none;
+  transition: opacity var(--motion-base) var(--ease-standard), transform var(--motion-base) var(--ease-standard);
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ── responsive ── */
+@media (max-width: 1100px) {
+  .sidepanel { width: 360px; }
+  .canvas-legend { width: 188px; }
+}
+@media (max-width: 900px) {
+  .chat { width: 340px; }
+  .crumb-region { display: none; }
+}
+@media (max-width: 720px) {
+  .topbar { padding: 0 16px; gap: 12px; }
+  .crumb { display: none; }
+  .sidepanel { width: 100%; }
+  .chat { right: 12px; bottom: 76px; width: calc(100vw - 24px); height: min(70vh, 560px); }
+  .chat-fab { right: 12px; bottom: 76px; }
+  .chat.shift { transform: none; }
+  .control-dock { right: 12px; bottom: 14px; gap: 8px; }
+  .dock-btn { width: 46px; height: 46px; }
+  .canvas-legend { top: 12px; right: 12px; width: 172px; padding: 12px; }
+  .search-pop, .layers-pop { right: 12px; bottom: 72px; width: calc(100vw - 24px); max-width: 320px; }
+  .welcome { top: 12px; left: 12px; width: calc(100vw - 24px); max-width: 340px; }
+  .hint-chip { display: none; }
+  .stage-ui { left: 12px; bottom: 14px; }
+  .review-view { padding: 24px 20px 56px; }
+  .review-card { flex-wrap: wrap; }
+  .review-card .acts { margin-left: 0; width: 100%; }
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- ── topbar ── -->
+  <header class="topbar" data-od-id="topnav">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="6" cy="17" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="17" cy="18" r="2.4"/><path d="M8.1 15.7 15.9 7.3M8.1 17 14.8 17.2M15.8 8 15.4 16"/></svg>
+      </span>
+      <span class="brand-name">VillageRoots</span>
+    </div>
+    <div class="crumb" data-od-id="village-crumb">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 21s-6-5.2-6-10a6 6 0 1 1 12 0c0 4.8-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/></svg>
+      <span>Potidaneia</span><span class="crumb-sep">·</span><span class="crumb-region">Fokida</span>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn" id="btnReview" data-od-id="btn-review-queue" aria-label="Review queue" title="Review queue">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+        <span class="count-badge" id="reviewCount">3</span>
+      </button>
+      <div class="avatar" title="Eleni Katsari — village editor">EK</div>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <!-- ── canvas ── -->
+    <main class="stage" id="stage" data-od-id="canvas-region" aria-label="Heritage graph canvas">
+      <div class="world" id="world">
+        <svg class="grid-layer" viewBox="0 0 2600 1800" aria-hidden="true">
+          <defs>
+            <pattern id="gridMinor" width="16" height="16" patternUnits="userSpaceOnUse">
+              <path d="M16 0H0V16" fill="none" stroke="var(--grid-line)" stroke-width="1"/>
+            </pattern>
+            <pattern id="gridMajor" width="80" height="80" patternUnits="userSpaceOnUse">
+              <path d="M80 0H0V80" fill="none" stroke="var(--grid-line-strong)" stroke-width="1.2"/>
+            </pattern>
+          </defs>
+          <rect width="2600" height="1800" fill="url(#gridMinor)"/>
+          <rect width="2600" height="1800" fill="url(#gridMajor)"/>
+        </svg>
+        <svg class="edge-layer" id="edgeLayer" viewBox="0 0 2600 1800" aria-hidden="true"></svg>
+        <div class="node-layer" id="nodeLayer"></div>
+      </div>
+
+      <aside class="canvas-legend" data-od-id="canvas-legend" aria-label="Legend — entity types on the canvas">
+        <div class="lg-head"><h2>Entities</h2><span class="lg-count num" id="nodeCount"></span></div>
+        <ul class="legend" id="legend"></ul>
+      </aside>
+
+      <div class="welcome" id="welcome" data-od-id="welcome">
+        <div>You're looking at <b>Potidaneia's living memory</b> — a spatial knowledge graph. <b>Drag</b> to pan, <b>scroll</b> to zoom, click any node to open its document. Then <b>ask the village</b> a question.</div>
+        <button class="close" id="welcomeClose" aria-label="Dismiss welcome"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="hint-chip" id="hintChip">Drag to pan <kbd>scroll</kbd> to zoom · click a node for its document</div>
+
+      <div class="stage-ui">
+        <div class="zoomctl" role="group" aria-label="Zoom controls">
+          <button id="zoomOut" aria-label="Zoom out">−</button>
+          <span class="zval num" id="zoomPct">100%</span>
+          <button id="zoomIn" aria-label="Zoom in">+</button>
+          <button class="fit" id="zoomFit" aria-label="Fit graph to view">Fit</button>
+        </div>
+        <div class="coord mono" id="coord">0, 0 · 1.00×</div>
+      </div>
+
+      <div class="control-dock" data-od-id="control-dock" role="group" aria-label="Canvas controls">
+        <button class="dock-btn" id="dockSearch" data-od-id="btn-search-open" aria-label="Search the village" aria-haspopup="true" title="Search (⌘K)">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>
+        </button>
+        <button class="dock-btn" id="btnNewNode" data-od-id="btn-new-node" aria-label="New node" title="New node">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <button class="dock-btn" id="btnImport" data-od-id="btn-import-doc" aria-label="Import a document" title="Import document">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 7V5a2 2 0 0 1 2-2h2M16 3h2a2 2 0 0 1 2 2v2M20 17v2a2 2 0 0 1-2 2h-2M8 21H6a2 2 0 0 1-2-2v-2"/><path d="M12 7v8M9 12l3 3 3-3"/></svg>
+        </button>
+        <button class="dock-btn" id="dockLayers" data-od-id="btn-layers" aria-label="Layers and filters" aria-haspopup="true" title="Layers">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2" fill="var(--surface)"/><circle cx="15" cy="12" r="2" fill="var(--surface)"/><circle cx="7" cy="18" r="2" fill="var(--surface)"/></svg>
+        </button>
+      </div>
+
+      <div class="search-pop" id="searchPop" data-od-id="search-popover" role="dialog" aria-label="Search the village">
+        <div class="pop-head"><span>Search the village</span><kbd>esc</kbd></div>
+        <div class="search-pill">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>
+          <input class="search-input" id="search" placeholder="Names, places, events…" aria-label="Search the graph" />
+        </div>
+        <p class="pop-hint mono">Matches flash on the canvas · a single match opens the document</p>
+      </div>
+
+      <div class="layers-pop" id="layersPop" data-od-id="layers-popover" role="dialog" aria-label="Layers and filters">
+        <div class="pop-head"><span>Layers</span></div>
+        <ul class="legend">
+          <li><button class="rel-toggle" data-kind="social" aria-pressed="true"><span class="swatch sw-social"></span>Social<span class="st"></span></button></li>
+          <li><button class="rel-toggle" data-kind="geo" aria-pressed="true"><span class="swatch sw-geo"></span>Geographic<span class="st"></span></button></li>
+          <li><button class="rel-toggle" data-kind="hist" aria-pressed="true"><span class="swatch sw-hist"></span>Historical<span class="st"></span></button></li>
+        </ul>
+        <label class="switch-row" for="suggestToggle"><span>AI link suggestions</span>
+          <span class="switch"><input type="checkbox" id="suggestToggle" checked /><span class="track"></span></span>
+        </label>
+        <a class="pop-about" href="#" id="btnAbout">How this maps to the roadmap →</a>
+      </div>
+    </main>
+
+    <!-- ── node document sidepanel ── -->
+    <aside class="sidepanel" id="sidepanel" data-od-id="sidepanel" aria-label="Node document">
+      <div class="sp-head">
+        <div class="tabs">
+          <button class="tab on">Document</button>
+          <button class="tab">Relations</button>
+        </div>
+        <button class="icon-btn sp-close" id="spClose" aria-label="Close document panel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="sp-body" id="spBody"></div>
+      <div class="sp-foot">
+        <span class="st" id="spStatus">Public record · approved</span>
+        <button class="btn btn-ghost btn-sm" id="spReport">Report</button>
+        <button class="btn btn-primary" id="spSave" data-od-id="btn-save-node">Save</button>
+      </div>
+    </aside>
+
+    <!-- ── chat ── -->
+    <section class="chat" id="chat" data-od-id="chat-panel" aria-label="Ask the village" aria-hidden="true" hidden>
+      <header class="chat-head">
+        <span class="chat-ai-mark mono">GraphRAG</span>
+        <div><h2>Ask the village</h2><p class="meta">Potidaneia · Fokida · text + graph</p></div>
+        <div class="head-right">
+          <button class="icon-btn" id="chatCollapse" aria-label="Collapse chat panel" style="width:44px;height:44px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9l6 6 6-6"/></svg></button>
+        </div>
+      </header>
+      <div class="chat-body" id="chatBody">
+        <div class="msg ai">I can read this village's records and trace the graph. Ask who owned, lived, farmed, or was baptized where — or try a suggestion below.</div>
+        <div class="chips" id="chips">
+          <button class="chip" data-q="Who owned the old mill before 1950?">Who owned the old mill before 1950?</button>
+          <button class="chip" data-q="Which families lived in Kalyvia?">Which families lived in Kalyvia?</button>
+          <button class="chip" data-q="When was Agios Ioannis built?">When was Agios Ioannis built?</button>
+        </div>
+      </div>
+      <div class="chat-input">
+        <input id="chatInput" placeholder="Ask about people, places, events…" aria-label="Ask a question" />
+        <button class="btn btn-primary send" id="chatSend" aria-label="Send question" data-od-id="btn-chat-send">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+    </section>
+    <button class="chat-fab" id="chatFab" data-od-id="btn-chat-open">
+      <span class="dot" aria-hidden="true"></span>Ask the village
+    </button>
+
+    <!-- ── review queue view ── -->
+    <section class="review-view" id="reviewView" data-od-id="review-view" aria-label="Moderation queue" hidden>
+      <div class="review-head">
+        <button class="icon-btn" id="reviewBack" aria-label="Back to canvas"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 12H6M11 6l-6 6 6 6"/></svg></button>
+        <div>
+          <h1>Review queue</h1>
+          <div class="sub mono" id="reviewSub">Pending moderation · village editors approve before the public graph updates</div>
+        </div>
+        <button class="btn btn-secondary btn-sm back" id="reviewBack2">Back to canvas</button>
+      </div>
+      <div class="review-filters" id="reviewFilters" role="group" aria-label="Filter review items">
+        <button class="filter-chip on" data-f="all">All</button>
+        <button class="filter-chip" data-f="relation">Relations</button>
+        <button class="filter-chip" data-f="node">Nodes</button>
+        <button class="filter-chip" data-f="ocr">OCR</button>
+      </div>
+      <div class="review-list" id="reviewList"></div>
+    </section>
+  </div>
+</div>
+
+<!-- ── modals ── -->
+<div class="scrim" id="scrim" hidden>
+  <!-- OCR import -->
+  <div class="modal" id="ocrModal" data-od-id="ocr-modal" role="dialog" aria-modal="true" aria-label="Import a document">
+    <div class="modal-head">
+      <h2>Digitize a document</h2>
+      <button class="icon-btn" data-close aria-label="Close"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="sub mono">OCR + AI extraction · submit to the moderation queue for review</div>
+    <div class="modal-body">
+      <div class="ocr-step show" id="ocrStep1">
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-label="Upload a photo of a document">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7V5a2 2 0 0 1 2-2h2M16 3h2a2 2 0 0 1 2 2v2M20 17v2a2 2 0 0 1-2 2h-2M8 21H6a2 2 0 0 1-2-2v-2"/><path d="M12 8v7M9 12l3 3 3-3"/></svg>
+          <div><b>Upload a photo</b> of a handwritten page — a church registry, deed, or census notebook.</div>
+          <div style="margin-top:6px;font-size:12px;color:var(--muted);">PNG, JPG or HEIC · Greek or Ottoman-era cursive supported</div>
+        </div>
+      </div>
+      <div class="ocr-step" id="ocrStep2">
+        <div class="doc-preview" aria-hidden="true">
+          <div class="row"><span>Christening Record — Church of Agios Ioannis, 1924</span></div>
+          <div style="margin-top:6px;">№ 14 · <em>Βαπτίζεται ἡ Σταυρούλα, θυγάτηρ Νικολάου Κατσαρῆ …</em></div>
+        </div>
+        <div class="progress" role="progressbar" aria-label="Reading handwriting"><i id="ocrBar"></i></div>
+        <div class="mono" style="font-size:11px;color:var(--fg-2);" id="ocrStatus">Reading handwriting…</div>
+      </div>
+      <div class="ocr-step" id="ocrStep3">
+        <p style="font-size:13px;color:var(--fg-2);margin-bottom:14px;">Extraction ready. Review the pre-filled fields, then submit — changes wait for a village editor.</p>
+        <div class="field" style="margin-bottom:10px;"><label for="fName">Name</label><input class="input" id="fName" value="Stavroula Katsari" /></div>
+        <div class="field" style="margin-bottom:10px;"><label for="fYear">Born</label><input class="input" id="fYear" value="1924" /></div>
+        <div class="field" style="margin-bottom:10px;"><label for="fBapt">Baptized at</label><input class="input" id="fBapt" value="Agios Ioannis" /></div>
+        <div class="field"><label for="fNote">Notes from the page</label><textarea class="textarea" id="fNote" style="min-height:64px;">Daughter of Nikolas &amp; Maria Katsaris, millers of Petra. Godparent: A. Vasiliou.</textarea></div>
+        <div class="conf-row"><span>Confidence</span><span class="conf-bar"><i style="width:91%"></i></span><span class="num">91%</span></div>
+        <div class="modal-acts">
+          <button class="btn btn-secondary" data-close>Discard</button>
+          <button class="btn btn-primary" id="ocrSubmit" data-od-id="btn-ocr-submit">Submit for review</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- New node -->
+  <div class="modal" id="newNodeModal" data-od-id="new-node-modal" role="dialog" aria-modal="true" aria-label="Create a node">
+    <div class="modal-head">
+      <h2>New node</h2>
+      <button class="icon-btn" data-close aria-label="Close"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="sub mono">Creates a node on the canvas · held in review until a moderator approves</div>
+    <div class="modal-body">
+      <div class="field" style="margin-bottom:12px;"><label for="nnType">Entity type</label>
+        <select class="input" id="nnType">
+          <option value="person">Person</option><option value="family">Family</option>
+          <option value="landmark">Landmark</option><option value="toponym">Toponym</option>
+          <option value="event">Event</option><option value="path">Path / road</option>
+        </select>
+      </div>
+      <div class="field"><label for="nnName">Name</label><input class="input" id="nnName" placeholder="e.g. Stavros Katsaris" /></div>
+      <div class="modal-acts">
+        <button class="btn btn-secondary" data-close>Cancel</button>
+        <button class="btn btn-primary" id="nnCreate" data-od-id="btn-create-node">Create node</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- About / roadmap -->
+  <div class="modal" id="aboutModal" data-od-id="about-modal" role="dialog" aria-modal="true" aria-label="Roadmap mapping">
+    <div class="modal-head">
+      <h2>How this prototype maps to the roadmap</h2>
+      <button class="icon-btn" data-close aria-label="Close"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="sub mono">VillageRoots · four sequential phases</div>
+    <div class="modal-body">
+      <div class="phase-row"><span class="ph-num">01</span><div><h3>Infinite canvas &amp; core editor</h3><p>Pan/zoom graph, manual nodes &amp; relations, Notion-like documents, moderation queue.</p></div><span class="ph-status live">live here</span></div>
+      <div class="phase-row"><span class="ph-num">02</span><div><h3>External context &amp; rich media</h3><p>Paste a Google Maps or Wikipedia link — it auto-embeds inside the node document.</p></div><span class="ph-status live">live here</span></div>
+      <div class="phase-row"><span class="ph-num">03</span><div><h3>Digitizing the physical archive</h3><p>Photo upload, handwriting OCR, AI pre-fill of node &amp; relation forms.</p></div><span class="ph-status beta">try it</span></div>
+      <div class="phase-row"><span class="ph-num">04</span><div><h3>The intelligent graph</h3><p>GraphRAG chat that answers in plain language and highlights the path on the canvas; AI link suggestions to verify.</p></div><span class="ph-status beta">try it</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+  var TYPES = { person: 'Person', family: 'Family', landmark: 'Landmark', toponym: 'Toponym', event: 'Event', path: 'Path' };
+  var VERBS = {
+    CHILD_OF: 'social', MARRIED_TO: 'social', SIBLING_OF: 'social', BELONGS_TO_CLAN: 'social',
+    OWNS_LAND_AT: 'geo', LIVED_AT: 'geo', FARMED_AT: 'geo',
+    BAPTIZED_AT: 'hist', BURIED_AT: 'hist', RAN_BY: 'hist', BUILT_BY: 'hist', PARTICIPATED_IN: 'hist'
+  };
+
+  var NODES = [
+    { id: 'p-nikolas', type: 'person', name: 'Nikolas Katsaris', x: 1410, y: 400, sub: '1898–1978 · miller', initial: 'N',
+      data: { born: '1898, Petra', died: '1978, Potidaneia', role: 'Miller · village elder', audio: 'Oral history tape · 1972' } },
+    { id: 'p-maria', type: 'person', name: 'Maria Katsari', x: 1260, y: 500, sub: '1905–1992', initial: 'M',
+      data: { born: '1905, Kalyvia', died: '1992, Potidaneia', role: 'Household · Kalyvia', audio: 'Oral history tape · 1973' } },
+    { id: 'p-yiannis', type: 'person', name: 'Yiannis Katsaris', x: 1550, y: 570, sub: '1932–2010 · miller', initial: 'Y',
+      data: { born: '1932, Potidaneia', died: '2010, Potidaneia', role: 'Miller · continued the trade', audio: 'Interview · 1989' } },
+    { id: 'p-eleni', type: 'person', name: 'Eleni Vasiliou', x: 1410, y: 690, sub: 'b. 1935', initial: 'E',
+      data: { born: '1935, Potidaneia', died: null, role: 'Emigrated to Thessaloniki · 1958', audio: 'Interview · 2019' } },
+    { id: 'p-alexandros', type: 'person', name: 'Alexandros Vasiliou', x: 1860, y: 900, sub: '1928–1996 · farmer', initial: 'A',
+      data: { born: '1928, Kalyvia', died: '1996, Potidaneia', role: 'Farmer · western fields', audio: null } },
+    { id: 'f-katsaris', type: 'family', name: 'Katsaris Lineage', x: 1390, y: 530, sub: '5 members',
+      data: { origin: 'Kalyvia · 18th c.', members: 'Nikolas, Maria, Yiannis, Eleni + 1' } },
+    { id: 'f-vasiliou', type: 'family', name: 'Vasiliou Lineage', x: 1980, y: 960, sub: '3 members',
+      data: { origin: 'Western fields · Kalyvia', members: 'Alexandros + 2' } },
+    { id: 'l-church', type: 'landmark', name: 'Agios Ioannis', x: 430, y: 560, sub: 'built 1742',
+      data: { type: 'Church', built: '1742', note: 'Registries of baptisms and burials, 1742–today' } },
+    { id: 'l-mill', type: 'landmark', name: 'The Old Mill', x: 560, y: 700, sub: 'built 1901',
+      data: { type: 'Water mill', built: '1901', note: 'On the Petra stream; three generations of millers' } },
+    { id: 'l-bridge', type: 'landmark', name: 'Kamares Bridge', x: 330, y: 790, sub: '19th century',
+      data: { type: 'Stone bridge', built: 'c. 1840', note: 'Crosses the Petra gorge on the mule track' } },
+    { id: 'l-plane', type: 'landmark', name: 'Grand Plane Tree', x: 640, y: 480, sub: 'est. c. 1700',
+      data: { type: 'Tree', built: 'c. 1700', note: 'Village assembly point · weddings and feasts' } },
+    { id: 't-petra', type: 'toponym', name: 'Petra', x: 700, y: 890, sub: 'the rock',
+      data: { desc: 'Micro-local name for the rocky slope by the mill stream' } },
+    { id: 't-kalyvia', type: 'toponym', name: 'Kalyvia', x: 760, y: 1290, sub: 'the outlying hamlet',
+      data: { desc: 'Summer outpost of the village; fields and stone huts' } },
+    { id: 't-lakka', type: 'toponym', name: 'Lakka', x: 980, y: 700, sub: 'the hollow',
+      data: { desc: 'Fertile hollow where the Katsaris family farmed' } },
+    { id: 'e-charter', type: 'event', name: 'Founding charter', x: 800, y: 380, sub: '1731',
+      data: { date: '1731', desc: 'First written record naming the settlement' } },
+    { id: 'e-school', type: 'event', name: 'School opens', x: 240, y: 950, sub: '1912',
+      data: { date: '1912', desc: 'First village schoolhouse; literacy wave begins' } },
+    { id: 'e-feast', type: 'event', name: 'Harvest feast', x: 950, y: 1100, sub: '1947',
+      data: { date: 'Aug 1947', desc: 'Recorded harvest celebration under the plane tree' } },
+    { id: 'e-emigrate', type: 'event', name: 'Emigration wave', x: 1800, y: 1240, sub: '1960s',
+      data: { date: '1960–1970', desc: 'Families leave for the cities and abroad; diaspora era' } },
+    { id: 'd-drakia', type: 'path', name: 'Drakia mule track', x: 880, y: 1060, sub: 'stone · 4 km',
+      data: { surface: 'Cobble', length: '4 km', note: 'Links Potidaneia to the Drakia road' } }
+  ];
+
+  var EDGES = [
+    { id: 'e-nik-maria', from: 'p-nikolas', to: 'p-maria', verb: 'MARRIED_TO', kind: 'social' },
+    { id: 'e-nik-yiannis', from: 'p-nikolas', to: 'p-yiannis', verb: 'CHILD_OF', kind: 'social' },
+    { id: 'e-nik-eleni', from: 'p-nikolas', to: 'p-eleni', verb: 'CHILD_OF', kind: 'social' },
+    { id: 'e-nik-fam', from: 'p-nikolas', to: 'f-katsaris', verb: 'BELONGS_TO_CLAN', kind: 'social' },
+    { id: 'e-yian-fam', from: 'p-yiannis', to: 'f-katsaris', verb: 'BELONGS_TO_CLAN', kind: 'social' },
+    { id: 'e-elen-fam', from: 'p-eleni', to: 'f-katsaris', verb: 'BELONGS_TO_CLAN', kind: 'social' },
+    { id: 'e-elen-alex', from: 'p-eleni', to: 'p-alexandros', verb: 'MARRIED_TO', kind: 'social' },
+    { id: 'e-alex-fam', from: 'p-alexandros', to: 'f-vasiliou', verb: 'BELONGS_TO_CLAN', kind: 'social' },
+    { id: 'e-nik-petra', from: 'p-nikolas', to: 't-petra', verb: 'LIVED_AT', kind: 'geo' },
+    { id: 'e-nik-lakka', from: 'p-nikolas', to: 't-lakka', verb: 'FARMED_AT', kind: 'geo' },
+    { id: 'e-yian-kalyvia', from: 'p-yiannis', to: 't-kalyvia', verb: 'OWNS_LAND_AT', kind: 'geo' },
+    { id: 'e-alex-kalyvia', from: 'p-alexandros', to: 't-kalyvia', verb: 'OWNS_LAND_AT', kind: 'geo' },
+    { id: 'e-mill-nikolas', from: 'l-mill', to: 'p-nikolas', verb: 'RAN_BY', kind: 'hist' },
+    { id: 'e-yiannis-bapt', from: 'p-yiannis', to: 'l-church', verb: 'BAPTIZED_AT', kind: 'hist' },
+    { id: 'e-maria-burial', from: 'p-maria', to: 'l-church', verb: 'BURIED_AT', kind: 'hist' },
+    { id: 'e-nik-feast', from: 'p-nikolas', to: 'e-feast', verb: 'PARTICIPATED_IN', kind: 'hist' },
+    { id: 'e-yian-school', from: 'p-yiannis', to: 'e-school', verb: 'PARTICIPATED_IN', kind: 'hist' },
+    { id: 'e-fam-plane', from: 'f-katsaris', to: 'l-plane', verb: 'GATHERED_AT', kind: 'hist' },
+    { id: 's1', from: 'p-yiannis', to: 'p-eleni', verb: 'SIBLING_OF', kind: 'social', suggested: true, conf: 82 },
+    { id: 's2', from: 'p-alexandros', to: 't-lakka', verb: 'OWNS_LAND_AT', kind: 'geo', suggested: true, conf: 67 }
+  ];
+
+  var CLUSTERS = [
+    { x: 1390, y: 540, rx: 320, ry: 240, label: 'The Katsaris Lineage' },
+    { x: 1940, y: 960, rx: 250, ry: 200, label: 'The Vasiliou Lineage' },
+    { x: 520, y: 680, rx: 340, ry: 270, label: 'Village core' }
+  ];
+
+  var REVIEW = [
+    { id: 'r1', kind: 'relation', title: 'Sibling link suggested', body: 'Eleni Vasiliou — Yiannis Katsaris · SIBLING_OF', who: 'AI link prediction · 82%' },
+    { id: 'r2', kind: 'node', title: 'New person node', body: 'Stavros Katsaris · b. 1906, Kalyvia', who: 'Anonymous villager' },
+    { id: 'r3', kind: 'ocr', title: 'OCR batch — Christening records', body: '1924 ledger · 14 names extracted, 3 matched existing nodes', who: 'OCR pipeline' }
+  ];
+
+  /* ── state ── */
+  var state = { tx: 0, ty: 0, z: 1, sel: null };
+  var hiddenTypes = {};
+  var kindOn = { social: true, geo: true, hist: true };
+  var suggestOn = true;
+  var litSet = {};
+  var byId = {};
+  NODES.forEach(function (n) { byId[n.id] = n; });
+
+  /* ── element refs ── */
+  var stage = document.getElementById('stage');
+  var world = document.getElementById('world');
+  var edgeLayer = document.getElementById('edgeLayer');
+  var nodeLayer = document.getElementById('nodeLayer');
+  var sidepanel = document.getElementById('sidepanel');
+  var spBody = document.getElementById('spBody');
+  var toast = document.getElementById('toast');
+  var reviewCountEl = document.getElementById('reviewCount');
+  var scrim = document.getElementById('scrim');
+
+  function $(id) { return document.getElementById(id); }
+
+  function toastMsg(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastMsg._t);
+    toastMsg._t = setTimeout(function () { toast.classList.remove('show'); }, 2600);
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  /* ── canvas: nodes ── */
+  function positionNode(n) {
+    var el = byId['_el_' + n.id];
+    if (el) { el.style.left = n.x + 'px'; el.style.top = n.y + 'px'; }
+  }
+
+  function renderNodes() {
+    nodeLayer.innerHTML = '';
+    NODES.forEach(function (n) {
+      var el = document.createElement('button');
+      el.className = 'node n-' + n.type;
+      el.style.left = n.x + 'px';
+      el.style.top = n.y + 'px';
+      el.setAttribute('data-id', n.id);
+      el.setAttribute('data-od-id', 'node-' + n.id);
+      el.setAttribute('aria-label', n.name + (n.sub ? ', ' + n.sub : ''));
+      if (n.type === 'family') {
+        el.innerHTML = '<span class="n-mark">' + escapeHtml(n.name) + '</span>';
+      } else {
+        el.innerHTML = '<span class="n-mark">' + (n.initial ? escapeHtml(n.initial) : '') + '</span>' +
+          '<span class="n-text"><span class="n-label">' + escapeHtml(n.name) + '</span>' +
+          (n.sub ? '<span class="n-sub">' + escapeHtml(n.sub) + '</span>' : '') + '</span>';
+      }
+      el.addEventListener('pointerdown', function (e) { e.stopPropagation(); startNodeDrag(e, n); });
+      nodeLayer.appendChild(el);
+      byId['_el_' + n.id] = el;
+    });
+    renderEdgeLayer();
+  }
+
+  function nodeVisible(n) { return !hiddenTypes[n.type]; }
+
+  function renderEdgeLayer() {
+    edgeLayer.innerHTML = '';
+    nodeLayer.querySelectorAll('.sug-chip').forEach(function (c) { c.remove(); });
+    EDGES.forEach(function (e) {
+      var a = byId[e.from], b = byId[e.to];
+      if (!a || !b) return;
+      if (!nodeVisible(a) || !nodeVisible(b)) return;
+      if (e.suggested && !suggestOn) return;
+      if (!e.suggested && !kindOn[e.kind]) return;
+      var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', a.x); line.setAttribute('y1', a.y);
+      line.setAttribute('x2', b.x); line.setAttribute('y2', b.y);
+      line.setAttribute('data-id', e.id);
+      line.setAttribute('class', 'e-' + (e.suggested ? 'suggest' : e.kind) + (litSet[e.id] ? ' e-lit' : ''));
+      edgeLayer.appendChild(line);
+      if (e.suggested) {
+        var mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+        var dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        dot.setAttribute('cx', mx); dot.setAttribute('cy', my); dot.setAttribute('r', 3.5);
+        dot.setAttribute('class', 'sug-dot');
+        edgeLayer.appendChild(dot);
+        renderChip(e, mx, my);
+      }
+    });
+  }
+
+  function renderChip(e, mx, my) {
+    var chip = document.createElement('button');
+    chip.className = 'sug-chip';
+    chip.style.left = mx + 'px';
+    chip.style.top = my + 'px';
+    chip.setAttribute('data-od-id', 'sug-' + e.id);
+    chip.innerHTML = '<span class="ai-tag">suggested</span><span>' + escapeHtml(e.verb) + '? ' + e.conf + '%</span>' +
+      '<span class="confirm">Verify</span>';
+    chip.addEventListener('pointerdown', function (ev) { ev.stopPropagation(); });
+    chip.addEventListener('click', function () { verifySuggestion(e, chip); });
+    nodeLayer.appendChild(chip);
+  }
+
+  function verifySuggestion(e, chip) {
+    var idx = EDGES.indexOf(e);
+    EDGES[idx] = { id: e.id, from: e.from, to: e.to, verb: e.verb, kind: e.kind, pending: true };
+    REVIEW.unshift({ id: 'rv' + Date.now(), kind: 'relation', title: 'Verified: ' + e.verb.toLowerCase(), body: byId[e.from].name + ' — ' + byId[e.to].name, who: 'AI link prediction · confirmed by editor' });
+    reviewCountEl.textContent = REVIEW.length;
+    reviewCountEl.classList.remove('zero');
+    renderEdgeLayer();
+    toastMsg('Verified link added to the review queue');
+  }
+
+  /* ── drag nodes ── */
+  function startNodeDrag(e, n) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    var sx = e.clientX, sy = e.clientY, ox = n.x, oy = n.y, moved = false;
+    function move(ev) {
+      n.x = ox + (ev.clientX - sx) / state.z;
+      n.y = oy + (ev.clientY - sy) / state.z;
+      moved = true;
+      positionNode(n);
+      renderEdgeLayer();
+    }
+    function up() {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      if (!moved) selectNode(n.id);
+    }
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  }
+
+  /* ── pan / zoom ── */
+  function apply() {
+    world.style.transform = 'translate(' + state.tx + 'px,' + state.ty + 'px) scale(' + state.z + ')';
+    $('zoomPct').textContent = Math.round(state.z * 100) + '%';
+    $('coord').textContent = Math.round(-state.tx / state.z) + ', ' + Math.round(-state.ty / state.z) + ' · ' + state.z.toFixed(2) + '×';
+  }
+
+  stage.addEventListener('pointerdown', function (e) {
+    if (e.target.closest('.node, .sug-chip, .canvas-legend, .control-dock, .search-pop, .layers-pop, .welcome, .stage-ui, .hint-chip, .chat, .chat-fab, .sidepanel')) return;
+    if (e.button !== 0) return;
+    stage.classList.add('panning');
+    var sx = e.clientX, sy = e.clientY, stx = state.tx, sty = state.ty;
+    function move(ev) {
+      state.tx = stx + (ev.clientX - sx);
+      state.ty = sty + (ev.clientY - sy);
+      apply();
+    }
+    function up(ev) {
+      stage.classList.remove('panning');
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      if (Math.abs(ev.clientX - sx) < 5 && Math.abs(ev.clientY - sy) < 5) deselect();
+    }
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  });
+
+  stage.addEventListener('wheel', function (e) {
+    if (e.target.closest('.canvas-legend, .control-dock, .search-pop, .layers-pop, .sidepanel, .chat, .welcome, .stage-ui, .hint-chip')) return;
+    e.preventDefault();
+    var rect = stage.getBoundingClientRect();
+    var mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    var factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+    var nz = Math.min(2.6, Math.max(0.25, state.z * factor));
+    var wx = (mx - state.tx) / state.z, wy = (my - state.ty) / state.z;
+    state.tx = mx - wx * nz;
+    state.ty = my - wy * nz;
+    state.z = nz;
+    apply();
+  }, { passive: false });
+
+  $('zoomIn').addEventListener('click', function () { zoomAt(1, stage.clientWidth / 2, stage.clientHeight / 2); });
+  $('zoomOut').addEventListener('click', function () { zoomAt(-1, stage.clientWidth / 2, stage.clientHeight / 2); });
+  function zoomAt(dir, mx, my) {
+    var factor = dir > 0 ? 1.12 : 1 / 1.12;
+    var nz = Math.min(2.6, Math.max(0.25, state.z * factor));
+    var wx = (mx - state.tx) / state.z, wy = (my - state.ty) / state.z;
+    state.tx = mx - wx * nz; state.ty = my - wy * nz; state.z = nz;
+    apply();
+  }
+  $('zoomFit').addEventListener('click', fitView);
+
+  function fitView() {
+    var xs = [], ys = [];
+    NODES.forEach(function (n) { xs.push(n.x); ys.push(n.y); });
+    var minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
+    var minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
+    var w = stage.clientWidth, h = stage.clientHeight;
+    var z = Math.min(w / (maxX - minX + 260), h / (maxY - minY + 260), 1.2);
+    state.z = Math.max(0.25, z);
+    state.tx = w / 2 - (minX + maxX) / 2 * state.z;
+    state.ty = h / 2 - (minY + maxY) / 2 * state.z;
+    apply();
+  }
+
+  function centerOn(ids) {
+    var xs = [], ys = [];
+    ids.forEach(function (id) { var n = byId[id]; if (n) { xs.push(n.x); ys.push(n.y); } });
+    if (!xs.length) return;
+    var z = Math.max(0.8, state.z);
+    var w = stage.clientWidth, h = stage.clientHeight;
+    state.z = z;
+    state.tx = w / 2 - (Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2 * z;
+    state.ty = h / 2 - (Math.min.apply(null, ys) + Math.max.apply(null, ys)) / 2 * z;
+    apply();
+  }
+
+  function setLit(nodeIds, edgeIds) {
+    litSet = {};
+    nodeIds.forEach(function (id) { litSet[id] = true; });
+    edgeIds.forEach(function (id) { litSet[id] = true; });
+    NODES.forEach(function (n) {
+      var el = byId['_el_' + n.id];
+      if (el) el.classList.toggle('lit', !!litSet[n.id]);
+    });
+    renderEdgeLayer();
+  }
+
+  /* ── selection + sidepanel ── */
+  function selectNode(id) {
+    if (state.sel) {
+      var old = byId['_el_' + state.sel];
+      if (old) old.classList.remove('sel');
+    }
+    state.sel = id;
+    var el = byId['_el_' + id];
+    if (el) el.classList.add('sel');
+    renderDoc(id);
+    sidepanel.classList.add('open');
+    $('chat').classList.add('shift');
+  }
+  function deselect() {
+    if (!state.sel) return;
+    var el = byId['_el_' + state.sel];
+    if (el) el.classList.remove('sel');
+    state.sel = null;
+    sidepanel.classList.remove('open');
+    $('chat').classList.remove('shift');
+  }
+
+  function factRows(n) {
+    var d = n.data || {};
+    var rows = [];
+    function add(label, val) { if (val != null && val !== '') rows.push([label, val]); }
+    if (n.type === 'person') { add('Born', d.born); add('Died', d.died || '—'); add('Role', d.role); add('Audio story', d.audio || 'Not recorded'); }
+    if (n.type === 'family') { add('Origin', d.origin); add('Members', d.members); }
+    if (n.type === 'landmark') { add('Type', d.type); add('Built', d.built); add('Note', d.note); }
+    if (n.type === 'toponym') { add('Micro-name', d.desc); }
+    if (n.type === 'event') { add('Date', d.date); add('What happened', d.desc); }
+    if (n.type === 'path') { add('Surface', d.surface); add('Length', d.length); add('Note', d.note); }
+    return rows;
+  }
+
+  function relatedRows(id) {
+    var rows = [];
+    EDGES.forEach(function (e) {
+      if (e.from !== id && e.to !== id) return;
+      var other = byId[e.from === id ? e.to : e.from];
+      if (!other) return;
+      rows.push({ verb: e.verb, to: other.name, kind: e.kind, pending: e.pending, sugg: e.suggested });
+    });
+    return rows;
+  }
+
+  function bioHTML(n) {
+    if (n.id === 'p-nikolas') {
+      return '<h1>Nikolas Katsaris</h1>' +
+        '<p>Nikolas was the third generation of the <strong>Katsaris</strong> family to run <strong>The Old Mill</strong> on the Petra stream. He took over from his father in <strong>1931</strong> and kept the mill going through the occupation and the civil war years.</p>' +
+        '<blockquote>“He ground wheat for every household in the hollow — nobody was turned away, even in the hungry years.” — Village oral archive</blockquote>' +
+        '<p>He married Maria, from the Kalyvia side, and raised two children. In 1962 he passed the mill to his son Yiannis, but stayed on until 1972, when he could no longer carry the sacks.</p>';
+    }
+    if (n.type === 'person') {
+      return '<h1>' + escapeHtml(n.name) + '</h1><p>No biography written yet — a villager can open this document and tell their story.</p>' +
+        '<p class="ph-line">Start with “# Who they were”, add a few <strong>strong</strong> details, and paste a map or Wikipedia link to embed it inline.</p>';
+    }
+    if (n.type === 'landmark') {
+      return '<h1>' + escapeHtml(n.name) + '</h1><p>' + escapeHtml((n.data && n.data.note) || '') + '</p>';
+    }
+    return '<h1>' + escapeHtml(n.name) + '</h1><p>This node is part of the village graph. Open it, add context, and connect it to the people and places it belongs to.</p>';
+  }
+
+  function renderDoc(id) {
+    var n = byId[id];
+    if (!n) return;
+    var type = TYPES[n.type];
+    var status = n.type === 'person' && !n.data.died ? 'Living · private by default' : 'Public record · approved';
+    var facts = factRows(n).map(function (r) {
+      return '<div class="fact-row"><dt>' + escapeHtml(r[0]) + '</dt><dd>' + escapeHtml(r[1]) + '</dd></div>';
+    }).join('');
+    var rels = relatedRows(id).map(function (r) {
+      return '<div class="rel-row' + (r.pending || r.sugg ? ' await' : '') + '"><span class="rel-verb">' + escapeHtml(r.verb) + '</span><span class="to">' + escapeHtml(r.to) + '</span><span class="kind">' + escapeHtml(r.kind) + '</span></div>';
+    }).join('') || '<div class="rel-row"><span class="to" style="color:var(--muted);">No relations mapped yet</span></div>';
+
+    var embeds = '';
+    if (n.type === 'person') {
+      embeds += '<div class="embed"><div class="embed-bar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 5.5v13l10-6.5z"/></svg><span class="eurl">audio / ' + escapeHtml((n.data && n.data.audio) || 'not recorded') + '</span></div>' +
+        '<div class="embed-body"><div class="embed-title">Oral history story</div><p>Listen to this person tell their own account. Audio stories stay private until the person claims the node.</p><span class="embed-note">Pasted .mp3 or SoundCloud link auto-embeds</span></div></div>';
+    }
+    embeds += '<div class="embed"><div class="embed-bar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 3h6l2 3h4a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4l2-3z"/></svg><span class="eurl">en.wikipedia.org / wiki / Potidaneia</span></div>' +
+      '<div class="embed-body"><div class="embed-title">Potidaneia, Fokida</div><p>A chestnut-growing village first written about in 1731. Its stone mills and bridges survive today.</p><span class="embed-note">Pasted Wikipedia link auto-embeds</span></div></div>';
+
+    if (n.type === 'landmark' || n.type === 'path' || n.type === 'toponym') {
+      embeds += '<div class="embed"><div class="embed-bar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s-6-5.2-6-10a6 6 0 1 1 12 0c0 4.8-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/></svg><span class="eurl">maps.google.com / Potidaneia, Fokida</span></div>' +
+        '<div class="embed-body"><div class="map-mock"><svg class="map-pin" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s-6-5.2-6-10a6 6 0 1 1 12 0c0 4.8-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/></svg></div><span class="embed-note" style="display:block;margin-top:8px;">Pasted Google Maps link auto-embeds</span></div></div>';
+    }
+
+    var verbOptions = Object.keys(VERBS).map(function (v) {
+      return '<option value="' + v + '">' + v + ' — ' + VERBS[v] + '</option>';
+    }).join('');
+
+    spBody.innerHTML =
+      '<div class="doc-cover"><span class="cap">Archive photograph · Potidaneia, 1930s</span><span class="tag">' + escapeHtml(type) + '</span></div>' +
+      '<div class="doc-badge"><span class="pill neutral">' + escapeHtml(type) + '</span><span class="pill ' + (status.indexOf('Living') === 0 ? 'wait' : 'ok') + '">' + escapeHtml(status) + '</span></div>' +
+      '<h1 class="doc-title">' + escapeHtml(n.name) + '</h1>' +
+      '<div class="doc-meta mono">' + escapeHtml(n.sub || '') + '</div>' +
+      '<dl class="doc-facts">' + facts + '</dl>' +
+
+      '<p class="sec-title">Document</p>' +
+      '<div class="md-toolbar" aria-label="Formatting"><button class="md-btn" data-cmd="bold" title="Bold"><b>B</b></button><button class="md-btn" data-cmd="h2" title="Heading" style="font-size:12px;">H1</button><button class="md-btn" data-cmd="ul" title="List" style="font-family:var(--font-mono);font-size:12px;">•</button><button class="md-btn" data-cmd="blockquote" title="Quote" style="font-size:16px;">“</button></div>' +
+      '<div class="md-body" id="mdBody" contenteditable="true" data-od-id="md-editor" aria-label="Editable biography">' + bioHTML(n) + '</div>' +
+      '<div class="md-note">Markdown supported — <span class="mono">#</span>, <span class="mono">**bold**</span>, <span class="mono">- list</span>. Paste a Wikipedia or Google Maps URL to embed it inline.</div>' +
+
+      '<p class="sec-title">Relations</p>' +
+      '<div class="rel-list" id="relList">' + rels + '</div>' +
+      '<button class="btn btn-ghost btn-sm" id="addRel" style="margin-top:8px;color:var(--accent);">+ Add relation</button>' +
+      '<div class="rel-form" id="relForm">' +
+        '<select id="relVerb" aria-label="Relationship verb">' + verbOptions + '</select>' +
+        '<input id="relTarget" placeholder="Node name…" aria-label="Target node name" />' +
+        '<button class="btn btn-primary btn-sm" id="relAdd">Link</button>' +
+      '</div>' +
+
+      '<p class="sec-title">Embedded context</p>' + embeds;
+
+    spStatus.textContent = status;
+
+    var md = $('mdBody');
+    if (md) md.querySelectorAll('.md-btn').forEach(function (b) {
+      b.addEventListener('click', function () {
+        md.focus();
+        var cmd = b.getAttribute('data-cmd');
+        if (cmd === 'h2') document.execCommand('formatBlock', false, 'h1');
+        else if (cmd === 'ul') document.execCommand('insertUnorderedList', false);
+        else if (cmd === 'blockquote') document.execCommand('formatBlock', false, 'blockquote');
+        else document.execCommand(cmd, false);
+      });
+    });
+    var addRel = $('addRel'), relForm = $('relForm');
+    if (addRel) addRel.addEventListener('click', function () { relForm.classList.toggle('show'); });
+    var relAdd = $('relAdd');
+    if (relAdd) relAdd.addEventListener('click', function () {
+      var verb = $('relVerb').value;
+      var tname = $('relTarget').value.trim();
+      var target = null;
+      NODES.forEach(function (nn) { if (nn.name.toLowerCase() === tname.toLowerCase()) target = nn; });
+      if (!target) { toastMsg('No node named "' + tname + '" — create it first'); return; }
+      if (target.id === id) { toastMsg('A node can’t link to itself'); return; }
+      var eid = 'e-u' + Date.now();
+      EDGES.push({ id: eid, from: id, to: target.id, verb: verb, kind: VERBS[verb], pending: true });
+      REVIEW.unshift({ id: 'rq' + Date.now(), kind: 'relation', title: 'New relation: ' + verb.toLowerCase(), body: n.name + ' — ' + target.name, who: 'Submitted by Eleni Katsari' });
+      reviewCountEl.textContent = REVIEW.length;
+      reviewCountEl.classList.remove('zero');
+      relForm.classList.remove('show');
+      renderEdgeLayer();
+      renderDoc(id);
+      toastMsg('Relation added · queued for review');
+    });
+  }
+
+  $('spClose').addEventListener('click', deselect);
+  $('spSave').addEventListener('click', function () { toastMsg('Saved — changes queued for a village editor'); });
+  $('spReport').addEventListener('click', function () { toastMsg('Flagged for review'); });
+  $('sidepanel').querySelectorAll('.tab').forEach(function (t) {
+    t.addEventListener('click', function () { toastMsg('Tab: ' + t.textContent + ' (sample)'); });
+  });
+
+  /* ── layers ── */
+  function updateVisibility() {
+    NODES.forEach(function (n) {
+      var el = byId['_el_' + n.id];
+      if (el) el.style.display = nodeVisible(n) ? '' : 'none';
+    });
+    renderEdgeLayer();
+  }
+  document.querySelectorAll('.rel-toggle').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var k = b.getAttribute('data-kind');
+      kindOn[k] = !kindOn[k];
+      b.classList.toggle('off', !kindOn[k]);
+      b.setAttribute('aria-pressed', kindOn[k]);
+      renderEdgeLayer();
+    });
+  });
+  $('suggestToggle').addEventListener('change', function () {
+    suggestOn = this.checked;
+    renderEdgeLayer();
+  });
+
+  function buildLegend() {
+    var counts = {};
+    NODES.forEach(function (n) { counts[n.type] = (counts[n.type] || 0) + 1; });
+    $('nodeCount').textContent = NODES.length;
+    var marks = {
+      person: '<span class="dot" style="width:13px;height:13px;border-radius:50%;background:var(--accent);"></span>',
+      family: '<span class="dot" style="width:26px;height:13px;border-radius:999px;background:var(--surface-warm);border:1.5px solid color-mix(in oklch, var(--fg) 55%, transparent);"></span>',
+      landmark: '<span class="dot" style="width:12px;height:12px;border-radius:3px;background:var(--success);"></span>',
+      toponym: '<span class="dot" style="width:11px;height:11px;transform:rotate(45deg);border-radius:2px;border:1.5px solid var(--fg-2);background:var(--surface);"></span>',
+      event: '<span class="dot" style="width:12px;height:12px;border-radius:50%;background:color-mix(in oklch, var(--warn) 80%, white);"></span>',
+      path: '<span class="dot" style="width:20px;height:6px;border-radius:999px;border:1.5px solid var(--fg-2);"></span>'
+    };
+    var legend = $('legend');
+    legend.innerHTML = Object.keys(TYPES).map(function (t) {
+      return '<li><span class="lg-mark">' + marks[t] + '</span><span class="lg-name">' + TYPES[t] + '</span><span class="count num">' + (counts[t] || 0) + '</span></li>';
+    }).join('');
+  }
+
+  /* ── search ── */
+  var search = $('search');
+  search.addEventListener('input', function () {
+    var q = search.value.trim().toLowerCase();
+    NODES.forEach(function (n) {
+      var el = byId['_el_' + n.id];
+      if (!el) return;
+      el.classList.remove('flash');
+    });
+    if (!q) return;
+    var hits = NODES.filter(function (n) { return n.name.toLowerCase().indexOf(q) !== -1 || (n.sub && n.sub.toLowerCase().indexOf(q) !== -1); });
+    hits.forEach(function (n) {
+      var el = byId['_el_' + n.id];
+      if (el) { el.classList.add('flash'); setTimeout(function () { el.classList.remove('flash'); }, 1800); }
+    });
+    if (hits.length === 1) { selectNode(hits[0].id); }
+    else if (hits.length > 1) { toastMsg(hits.length + ' nodes match "' + search.value.trim() + '"'); }
+  });
+  search.addEventListener('keydown', function (e) {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); layersPop.classList.remove('show'); searchPop.classList.add('show'); search.focus(); }
+    if (e.key === 'Escape') { searchPop.classList.remove('show'); }
+  });
+
+  /* ── chat ── */
+  var chat = $('chat'), chatBody = $('chatBody'), chatInput = $('chatInput');
+  $('chatFab').addEventListener('click', function () {
+    chat.hidden = false;
+    chat.setAttribute('aria-hidden', 'false');
+    chat.classList.remove('collapsed');
+    $('chatFab').style.display = 'none';
+    chatInput.focus();
+  });
+  $('chatCollapse').addEventListener('click', function () { chat.classList.toggle('collapsed'); });
+  $('chatSend').addEventListener('click', askQuestion);
+  chatInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') askQuestion(); });
+
+  function addMsg(html, who) {
+    var d = document.createElement('div');
+    d.className = 'msg ' + who;
+    d.innerHTML = html;
+    chatBody.appendChild(d);
+    chatBody.scrollTop = chatBody.scrollHeight;
+    return d;
+  }
+  function askQuestion() {
+    var q = chatInput.value.trim();
+    if (!q) return;
+    addMsg(escapeHtml(q), 'user');
+    chatInput.value = '';
+    var lq = q.toLowerCase();
+    setTimeout(function () {
+      var html;
+      if (lq.indexOf('mill') !== -1) {
+        html = 'The ledger traces the mill to the <strong>Katsaris</strong> family. <strong>Nikolas</strong> ran it from 1931 until 1962, when his son <strong>Yiannis</strong> took over; before him, records name miller <em>T. Gerasimos</em> (1919–1930).<br><button class="path-btn" data-act="mill">View the path on canvas</button>';
+      } else if (lq.indexOf('kalyvia') !== -1) {
+        html = '<strong>Kalyvia</strong> appears in 1920s land deeds. The <strong>Vasiliou</strong> line claimed the western fields, while the <strong>Katsaris</strong> family kept the summer pastures along the mule track — three families recorded in total.';
+      } else if (lq.indexOf('church') !== -1 || lq.indexOf('agios') !== -1 || lq.indexOf('ioannis') !== -1) {
+        html = '<strong>Agios Ioannis</strong> was built in <strong>1742</strong>. The parish registry shows 38 baptisms and 21 burials between 1919 and 1960, including Nikolas Katsaris’s son.';
+      } else {
+        html = 'I can only query this village’s records. Try one of the suggestions below, or ask about the <strong>mill</strong>, <strong>Kalyvia</strong>, or <strong>Agios Ioannis</strong>.';
+      }
+      addMsg(html, 'ai');
+      var btn = chatBody.lastElementChild && chatBody.lastElementChild.querySelector('.path-btn');
+      if (btn) btn.addEventListener('click', function () {
+        setLit(['l-mill', 'p-nikolas', 'p-yiannis'], ['e-mill-nikolas', 'e-nik-yiannis']);
+        centerOn(['l-mill', 'p-nikolas', 'p-yiannis']);
+        toastMsg('Path highlighted: The Old Mill → Nikolas → Yiannis');
+        setTimeout(function () { setLit([], []); }, 6000);
+      });
+    }, 700);
+  }
+  $('chips').addEventListener('click', function (e) {
+    var c = e.target.closest('.chip');
+    if (c) { chatInput.value = c.getAttribute('data-q'); askQuestion(); }
+  });
+
+  /* ── review queue ── */
+  var reviewView = $('reviewView'), reviewList = $('reviewList');
+  var reviewFilter = 'all';
+  function renderReview() {
+    var items = REVIEW.filter(function (r) { return reviewFilter === 'all' || r.kind === reviewFilter; });
+    reviewSub.textContent = 'Pending moderation · village editors approve before the public graph updates';
+    if (!items.length) {
+      reviewList.innerHTML = '<div class="review-empty"><div class="mark">✓</div>Queue is clear — nothing waiting for moderation.</div>';
+      return;
+    }
+    reviewList.innerHTML = items.map(function (r) {
+      return '<div class="review-card" data-id="' + r.id + '">' +
+        '<span class="rv-kind">' + escapeHtml(r.kind) + '</span>' +
+        '<div style="min-width:0;"><h3>' + escapeHtml(r.title) + '</h3><p>' + escapeHtml(r.body) + '</p><span class="who">' + escapeHtml(r.who) + '</span></div>' +
+        '<div class="acts"><button class="btn btn-secondary btn-sm act-ok">Approve</button><button class="btn btn-ghost btn-sm act-no">Reject</button></div>' +
+        '</div>';
+    }).join('');
+  }
+  reviewList.addEventListener('click', function (e) {
+    var card = e.target.closest('.review-card');
+    if (!card) return;
+    var id = card.getAttribute('data-id');
+    var action = e.target.closest('.act-ok') ? 'approved' : (e.target.closest('.act-no') ? 'rejected' : null);
+    if (!action) return;
+    REVIEW = REVIEW.filter(function (r) { return r.id !== id; });
+    reviewCountEl.textContent = REVIEW.length;
+    if (!REVIEW.length) reviewCountEl.classList.add('zero');
+    renderReview();
+    toastMsg('Item ' + action);
+  });
+  $('reviewFilters').addEventListener('click', function (e) {
+    var f = e.target.closest('.filter-chip');
+    if (!f) return;
+    document.querySelectorAll('.filter-chip').forEach(function (c) { c.classList.remove('on'); });
+    f.classList.add('on');
+    reviewFilter = f.getAttribute('data-f');
+    renderReview();
+  });
+  function openReview() {
+    renderReview();
+    reviewView.hidden = false;
+    deselect();
+  }
+  $('btnReview').addEventListener('click', openReview);
+  $('reviewBack').addEventListener('click', function () { reviewView.hidden = true; });
+  $('reviewBack2').addEventListener('click', function () { reviewView.hidden = true; });
+
+  /* ── modals ── */
+  function openModal(id) { scrim.hidden = false; $(id).style.display = 'block'; }
+  function closeModals() { scrim.hidden = true; document.querySelectorAll('.modal').forEach(function (m) { m.style.display = 'none'; }); resetOcr(); }
+  scrim.querySelectorAll('[data-close]').forEach(function (b) { b.addEventListener('click', closeModals); });
+  scrim.addEventListener('click', function (e) { if (e.target === scrim) closeModals(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { if (!scrim.hidden) closeModals(); else deselect(); } });
+  document.querySelectorAll('.modal').forEach(function (m) { m.style.display = 'none'; });
+
+  $('btnImport').addEventListener('click', function () { openModal('ocrModal'); });
+  $('btnNewNode').addEventListener('click', function () { openModal('newNodeModal'); });
+  $('btnAbout').addEventListener('click', function (e) { e.preventDefault(); openModal('aboutModal'); });
+
+  /* OCR flow */
+  function resetOcr() {
+    $('ocrStep1').classList.add('show'); $('ocrStep2').classList.remove('show'); $('ocrStep3').classList.remove('show');
+    $('ocrBar').style.width = '0'; $('ocrStatus').textContent = 'Reading handwriting…';
+  }
+  function startOcr() {
+    $('ocrStep1').classList.remove('show'); $('ocrStep2').classList.add('show');
+    var w = 0;
+    var phases = ['Reading handwriting…', 'Finding names & dates…', 'Matching toponyms…', 'Pre-filling form…'];
+    var i = 0;
+    var iv = setInterval(function () {
+      w += 6; i++;
+      $('ocrBar').style.width = Math.min(100, w) + '%';
+      $('ocrStatus').textContent = phases[i % phases.length];
+      if (w >= 100) {
+        clearInterval(iv);
+        setTimeout(function () {
+          $('ocrStep2').classList.remove('show'); $('ocrStep3').classList.add('show');
+        }, 350);
+      }
+    }, 160);
+  }
+  $('dropZone').addEventListener('click', startOcr);
+  $('dropZone').addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startOcr(); } });
+  $('ocrSubmit').addEventListener('click', function () {
+    REVIEW.unshift({ id: 'ro' + Date.now(), kind: 'ocr', title: 'OCR extraction — Christening record 1924', body: $('fName').value + ' · b. ' + $('fYear').value + ' · baptized at ' + $('fBapt').value, who: 'OCR pipeline · 91% confidence' });
+    reviewCountEl.textContent = REVIEW.length;
+    reviewCountEl.classList.remove('zero');
+    closeModals();
+    toastMsg('Extraction queued for review');
+  });
+
+  /* new node */
+  $('nnCreate').addEventListener('click', function () {
+    var name = $('nnName').value.trim();
+    if (!name) { toastMsg('Give the node a name'); return; }
+    var type = $('nnType').value;
+    var cxn = (stage.clientWidth / 2 - state.tx) / state.z;
+    var cyn = (stage.clientHeight / 2 - state.ty) / state.z;
+    var id = 'u-' + Date.now();
+    var node = { id: id, type: type, name: name, x: cxn, y: cyn, sub: 'pending review', initial: name.charAt(0).toUpperCase(), data: {} };
+    NODES.push(node);
+    byId[id] = node;
+    REVIEW.unshift({ id: 'rn' + Date.now(), kind: 'node', title: 'New ' + TYPES[type].toLowerCase() + ' node', body: name, who: 'Submitted by Eleni Katsari' });
+    reviewCountEl.textContent = REVIEW.length;
+    reviewCountEl.classList.remove('zero');
+    hiddenTypes[type] = false;
+    updateVisibility();
+    buildLegend();
+    renderNodes();
+    selectNode(id);
+    closeModals();
+    toastMsg('Node created · queued for review');
+  });
+
+  /* ── control dock + popovers ── */
+  var searchPop = $('searchPop'), layersPop = $('layersPop');
+  function syncFab() { if (searchPop.classList.contains('show') || layersPop.classList.contains('show')) $('chatFab').classList.add('pop-open'); else $('chatFab').classList.remove('pop-open'); }
+  function closePops() { searchPop.classList.remove('show'); layersPop.classList.remove('show'); syncFab(); }
+  $('dockSearch').addEventListener('click', function () {
+    layersPop.classList.remove('show');
+    searchPop.classList.toggle('show');
+    if (searchPop.classList.contains('show')) search.focus();
+    syncFab();
+  });
+  $('dockLayers').addEventListener('click', function () {
+    searchPop.classList.remove('show');
+    layersPop.classList.toggle('show');
+    syncFab();
+  });
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('.control-dock') || e.target.closest('.search-pop') || e.target.closest('.layers-pop')) return;
+    closePops();
+  });
+  document.addEventListener('keydown', function (e) {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      layersPop.classList.remove('show');
+      searchPop.classList.add('show');
+      search.focus();
+    }
+  });
+
+  /* welcome */
+  $('welcomeClose').addEventListener('click', function () { $('welcome').style.display = 'none'; });
+  setTimeout(function () { $('welcome').style.opacity = '0'; setTimeout(function () { $('welcome').style.display = 'none'; }, 650); }, 8000);
+  setTimeout(function () { $('hintChip').style.opacity = '1'; }, 8800);
+
+  /* ── init ── */
+  var NS = 'http://www.w3.org/2000/svg';
+  var gridSvg = document.querySelector('.grid-layer');
+  CLUSTERS.forEach(function (c) {
+    var e = document.createElementNS(NS, 'ellipse');
+    e.setAttribute('cx', c.x); e.setAttribute('cy', c.y); e.setAttribute('rx', c.rx); e.setAttribute('ry', c.ry);
+    e.setAttribute('class', 'cluster-blob');
+    gridSvg.appendChild(e);
+    var l = document.createElementNS(NS, 'text');
+    l.setAttribute('x', c.x - c.rx + 18); l.setAttribute('y', c.y - c.ry + 26);
+    l.setAttribute('class', 'cluster-label');
+    l.textContent = c.label;
+    gridSvg.appendChild(l);
+  });
+
+  buildLegend();
+  renderNodes();
+  fitView();
+  selectNode('p-nikolas');
+})();
+</script>
+</body>
+</html>
