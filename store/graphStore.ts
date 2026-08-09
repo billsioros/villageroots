@@ -75,7 +75,7 @@ export interface GraphStore {
 
   // review
   reviewQueue: ReviewItem[];
-  pushReview: (item: ReviewItem) => void;
+  pushReview: (item: Omit<ReviewItem, "id">) => void;
   resolveReview: (id: string) => void;
 
   // chat
