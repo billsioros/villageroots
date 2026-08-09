@@ -43,3 +43,6 @@ next-env.d.ts
 
 # superpowers working docs (specs/plans live locally, not in git)
 /docs/superpowers/
+
+# git worktrees
+/.worktrees/
