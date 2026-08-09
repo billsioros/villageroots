@@ -47,12 +47,15 @@ Replace the template shadcn HSL variables in `app/globals.css` with the VillageR
 | `--secondary-foreground` | `0 0% 13%` | |
 | `--muted` | `0 0% 42%` | #6a6a6a |
 | `--muted-foreground` | `0 0% 42%` | |
-| `--accent` / `--accent-foreground` | per shadcn expectation (accent bg w/ on color) | |
+| `--accent` | `351 100% 61%` | brand pink (mockup's "accent") |
+| `--accent-foreground` | `0 0% 100%` | on-accent text |
 | `--border` | `0 0% 87%` | #ddd |
 | `--input` | `0 0% 87%` | |
 | `--ring` | `0 0% 13%` | focus-ring = foreground |
 | `--destructive` | `13 71% 42%` | #c13515 (danger) |
 | `--destructive-foreground` | `0 0% 100%` | |
+
+> Semantic mapping note: shadcn's default `--accent` is a gray hover-tint and its `--secondary` is a gray chip. This scaffold intentionally re-binds them to the mockup's language: `accent` = brand pink (hover states like dropdown items render pink-tinted), `secondary` = white surface with border (mockup `.btn-secondary`). This diverges from shadcn defaults on purpose and is the single place that intent lives.
 
 **Extended tokens (keep contract granularity):**
 
@@ -121,7 +124,7 @@ store/
 
 ### 4.3 Typed mock data
 
-Port of the mockup's dataset (full inventory in the compressed design history; source is `design/mockup.html`):
+Port of the mockup's dataset; the authoritative source is `design/mockup.html` (NODES, EDGES, SUGGESTIONS, REVIEW seed, and per-type fact rows). The scaffold's `lib/graph/data.ts` is a direct typed port of that file's data.
 
 - **18 nodes** (persons p-nikolas, p-maria, p-yiannis, p-eleni, p-alexandros; families f-katsaris, f-vasiliou; landmarks l-church, l-mill, l-bridge, l-plane; toponyms t-petra, t-kalyvia, t-lakka; events e-charter, e-school, e-feast, e-emigrate; path d-drakia), each `{ id, type, name, seedX, seedY, sub, initial, data }` where `data` carries per-type facts (born/died/role/audio for persons; built/registries for landmarks; origin for families; etc.).
 - **20 edges** grouped by kind: social (CHILD_OF, MARRIED_TO, SIBLING_OF, BELONGS_TO_CLAN), geo (OWNS_LAND_AT, LIVED_AT, FARMED_AT), hist (BAPTIZED_AT, BURIED_AT, RAN_BY, BUILT_BY, PARTICIPATED_IN, GATHERED_AT); each `{ id, from, to, verb, kind }`.
