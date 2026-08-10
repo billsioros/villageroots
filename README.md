@@ -1,109 +1,71 @@
-<a href="https://demo-nextjs-with-supabase.vercel.app/">
-  <img alt="Next.js and Supabase Starter Kit - the fastest way to build apps with Next.js and Supabase" src="https://demo-nextjs-with-supabase.vercel.app/opengraph-image.png">
-  <h1 align="center">Next.js and Supabase Starter Kit</h1>
-</a>
+# VillageRoots
 
-<p align="center">
- The fastest way to build apps with Next.js and Supabase
-</p>
+An **infinite 2D spatial knowledge graph of village heritage** — replace static archives and rigid maps with a boundless, physics-driven workspace where familial, historical, and geographical connections come alive.
 
-<p align="center">
-  <a href="#features"><strong>Features</strong></a> ·
-  <a href="#demo"><strong>Demo</strong></a> ·
-  <a href="#deploy-to-vercel"><strong>Deploy to Vercel</strong></a> ·
-  <a href="#clone-and-run-locally"><strong>Clone and run locally</strong></a> ·
-  <a href="#feedback-and-issues"><strong>Feedback and issues</strong></a>
-  <a href="#more-supabase-examples"><strong>More Examples</strong></a>
-</p>
-<br/>
+Navigate the village's micro-geography and social fabric, build Notion-like documents for every node, embed external context (Maps/Wikipedia), and ultimately use AI to digitize handwritten archives and chat with the collective memory (GraphRAG).
 
-## Features
+## Status
 
-- Works across the entire [Next.js](https://nextjs.org) stack
-  - App Router
-  - Pages Router
-  - Proxy
-  - Client
-  - Server
-  - It just works!
-- supabase-ssr. A package to configure Supabase Auth to use cookies
-- Password-based authentication block installed via the [Supabase UI Library](https://supabase.com/ui/docs/nextjs/password-based-auth)
-- Styling with [Tailwind CSS](https://tailwindcss.com)
-- Components with [shadcn/ui](https://ui.shadcn.com/)
-- Optional deployment with [Supabase Vercel Integration and Vercel deploy](#deploy-your-own)
-  - Environment variables automatically assigned to Vercel project
+**Early scaffolding.** The codebase is the stock Next.js (App Router) + Supabase `with-supabase` starter (auth flow + placeholder pages). No product feature code has landed yet; design and planning docs are complete.
 
-## Demo
+## Stack
 
-You can view a fully working demo at [demo-nextjs-with-supabase.vercel.app](https://demo-nextjs-with-supabase.vercel.app/).
+- **Frontend:** Next.js (App Router), React 19, TypeScript (strict), Tailwind v3 + shadcn/ui
+- **Backend / DB:** Supabase (Auth, PostgreSQL + pgvector, Storage, Edge Functions)
+- **Planned but uninstalled:** `react-force-graph`, `TipTap`, `Zustand`, `@tanstack/react-query`
 
-## Deploy to Vercel
+> The authoritative architecture lives in [Technical Analysis & Architecture Desi.md](./Technical%20Analysis%20%26%20Architecture%20Desi.md). It supersedes PRD §9 (which still references a FastAPI/Neo4j stack). Product vision and roadmap: [PRD.md](./PRD.md).
 
-Vercel deployment will guide you through creating a Supabase account and project.
+## Getting started
 
-After installation of the Supabase integration, all relevant environment variables will be assigned to the project so the deployment is fully functioning.
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&project-name=nextjs-with-supabase&repository-name=nextjs-with-supabase&demo-title=nextjs-with-supabase&demo-description=This+starter+configures+Supabase+Auth+to+use+cookies%2C+making+the+user%27s+session+available+throughout+the+entire+Next.js+app+-+Client+Components%2C+Server+Components%2C+Route+Handlers%2C+Server+Actions+and+Middleware.&demo-url=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2F&external-id=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&demo-image=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2Fopengraph-image.png)
-
-The above will also clone the Starter kit to your GitHub, you can clone that locally and develop locally.
-
-If you wish to just develop locally and not deploy to Vercel, [follow the steps below](#clone-and-run-locally).
-
-## Clone and run locally
-
-1. You'll first need a Supabase project which can be made [via the Supabase dashboard](https://database.new)
-
-2. Create a Next.js app using the Supabase Starter template npx command
+1. Clone and install dependencies:
 
    ```bash
-   npx create-next-app --example with-supabase with-supabase-app
+   npm install
    ```
 
-   ```bash
-   yarn create next-app --example with-supabase with-supabase-app
+2. Copy `.env.example` to `.env.local` and fill in your Supabase project credentials (URL + publishable key; the legacy anon key value is accepted):
+
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=...
+   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
    ```
 
-   ```bash
-   pnpm create next-app --example with-supabase with-supabase-app
-   ```
+   Without these set, the dev server skips the auth check so you can work without a Supabase project.
 
-3. Use `cd` to change into the app's directory
-
-   ```bash
-   cd with-supabase-app
-   ```
-
-4. Rename `.env.example` to `.env.local` and update the following:
-
-  ```env
-  NEXT_PUBLIC_SUPABASE_URL=[INSERT SUPABASE PROJECT URL]
-  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=[INSERT SUPABASE PROJECT API PUBLISHABLE OR ANON KEY]
-  ```
-  > [!NOTE]
-  > This example uses `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, which refers to Supabase's new **publishable** key format.
-  > Both legacy **anon** keys and new **publishable** keys can be used with this variable name during the transition period. Supabase's dashboard may show `NEXT_PUBLIC_SUPABASE_ANON_KEY`; its value can be used in this example.
-  > See the [full announcement](https://github.com/orgs/supabase/discussions/29260) for more information.
-
-  Both `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` can be found in [your Supabase project's API settings](https://supabase.com/dashboard/project/_?showConnect=true)
-
-5. You can now run the Next.js local development server:
+3. Run the dev server:
 
    ```bash
    npm run dev
    ```
 
-   The starter kit should now be running on [localhost:3000](http://localhost:3000/).
+   Open [http://localhost:3000](http://localhost:3000).
 
-6. This template comes with the default shadcn/ui style initialized. If you instead want other ui.shadcn styles, delete `components.json` and [re-install shadcn/ui](https://ui.shadcn.com/docs/installation/next)
+## Commands
 
-> Check out [the docs for Local Development](https://supabase.com/docs/guides/getting-started/local-development) to also run Supabase locally.
+| Command            | Purpose                                             |
+| ------------------ | --------------------------------------------------- |
+| `npm run dev`      | Dev server on localhost:3000                        |
+| `npm run build`    | Production build (runs `tsc` typecheck — the typecheck step) |
+| `npm run lint`     | ESLint (flat config)                                |
+| `npm run start`    | Serve the production build                          |
 
-## Feedback and issues
+There is no test framework or test script yet.
 
-Please file feedback and issues over on the [Supabase GitHub org](https://github.com/supabase/supabase/issues/new/choose).
+## Project docs
 
-## More Supabase examples
+- `PRD.md` — product vision, ontology (nodes/edges), and 4-phase rollout.
+- `Technical Analysis & Architecture Desi.md` — authoritative architecture: graph-in-PostgreSQL schema, RLS/GDPR, phase-by-phase implementation.
+- `design/mockup.html` — interactive UI prototype; source of truth for the UI scaffold.
+- `docs/superpowers/` — UI scaffold design spec + implementation plan (local-only, gitignored).
 
-- [Next.js Subscription Payments Starter](https://github.com/vercel/nextjs-subscription-payments)
-- [Cookie-based Auth and the Next.js 13 App Router (free course)](https://youtube.com/playlist?list=PL5S4mPUpp4OtMhpnp93EFSo42iQ40XjbF)
-- [Supabase Auth and the Next.js App Router](https://github.com/supabase/supabase/tree/master/examples/auth/nextjs)
+## Issue tracker
+
+VillageRoots is tracked on [Linear — Village Roots](https://linear.app/yiayiaai/project/village-roots-41596ea1772e) (team `Potidaneia`, keys `PTDN-*`).
+
+## Roadmap
+
+1. **Phase 1** — Infinite canvas, manual node/edge creation, Notion-like sidepanel editor, moderation queue.
+2. **Phase 2** — Inline embedding engine (Google Maps / Wikipedia widgets).
+3. **Phase 3** — OCR/AI-assisted document scanner for handwritten archives.
+4. **Phase 4** — GraphRAG chat + AI linkage prediction.
