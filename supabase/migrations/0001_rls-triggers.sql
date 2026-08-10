@@ -1,8 +1,14 @@
 -- RLS as defense-in-depth. The Next.js route handlers connect as the
 -- `postgres` superuser (RLS bypassed); the approved/own-pending fetch policy
 -- is enforced in Drizzle. RLS protects the data from direct PostgREST access.
+-- GRANTs below give anon/authenticated table privileges so the policies run
+-- via PostgREST. Follow-up (tracked): a self-approval guard so users cannot
+-- set status='approved'/'rejected' on their own rows via PostgREST.
 ALTER TABLE public.nodes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.edges ENABLE ROW LEVEL SECURITY;
+
+GRANT SELECT ON public.nodes, public.edges TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.nodes, public.edges TO authenticated;
 
 CREATE POLICY nodes_select ON public.nodes FOR SELECT USING (
   status = 'approved' OR (created_by = auth.uid() AND status <> 'rejected')
