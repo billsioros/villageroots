@@ -1,0 +1,3 @@
+-- Local seed placeholder.
+-- Schema migrations live under supabase/migrations (drizzle-kit generate).
+-- Application data is seeded by `npm run db:seed` (drizzle/seed.ts).
