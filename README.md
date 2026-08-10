@@ -4,7 +4,7 @@ An **infinite 2D spatial knowledge graph of village heritage** — replace stati
 
 Navigate the village's micro-geography and social fabric, build Notion-like documents for every node, embed external context (Maps/Wikipedia), and ultimately use AI to digitize handwritten archives and chat with the collective memory (GraphRAG).
 
-## Features
+## Status
 
 - **Infinite spatial canvas** — a boundless 2D workspace with multiscale zoom & pan. The physics engine clusters related nodes into families and lineages at the macro level, dissolving into individual nodes at the micro level. Users drag nodes and map connections by dragging a link from one node to another.
 - **Notion-like node editor** — double-clicking a node opens a full-height sidepanel. Nodes are rich documents: markdown formatting, bullet points, and rich text, auto-saved to the graph.
