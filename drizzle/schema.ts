@@ -65,6 +65,9 @@ export const nodes = pgTable(
       .default({}),
     status: statusEnum("status").notNull().default("pending"),
     privacy: privacyEnum("privacy").notNull().default("public"),
+    // created_by defaults to auth.uid() (RLS context only). Server-side inserts
+    // via the direct postgres connection MUST set it explicitly (auth.uid() is
+    // NULL without a request JWT → NOT NULL violation).
     createdBy: uuid("created_by")
       .notNull()
       .default(sql`auth.uid()`)
@@ -96,6 +99,9 @@ export const edges = pgTable(
       .notNull()
       .default({}),
     status: statusEnum("status").notNull().default("pending"),
+    // created_by defaults to auth.uid() (RLS context only). Server-side inserts
+    // via the direct postgres connection MUST set it explicitly (auth.uid() is
+    // NULL without a request JWT → NOT NULL violation).
     createdBy: uuid("created_by")
       .notNull()
       .default(sql`auth.uid()`)
