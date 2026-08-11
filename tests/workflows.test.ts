@@ -82,4 +82,17 @@ describe("CI/CD configuration", () => {
     expect(text).toContain("persist-credentials");
     expect(text).toContain("false");
   });
+
+  it("package.json defines a name required by semantic-release", () => {
+    const pkg = JSON.parse(read("package.json")) as { name?: string };
+    expect(typeof pkg.name).toBe("string");
+    expect(pkg.name?.length).toBeGreaterThan(0);
+  });
+
+  it("release.yml grants issues: write for release annotations", () => {
+    const release = parse(read(".github/workflows/release.yml")) as Workflow & {
+      permissions: { contents?: string; issues?: string };
+    };
+    expect(release.permissions?.issues).toBe("write");
+  });
 });
