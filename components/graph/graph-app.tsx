@@ -17,6 +17,7 @@ import { ChatPanel } from "./chat-panel";
 import { ChatFab } from "./chat-fab";
 import { ReviewQueue } from "./review-queue";
 import { NewNodeModal, OcrModal, AboutModal } from "./modals";
+import { GraphLoader } from "./graph-loader";
 import { useGraphStore } from "@/store/graphStore";
 
 export function GraphApp() {
@@ -46,27 +47,29 @@ export function GraphApp() {
   }, [aboutOpen, newNodeOpen, ocrOpen, clearSelection, setSearchOpen]);
 
   return (
-    <div className="relative flex h-full flex-1 flex-col overflow-hidden">
-      <Topbar />
-      <div className="relative min-h-0 flex-1">
-        <GraphGrid />
-        <GraphCanvas />
-        <Legend />
-        <StageUi />
-        <Dock />
-        <WelcomeCard />
-        <HintChip />
-        {searchOpen && <SearchPop />}
-        {layersOpen && <LayersPop />}
-        {reviewOpen && <ReviewQueue />}
-        <SidePanel />
+    <GraphLoader>
+      <div className="relative flex h-full flex-1 flex-col overflow-hidden">
+        <Topbar />
+        <div className="relative min-h-0 flex-1">
+          <GraphGrid />
+          <GraphCanvas />
+          <Legend />
+          <StageUi />
+          <Dock />
+          <WelcomeCard />
+          <HintChip />
+          {searchOpen && <SearchPop />}
+          {layersOpen && <LayersPop />}
+          {reviewOpen && <ReviewQueue />}
+          <SidePanel />
+        </div>
+        <ChatPanel />
+        <ChatFab />
+        <Toast />
+        <NewNodeModal />
+        <OcrModal />
+        <AboutModal />
       </div>
-      <ChatPanel />
-      <ChatFab />
-      <Toast />
-      <NewNodeModal />
-      <OcrModal />
-      <AboutModal />
-    </div>
+    </GraphLoader>
   );
 }
