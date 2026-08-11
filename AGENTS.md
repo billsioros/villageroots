@@ -6,8 +6,8 @@ Next.js (App Router) + Supabase starter repurposed for **VillageRoots**: an infi
 
 Docs (all committed — keep them in sync when implementing):
 
-- `PRD.md` — product vision and phased roadmap.
-- `Technical Analysis & Architecture Desi.md` — the **authoritative** architecture. It supersedes PRD §9: stack is Next.js + Supabase (PostgreSQL + pgvector), NOT the FastAPI/Neo4j still mentioned in the PRD. Planned-but-uninstalled libs: `react-force-graph`, `TipTap`, `Zustand`, `@tanstack/react-query`.
+- `docs/PRD.md` — product vision and phased roadmap.
+- `docs/Technical Analysis & Architecture Desi.md` — the **authoritative** architecture. It supersedes PRD §9: stack is Next.js + Supabase (PostgreSQL + pgvector), NOT the FastAPI/Neo4j still mentioned in the PRD. Planned-but-uninstalled libs: `react-force-graph`, `TipTap`, `Zustand`, `@tanstack/react-query`.
 - `design/mockup.html` — interactive UI prototype (Airbnb-derived design system). Source of truth for the UI scaffold.
 - `docs/superpowers/` — UI scaffold design spec + implementation plan. **Gitignored, local-only.** The scaffold is approved but NOT implemented — do not mistake the docs for shipped work.
 
@@ -57,7 +57,7 @@ Every feature follows: read the Linear issue → design (spec) → plan → TDD 
 
 - Pull the issue from Linear (identifier `PTDN-XX`) via the Linear integration: title, description, labels, comments, linked issues.
 - Extract the acceptance criteria. If the issue has none, write them out and confirm with the user before proceeding.
-- Cross-check the authoritative docs (`PRD.md`, `Technical Analysis & Architecture Desi.md`, `design/mockup.html`) and any existing `docs/superpowers/` spec/plan for the ticket.
+- Cross-check the authoritative docs (`docs/PRD.md`, `docs/Technical Analysis & Architecture Desi.md`, `design/mockup.html`) and any existing `docs/superpowers/` spec/plan for the ticket.
 
 ### 2. Design (superpowers:brainstorming)
 

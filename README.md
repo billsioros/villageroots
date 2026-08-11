@@ -49,7 +49,7 @@ The system is a semantic network of **nodes** (entities) and **edges** (relation
 - `@tanstack/react-query` — server state caching
 - `pgvector` — embeddings for GraphRAG (Phase 4)
 
-> The authoritative architecture lives in [Technical Analysis & Architecture Desi.md](./Technical%20Analysis%20%26%20Architecture%20Desi.md). It supersedes PRD §9 (which still references a FastAPI/Neo4j stack). Product vision and roadmap: [PRD.md](./PRD.md).
+> The authoritative architecture lives in [docs/Technical Analysis & Architecture Desi.md](./docs/Technical%20Analysis%20%26%20Architecture%20Desi.md). It supersedes PRD §9 (which still references a FastAPI/Neo4j stack). Product vision and roadmap: [docs/PRD.md](./docs/PRD.md).
 
 ## Status
 
@@ -102,8 +102,8 @@ There is no test framework or test script yet.
 
 ## Project docs
 
-- `PRD.md` — product vision, ontology (nodes/edges), and 4-phase rollout.
-- `Technical Analysis & Architecture Desi.md` — authoritative architecture: graph-in-PostgreSQL schema, RLS/GDPR, phase-by-phase implementation.
+- `docs/PRD.md` — product vision, ontology (nodes/edges), and 4-phase rollout.
+- `docs/Technical Analysis & Architecture Desi.md` — authoritative architecture: graph-in-PostgreSQL schema, RLS/GDPR, phase-by-phase implementation.
 - `design/mockup.html` — interactive UI prototype; source of truth for the UI scaffold.
 - `docs/superpowers/` — UI scaffold design spec + implementation plan (local-only, gitignored).
 
