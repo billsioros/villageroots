@@ -53,4 +53,33 @@ describe("CI/CD configuration", () => {
     const runs = release.jobs.release.steps.map((s) => s.run ?? "").join("\n");
     expect(runs).toContain("semantic-release");
   });
+
+  it("ci.yml grants pull-requests: read for the PR title check", () => {
+    const ci = parse(read(".github/workflows/ci.yml")) as Workflow & {
+      permissions: { contents?: string; "pull-requests"?: string };
+    };
+    expect(ci.permissions).toEqual({ contents: "read", "pull-requests": "read" });
+  });
+
+  it("all workflows use a supported Node version (>=22, per engines)", () => {
+    type Step = { uses?: string; with?: { "node-version"?: string } };
+    type Wf = { jobs: Record<string, { steps: Step[] }> };
+    for (const f of ["ci.yml", "release.yml"]) {
+      const wf = parse(read(`.github/workflows/${f}`)) as Wf;
+      for (const job of Object.values(wf.jobs)) {
+        for (const step of job.steps) {
+          if (step.uses?.startsWith("actions/setup-node")) {
+            expect(step.with?.["node-version"]).toBe("22");
+          }
+        }
+      }
+    }
+  });
+
+  it("release.yml avoids persisting checkout credentials", () => {
+    const release = parse(read(".github/workflows/release.yml")) as Workflow;
+    const text = JSON.stringify(release.jobs.release.steps);
+    expect(text).toContain("persist-credentials");
+    expect(text).toContain("false");
+  });
 });
