@@ -7,7 +7,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { GraphData } from "react-force-graph-2d";
-import { useGraphStore } from "@/store/graphStore";
+import { useShallow } from "zustand/react/shallow";
+import { useGraphStore, selectVisibleNodes } from "@/store/graphStore";
 import { tokenColor, TYPE_META } from "@/lib/graph/helpers";
 import type { GraphNode } from "@/lib/graph/types";
 
@@ -20,10 +21,9 @@ export function GraphCanvas() {
   const graphRef = useRef<any>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
 
-  const nodes = useGraphStore((s) => s.nodes);
+  const nodes = useGraphStore(useShallow(selectVisibleNodes));
   const edges = useGraphStore((s) => s.edges);
   const suggestedEdges = useGraphStore((s) => s.suggestedEdges);
-  const hiddenTypes = useGraphStore((s) => s.hiddenTypes);
   const selectedId = useGraphStore((s) => s.selectedId);
   const litIds = useGraphStore((s) => s.litIds);
   const litEdgeIds = useGraphStore((s) => s.litEdgeIds);
@@ -38,8 +38,7 @@ export function GraphCanvas() {
   const setCanvasCenter = useGraphStore((s) => s.setCanvasCenter);
 
   const { graphData, focusNode } = useMemo(() => {
-    const visibleNodes = nodes.filter((n) => !hiddenTypes[n.type]);
-    const visibleIds = new Set(visibleNodes.map((n) => n.id));
+    const visibleIds = new Set(nodes.map((n) => n.id));
     const links: GraphData["links"] = [
       ...edges
         .filter((e) => visibleIds.has(e.source) && visibleIds.has(e.target))
@@ -47,10 +46,10 @@ export function GraphCanvas() {
       ...suggestedEdges.map((e) => ({ ...e, suggested: true })),
     ];
     return {
-      graphData: { nodes: visibleNodes, links },
-      focusNode: visibleNodes.find((n) => n.id === selectedId),
+      graphData: { nodes, links },
+      focusNode: nodes.find((n) => n.id === selectedId),
     };
-  }, [nodes, edges, suggestedEdges, hiddenTypes, selectedId]);
+  }, [nodes, edges, suggestedEdges, selectedId]);
 
   // --- resize ---
   useEffect(() => {

@@ -3,10 +3,11 @@
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { PopoverShell } from "./popover-shell";
-import { useGraphStore } from "@/store/graphStore";
+import { useShallow } from "zustand/react/shallow";
+import { useGraphStore, selectAllNodes } from "@/store/graphStore";
 
 export function SearchPop() {
-  const nodes = useGraphStore((s) => s.nodes);
+  const nodes = useGraphStore(useShallow(selectAllNodes));
   const selectNode = useGraphStore((s) => s.selectNode);
   const flashNodes = useGraphStore((s) => s.flashNodes);
   const pushToast = useGraphStore((s) => s.pushToast);

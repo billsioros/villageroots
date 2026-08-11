@@ -3,13 +3,14 @@
 import { useState } from "react";
 import { ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useGraphStore } from "@/store/graphStore";
+import { useShallow } from "zustand/react/shallow";
+import { useGraphStore, selectAllNodes } from "@/store/graphStore";
 import { TYPE_META } from "@/lib/graph/helpers";
 import type { GraphNode, Verb } from "@/lib/graph/types";
 
 export function RelationsPanel({ node }: { node: GraphNode }) {
   const edges = useGraphStore((s) => s.edges);
-  const nodes = useGraphStore((s) => s.nodes);
+  const nodes = useGraphStore(useShallow(selectAllNodes));
   const suggestedEdges = useGraphStore((s) => s.suggestedEdges);
   const selectNode = useGraphStore((s) => s.selectNode);
   const pushReview = useGraphStore((s) => s.pushReview);

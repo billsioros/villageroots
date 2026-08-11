@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { X } from "lucide-react";
 import { DocumentPanel } from "./document-panel";
 import { RelationsPanel } from "./relations-panel";
@@ -14,12 +14,8 @@ const TABS = [
 export function SidePanel() {
   const [tab, setTab] = useState<"document" | "relations">("document");
   const selectedId = useGraphStore((s) => s.selectedId);
-  const nodes = useGraphStore((s) => s.nodes);
+  const node = useGraphStore((s) => (selectedId ? s.nodesMap[selectedId] ?? null : null));
   const clearSelection = useGraphStore((s) => s.clearSelection);
-  const node = useMemo(
-    () => (selectedId ? nodes.find((n) => n.id === selectedId) ?? null : null),
-    [selectedId, nodes],
-  );
 
   if (!node) return null;
 
