@@ -78,13 +78,13 @@ Every feature follows: read the Linear issue → design (spec) → plan → TDD 
 ### 5. Implement (TDD — superpowers:test-driven-development)
 
 - Iron law: NO production code without a failing test first. Red → Green → Refactor; commit per task.
-- There is no test runner installed yet — the plan must specify one (Vitest for pure logic is the default) and add its setup as the first task.
+- Vitest (v4) is installed and `npm test` runs it; config lives in `vitest.config.ts` (`tests/**/*.test.ts`). Add test files per feature.
 - Verification gates before pushing: tests green, `npm run build` (tsc typecheck) green, `npm run lint` green.
 
 ### 6. PR & close the Linear issue
 
 - Push the branch, then open a PR with `gh pr create`:
-  - Title: `PTDN-XX: <short summary>` (so Linear links the PR to the issue).
+  - Title: conventional type first, then the issue key: `<type>: PTDN-XX <short summary>` (e.g. `feat: PTDN-24 set up CI/CD pipeline`). The repo squash-merges, so the PR title becomes the release commit — it must be conventional or semantic-release produces no version. Linear still links the PR via title/body/branch.
   - Body: **Overview** (what & why) + **Technical details** (files changed, approach, how verified) + a closing line `Closes PTDN-XX`.
 - The Linear GitHub integration links the PR and auto-closes the issue on merge; confirm the issue transitioned to Done afterward.
 - Merge after review — the user reviews and merges.
