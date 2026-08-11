@@ -76,12 +76,41 @@ describe("node actions", () => {
       nodesMap: { a: node("a"), b: node("b") },
       edges: [edge("e1", "a", "b"), edge("e2", "b", "c")],
     });
-    mockQueryClient.getQueryData.mockReturnValue([{ slug: "a" }, { slug: "b" }]);
+    mockQueryClient.getQueryData.mockImplementation((key) =>
+      key[1] === "edges"
+        ? [
+            { slug: "e1", sourceSlug: "a", targetSlug: "b" },
+            { slug: "e3", sourceSlug: "x", targetSlug: "y" },
+          ]
+        : [{ slug: "a" }, { slug: "b" }],
+    );
     useGraphStore.getState().removeNode("a");
     expect(useGraphStore.getState().nodesMap.a).toBeUndefined();
     expect(useGraphStore.getState().edges).toEqual([edge("e2", "b", "c")]);
     const nodesUpdate = mockQueryClient.setQueryData.mock.calls.find((c) => c[0][1] === "nodes");
     expect(nodesUpdate?.[1]).toEqual([{ slug: "b" }]);
+    const edgesUpdate = mockQueryClient.setQueryData.mock.calls.find((c) => c[0][1] === "edges");
+    expect(edgesUpdate?.[1]).toEqual([{ slug: "e3", sourceSlug: "x", targetSlug: "y" }]);
+  });
+
+  it("routes x/y into the cache row's properties on update", () => {
+    useGraphStore.setState({ nodesMap: { n1: node("n1", 1, 1) } });
+    mockQueryClient.getQueryData.mockReturnValue([{ slug: "n1", properties: { x: 1, y: 1 } }]);
+    useGraphStore.getState().updateNode("n1", { x: 30, y: 40, label: "Renamed" });
+    const update = mockQueryClient.setQueryData.mock.calls.find((c) => c[0][1] === "nodes");
+    expect(update?.[1]).toEqual([{ slug: "n1", label: "Renamed", properties: { x: 30, y: 40 } }]);
+  });
+
+  it("skips the cache mirror when the nodes cache is empty", () => {
+    mockQueryClient.getQueryData.mockReturnValue(undefined);
+    useGraphStore.getState().addNode(node("n1"));
+    expect(mockQueryClient.setQueryData).not.toHaveBeenCalled();
+  });
+
+  it("skips the cache mirror when the edges cache is empty", () => {
+    mockQueryClient.getQueryData.mockReturnValue(undefined);
+    useGraphStore.getState().addEdge(edge("e1", "a", "b"));
+    expect(mockQueryClient.setQueryData).not.toHaveBeenCalled();
   });
 
   it("selectNodeById returns null for unknown ids", () => {

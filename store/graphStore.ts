@@ -164,7 +164,23 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
     if (!cache) return;
     queryClient.setQueryData(
       ["graph", "nodes"],
-      cache.map((r) => (r.slug === id ? { ...r, ...patch } : r)),
+      cache.map((r) => {
+        if (r.slug !== id) return r;
+        const rowPatch: Partial<NodeRow> = {};
+        if (patch.type !== undefined) rowPatch.type = patch.type;
+        if (patch.label !== undefined) rowPatch.label = patch.label;
+        if (patch.subtitle !== undefined) rowPatch.subtitle = patch.subtitle;
+        if (patch.description !== undefined) rowPatch.description = patch.description;
+        const properties =
+          patch.x === undefined && patch.y === undefined
+            ? r.properties
+            : {
+                ...r.properties,
+                ...(patch.x !== undefined ? { x: patch.x } : {}),
+                ...(patch.y !== undefined ? { y: patch.y } : {}),
+              };
+        return { ...r, ...rowPatch, properties };
+      }),
     );
   },
   removeNode: (id) => {
