@@ -13,7 +13,8 @@ const TABS = [
 
 export function SidePanel() {
   const [tab, setTab] = useState<"document" | "relations">("document");
-  const node = useGraphStore((s) => (s.selectedId ? s.nodes.find((n) => n.id === s.selectedId) : null));
+  const selectedId = useGraphStore((s) => s.selectedId);
+  const node = useGraphStore((s) => (selectedId ? s.nodesMap[selectedId] ?? null : null));
   const clearSelection = useGraphStore((s) => s.clearSelection);
 
   if (!node) return null;

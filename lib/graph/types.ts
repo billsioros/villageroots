@@ -6,6 +6,8 @@ export type NodeType =
   | "event"
   | "path";
 
+export type Status = "pending" | "approved" | "rejected";
+
 export type EdgeKind = "social" | "geo" | "hist";
 
 export type Verb =

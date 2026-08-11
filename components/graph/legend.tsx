@@ -1,12 +1,15 @@
 "use client";
 
-import { TYPE_META } from "@/lib/graph/helpers";
-import { useGraphStore } from "@/store/graphStore";
+import { useMemo } from "react";
+import { TYPE_META, countByType } from "@/lib/graph/helpers";
+import { useShallow } from "zustand/react/shallow";
+import { useGraphStore, selectAllNodes } from "@/store/graphStore";
 
 const ORDER = ["person", "family", "landmark", "toponym", "event", "path"] as const;
 
 export function Legend() {
-  const counts = useGraphStore((s) => s.countByType());
+  const nodes = useGraphStore(useShallow(selectAllNodes));
+  const counts = useMemo(() => countByType(nodes), [nodes]);
 
   return (
     <div className="absolute left-5 top-5 w-[212px] rounded-2xl border bg-card/90 p-3.5 shadow-elev-raised backdrop-blur">
