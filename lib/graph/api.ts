@@ -1,7 +1,7 @@
 import type { NodeRow, EdgeRow } from "@/drizzle/schema";
 
 export const PAGE_NODES = 500;
-export const PAGE_EDGES = 1000;
+export const PAGE_EDGES = 500;
 export const MAX_GRAPH_NODES = 2000;
 export const MAX_GRAPH_EDGES = 4000;
 
