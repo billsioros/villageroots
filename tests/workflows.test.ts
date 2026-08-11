@@ -61,7 +61,7 @@ describe("CI/CD configuration", () => {
     expect(ci.permissions).toEqual({ contents: "read", "pull-requests": "read" });
   });
 
-  it("all workflows use a supported Node version (>=22, per engines)", () => {
+  it("all workflows pin Node 24 (dev parity, bundles npm 11)", () => {
     type Step = { uses?: string; with?: { "node-version"?: string } };
     type Wf = { jobs: Record<string, { steps: Step[] }> };
     for (const f of ["ci.yml", "release.yml"]) {
@@ -69,7 +69,7 @@ describe("CI/CD configuration", () => {
       for (const job of Object.values(wf.jobs)) {
         for (const step of job.steps) {
           if (step.uses?.startsWith("actions/setup-node")) {
-            expect(step.with?.["node-version"]).toBe("22");
+            expect(step.with?.["node-version"]).toBe("24");
           }
         }
       }
