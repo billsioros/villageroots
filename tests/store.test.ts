@@ -9,7 +9,7 @@ vi.mock("@/lib/graph/query-client", () => {
   return { queryClient };
 });
 
-import { useGraphStore, selectAllNodes, selectNodeById } from "@/store/graphStore";
+import { useGraphStore, selectAllNodes, selectNodeById, selectVisibleNodes } from "@/store/graphStore";
 import { queryClient } from "@/lib/graph/query-client";
 
 const mockQueryClient = vi.mocked(queryClient);
@@ -138,3 +138,17 @@ describe("canvas position actions", () => {
     expect(update?.[1]).toEqual([{ slug: "a", properties: { x: 50, y: 60 } }]);
   });
 });
+
+describe("selectVisibleNodes", () => {
+  it("excludes hidden-type nodes and re-includes the same reference after toggle", () => {
+    useGraphStore.setState({ nodesMap: { a: node("a"), b: node("b") } });
+    useGraphStore.getState().toggleType("person");
+    const hidden = selectVisibleNodes(useGraphStore.getState());
+    expect(hidden).toHaveLength(0);
+    useGraphStore.getState().toggleType("person");
+    const visible = selectVisibleNodes(useGraphStore.getState());
+    expect(visible.map((n) => n.id)).toEqual(["a", "b"]);
+    expect(visible[0]).toBe(useGraphStore.getState().nodesMap.a);
+  });
+});
+
