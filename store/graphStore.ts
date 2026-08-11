@@ -1,6 +1,9 @@
 import { create } from "zustand";
-import { NODES, EDGES, SUGGESTED_EDGES, REVIEW_SEED } from "@/lib/graph/data";
+import { SUGGESTED_EDGES, REVIEW_SEED } from "@/lib/graph/data";
 import { uid, countByType as countByTypeHelper } from "@/lib/graph/helpers";
+import { toNodeRow, toEdgeRow } from "@/lib/graph/mappers";
+import { queryClient } from "@/lib/graph/query-client";
+import type { NodeRow, EdgeRow } from "@/drizzle/schema";
 import type {
   GraphNode,
   GraphEdge,
@@ -20,11 +23,18 @@ let litTimer: ReturnType<typeof setTimeout> | null = null;
 
 export interface GraphStore {
   // graph
-  nodes: GraphNode[];
+  nodesMap: Record<string, GraphNode>;
   edges: GraphEdge[];
   suggestedEdges: SuggestedEdge[];
+  hydrateGraph: (nodes: GraphNode[], edges: GraphEdge[]) => void;
   addNode: (n: GraphNode) => void;
+  updateNode: (id: string, patch: Partial<GraphNode>) => void;
+  removeNode: (id: string) => void;
   addEdge: (e: GraphEdge) => void;
+  updateEdge: (id: string, patch: Partial<GraphEdge>) => void;
+  removeEdge: (id: string) => void;
+  setNodePosition: (id: string, x: number, y: number) => void;
+  pinNode: (id: string, pos: { x: number; y: number }) => void;
 
   // ui
   selectedId: string | null;
@@ -127,11 +137,91 @@ function cannedAnswer(text: string): {
 
 export const useGraphStore = create<GraphStore>()((set, get) => ({
   // graph
-  nodes: NODES,
-  edges: EDGES,
+  nodesMap: {},
+  edges: [],
   suggestedEdges: SUGGESTED_EDGES,
-  addNode: (n) => set((s) => ({ nodes: [...s.nodes, n] })),
-  addEdge: (e) => set((s) => ({ edges: [...s.edges, e] })),
+  hydrateGraph: (nodes, edges) =>
+    set((s) => {
+      const merged: Record<string, GraphNode> = { ...s.nodesMap };
+      for (const n of nodes) {
+        const prev = s.nodesMap[n.id];
+        merged[n.id] = prev ? { ...n, x: prev.x ?? n.x, y: prev.y ?? n.y } : n;
+      }
+      return { nodesMap: merged, edges };
+    }),
+  addNode: (n) => {
+    set((s) => ({ nodesMap: { ...s.nodesMap, [n.id]: n } }));
+    const cache = queryClient.getQueryData<NodeRow[]>(["graph", "nodes"]);
+    if (cache) queryClient.setQueryData(["graph", "nodes"], [...cache, toNodeRow(n)]);
+  },
+  updateNode: (id, patch) => {
+    set((s) => {
+      const prev = s.nodesMap[id];
+      if (!prev) return s;
+      return { nodesMap: { ...s.nodesMap, [id]: { ...prev, ...patch } } };
+    });
+    const cache = queryClient.getQueryData<NodeRow[]>(["graph", "nodes"]);
+    if (!cache) return;
+    queryClient.setQueryData(
+      ["graph", "nodes"],
+      cache.map((r) => (r.slug === id ? { ...r, ...patch } : r)),
+    );
+  },
+  removeNode: (id) => {
+    set((s) => {
+      const nodesMap = { ...s.nodesMap };
+      delete nodesMap[id];
+      const edges = s.edges.filter((e) => e.source !== id && e.target !== id);
+      return { nodesMap, edges };
+    });
+    const cache = queryClient.getQueryData<NodeRow[]>(["graph", "nodes"]);
+    if (cache) queryClient.setQueryData(["graph", "nodes"], cache.filter((r) => r.slug !== id));
+    const edgeCache = queryClient.getQueryData<EdgeRow[]>(["graph", "edges"]);
+    if (edgeCache) {
+      queryClient.setQueryData(
+        ["graph", "edges"],
+        edgeCache.filter((r) => r.sourceSlug !== id && r.targetSlug !== id),
+      );
+    }
+  },
+  addEdge: (e) => {
+    set((s) => ({ edges: [...s.edges, e] }));
+    const cache = queryClient.getQueryData<EdgeRow[]>(["graph", "edges"]);
+    if (cache) queryClient.setQueryData(["graph", "edges"], [...cache, toEdgeRow(e)]);
+  },
+  updateEdge: (id, patch) => {
+    set((s) => ({ edges: s.edges.map((e) => (e.id === id ? { ...e, ...patch } : e)) }));
+    const cache = queryClient.getQueryData<EdgeRow[]>(["graph", "edges"]);
+    if (!cache) return;
+    queryClient.setQueryData(
+      ["graph", "edges"],
+      cache.map((r) => (r.slug === id ? { ...r, ...patch } : r)),
+    );
+  },
+  removeEdge: (id) => {
+    set((s) => ({ edges: s.edges.filter((e) => e.id !== id) }));
+    const cache = queryClient.getQueryData<EdgeRow[]>(["graph", "edges"]);
+    if (cache) queryClient.setQueryData(["graph", "edges"], cache.filter((r) => r.slug !== id));
+  },
+  setNodePosition: (id, x, y) =>
+    set((s) => {
+      const prev = s.nodesMap[id];
+      if (!prev) return s;
+      return { nodesMap: { ...s.nodesMap, [id]: { ...prev, x, y } } };
+    }),
+  pinNode: (id, { x, y }) => {
+    set((s) => {
+      const prev = s.nodesMap[id];
+      if (!prev) return s;
+      return { nodesMap: { ...s.nodesMap, [id]: { ...prev, x, y } } };
+    });
+    const cache = queryClient.getQueryData<NodeRow[]>(["graph", "nodes"]);
+    if (!cache) return;
+    queryClient.setQueryData(
+      ["graph", "nodes"],
+      cache.map((r) => (r.slug === id ? { ...r, properties: { ...r.properties, x, y } } : r)),
+    );
+  },
 
   // ui
   selectedId: null,
@@ -249,5 +339,13 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
   clearLit: () => set({ litIds: [], litEdgeIds: [] }),
 
   // derived
-  countByType: () => countByTypeHelper(get().nodes),
+  countByType: () => countByTypeHelper(Object.values(get().nodesMap)),
 }));
+
+export const selectAllNodes = (s: GraphStore): GraphNode[] => Object.values(s.nodesMap);
+
+export const selectNodeById = (s: GraphStore, id: string | null): GraphNode | null =>
+  id ? s.nodesMap[id] ?? null : null;
+
+export const selectVisibleNodes = (s: GraphStore): GraphNode[] =>
+  Object.values(s.nodesMap).filter((n) => !s.hiddenTypes[n.type]);
