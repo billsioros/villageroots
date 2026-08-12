@@ -77,7 +77,8 @@ CREATE POLICY edges_update ON public.edges FOR UPDATE USING (
 -- Self-approval guard: non-admins cannot set status to approved/rejected via PostgREST
 CREATE FUNCTION public.prevent_self_approval() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  IF NOT public.is_admin(auth.uid())
+  IF auth.uid() IS NOT NULL
+     AND NOT public.is_admin(auth.uid())
      AND NEW.status IN ('approved', 'rejected')
      AND NEW.status IS DISTINCT FROM OLD.status THEN
     RAISE EXCEPTION 'only admins may approve or reject rows';
