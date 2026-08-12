@@ -79,3 +79,36 @@ export function maskLivingPerson(
     },
   };
 }
+
+export function shouldMaskLivingOnRead(
+  row: {
+    type: string;
+    privacy: "public" | "private";
+    properties: Record<string, unknown> | null;
+    createdBy: string | null;
+  },
+  ctx: { uid: string | null; isAdmin: boolean },
+): boolean {
+  if (row.type !== "person" || row.privacy !== "private") return false;
+  if (ctx.isAdmin) return false;
+  if (ctx.uid !== null && ctx.uid === row.createdBy) return false;
+  return isLivingPerson(row);
+}
+
+export function maskPrivateLiving<T extends {
+  label: string;
+  subtitle: string | null;
+  description: string | null;
+  properties: Record<string, unknown> | null;
+}>(row: T): T {
+  return {
+    ...row,
+    label: LIVING_LABEL,
+    subtitle: "",
+    description: "",
+    properties: {
+      x: row.properties?.x ?? 0,
+      y: row.properties?.y ?? 0,
+    },
+  };
+}
