@@ -10,7 +10,15 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/lib/graph/session", () => ({ sessionUid: mocks.sessionUid }));
 vi.mock("@/lib/graph/admin", () => ({ isAdminUid: mocks.isAdminUid }));
 vi.mock("@/lib/graph/db", () => {
-  return { db: { select: () => ({ from: () => ({ where: () => ({ orderBy: () => ({ limit: () => ({ offset: mocks.dbSelect }) }) }) }) }) } };
+  return {
+    db: {
+      select: () => ({
+        from: () => ({
+          innerJoin: () => ({ where: () => ({ orderBy: () => mocks.dbSelect() }) }),
+        }),
+      }),
+    },
+  };
 });
 
 const REQ = (type: string) => ({ nextUrl: { searchParams: new URLSearchParams({ type }) } }) as unknown as Parameters<typeof GET>[0];
