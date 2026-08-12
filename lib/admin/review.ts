@@ -1,5 +1,5 @@
 import { eq, count } from "drizzle-orm";
-import type { AnyPgTable } from "drizzle-orm/pg-core";
+import type { AnyPgTable, AnyPgColumn } from "drizzle-orm/pg-core";
 import { db } from "@/lib/graph/db";
 import { nodes, edges, scanUploads, authUsers } from "@/drizzle/schema";
 import { maskLivingPerson, isLivingPerson } from "@/lib/graph/policy";
@@ -20,17 +20,15 @@ export interface ReviewPayload {
   counts: Record<string, number>;
 }
 
-async function countPending(table: AnyPgTable): Promise<number> {
-  const rows = await db.select({ value: count() }).from(table);
+async function countPending(
+  table: AnyPgTable,
+  statusColumn: AnyPgColumn,
+): Promise<number> {
+  const rows = await db
+    .select({ value: count() })
+    .from(table)
+    .where(eq(statusColumn, "pending"));
   return rows[0]?.value ?? 0;
-}
-
-async function counts(): Promise<Record<string, number>> {
-  return {
-    nodes: await countPending(nodes),
-    edges: await countPending(edges),
-    scan_uploads: await countPending(scanUploads),
-  };
 }
 
 type NodeReviewRow = {
@@ -96,7 +94,14 @@ export async function fetchNodeReview(): Promise<ReviewPayload> {
     .innerJoin(authUsers, eq(authUsers.id, nodes.createdBy))
     .where(eq(nodes.status, "pending"))
     .orderBy(nodes.createdAt);
-  return { items: rows.map(nodeToItem), counts: await counts() };
+  return {
+    items: rows.map(nodeToItem),
+    counts: {
+      nodes: await countPending(nodes, nodes.status),
+      edges: 0,
+      scan_uploads: 0,
+    },
+  };
 }
 
 type EdgeReviewRow = {
@@ -133,7 +138,11 @@ export async function fetchEdgeReview(): Promise<ReviewPayload> {
       submitter: row.email,
       properties: row.properties,
     })),
-    counts: await counts(),
+    counts: {
+      nodes: 0,
+      edges: await countPending(edges, edges.status),
+      scan_uploads: 0,
+    },
   };
 }
 
@@ -169,6 +178,10 @@ export async function fetchMediaReview(): Promise<ReviewPayload> {
       submitter: row.email,
       properties: {},
     })),
-    counts: await counts(),
+    counts: {
+      nodes: 0,
+      edges: 0,
+      scan_uploads: await countPending(scanUploads, scanUploads.status),
+    },
   };
 }

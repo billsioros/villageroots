@@ -14,6 +14,7 @@ vi.mock("@/lib/graph/db", () => {
     db: {
       select: () => ({
         from: () => ({
+          where: () => mocks.dbSelect(),
           innerJoin: () => ({ where: () => ({ orderBy: () => mocks.dbSelect() }) }),
         }),
       }),
