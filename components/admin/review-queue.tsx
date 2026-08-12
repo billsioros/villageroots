@@ -153,6 +153,11 @@ export function AdminReviewQueue() {
     setSelected(new Set());
   };
 
+  const selectTab = (t: Tab) => {
+    setTab(t);
+    setSelected(new Set());
+  };
+
   return (
     <div className="flex h-full flex-col gap-4">
       <div className="flex gap-2">
@@ -160,7 +165,7 @@ export function AdminReviewQueue() {
           <Button
             key={t}
             variant={tab === t ? "default" : "outline"}
-            onClick={() => setTab(t)}
+            onClick={() => selectTab(t)}
             className="gap-2"
           >
             {TAB_LABELS[t]}

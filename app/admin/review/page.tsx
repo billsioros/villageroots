@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { sessionUid } from "@/lib/graph/session";
 import { isAdminUid } from "@/lib/graph/admin";
+import { Providers } from "@/components/providers";
 import { AdminReviewQueue } from "@/components/admin/review-queue";
 
 export const metadata = { title: "Review queue" };
@@ -19,5 +20,9 @@ export default function AdminReviewPage() {
 async function ReviewGate() {
   const uid = await sessionUid();
   if (!uid || !(await isAdminUid(uid))) redirect("/");
-  return <AdminReviewQueue />;
+  return (
+    <Providers>
+      <AdminReviewQueue />
+    </Providers>
+  );
 }
