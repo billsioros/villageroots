@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { and, eq, ne, desc } from "drizzle-orm";
 import { db } from "@/lib/graph/db";
 import { nodes, moderations } from "@/drizzle/schema";
@@ -14,9 +14,7 @@ type SubmissionItem = {
   reason: string | null;
 };
 
-// request is part of the App Router handler contract but unused here.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function GET(_request: NextRequest) {
+export async function GET() {
   const uid = await sessionUid();
   if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const subs = await db
