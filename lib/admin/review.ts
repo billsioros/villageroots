@@ -42,7 +42,7 @@ type NodeReviewRow = {
   status: "pending" | "approved" | "rejected";
   type: "person" | "family" | "toponym" | "landmark" | "event" | "path";
   properties: Record<string, unknown>;
-  submitterId: string;
+  email: string | null;
 };
 
 function nodeToItem(row: NodeReviewRow): ReviewItem {
@@ -63,7 +63,7 @@ function nodeToItem(row: NodeReviewRow): ReviewItem {
       subtitle: masked.subtitle,
       body: masked.description,
       status: masked.status,
-      submitter: row.submitterId,
+      submitter: row.email,
       properties: masked.properties,
     };
   }
@@ -74,7 +74,7 @@ function nodeToItem(row: NodeReviewRow): ReviewItem {
     subtitle: row.subtitle ?? "",
     body: row.description ?? "",
     status: row.status,
-    submitter: row.submitterId,
+    submitter: row.email,
     properties: row.properties,
   };
 }
@@ -90,7 +90,7 @@ export async function fetchNodeReview(): Promise<ReviewPayload> {
       description: nodes.description,
       status: nodes.status,
       properties: nodes.properties,
-      submitterId: authUsers.id,
+      email: authUsers.email,
     })
     .from(nodes)
     .innerJoin(authUsers, eq(authUsers.id, nodes.createdBy))
@@ -105,7 +105,7 @@ type EdgeReviewRow = {
   type: string;
   status: "pending" | "approved" | "rejected";
   properties: Record<string, unknown>;
-  submitterId: string;
+  email: string | null;
 };
 
 export async function fetchEdgeReview(): Promise<ReviewPayload> {
@@ -116,7 +116,7 @@ export async function fetchEdgeReview(): Promise<ReviewPayload> {
       type: edges.type,
       status: edges.status,
       properties: edges.properties,
-      submitterId: authUsers.id,
+      email: authUsers.email,
     })
     .from(edges)
     .innerJoin(authUsers, eq(authUsers.id, edges.createdBy))
@@ -130,7 +130,7 @@ export async function fetchEdgeReview(): Promise<ReviewPayload> {
       subtitle: row.slug,
       body: JSON.stringify(row.properties),
       status: row.status,
-      submitter: row.submitterId,
+      submitter: row.email,
       properties: row.properties,
     })),
     counts: await counts(),
@@ -142,7 +142,7 @@ type MediaReviewRow = {
   slug: string;
   storagePath: string;
   status: "pending" | "approved" | "rejected";
-  submitterId: string;
+  email: string | null;
 };
 
 export async function fetchMediaReview(): Promise<ReviewPayload> {
@@ -152,7 +152,7 @@ export async function fetchMediaReview(): Promise<ReviewPayload> {
       slug: scanUploads.slug,
       storagePath: scanUploads.storagePath,
       status: scanUploads.status,
-      submitterId: authUsers.id,
+      email: authUsers.email,
     })
     .from(scanUploads)
     .innerJoin(authUsers, eq(authUsers.id, scanUploads.submitterId))
@@ -166,7 +166,7 @@ export async function fetchMediaReview(): Promise<ReviewPayload> {
       subtitle: row.storagePath,
       body: "",
       status: row.status,
-      submitter: row.submitterId,
+      submitter: row.email,
       properties: {},
     })),
     counts: await counts(),

@@ -43,7 +43,7 @@ describe("fetchNodeReview", () => {
         status: "pending",
         properties: { x: 1 },
         createdAt: new Date(),
-        submitterId: "e@x",
+        email: "e@x",
       },
     ];
     const out = await fetchNodeReview();
@@ -64,7 +64,7 @@ describe("fetchNodeReview", () => {
         status: "pending",
         properties: { deceased: false, x: 1, y: 2 },
         createdAt: new Date(),
-        submitterId: "e@x",
+        email: "e@x",
       },
     ];
     const out = await fetchNodeReview();
