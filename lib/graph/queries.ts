@@ -3,16 +3,22 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchAllNodes, fetchAllEdges } from "@/lib/graph/api";
 
+export const invalidationKeys = {
+  nodes: ["graph", "nodes"] as const,
+  edges: ["graph", "edges"] as const,
+  review: ["admin-review"] as const,
+};
+
 export function useGraphNodes() {
   return useQuery({
-    queryKey: ["graph", "nodes"],
+    queryKey: invalidationKeys.nodes,
     queryFn: fetchAllNodes,
   });
 }
 
 export function useGraphEdges() {
   return useQuery({
-    queryKey: ["graph", "edges"],
+    queryKey: invalidationKeys.edges,
     queryFn: fetchAllEdges,
   });
 }

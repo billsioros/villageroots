@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ModerationHistory } from "@/components/admin/moderation-history";
+import { invalidationKeys } from "@/lib/graph/queries";
 
 type ApiType = "nodes" | "edges" | "scan_uploads";
 
@@ -104,8 +105,8 @@ export function AdminReviewQueue() {
     if (!res.ok) throw new Error(`Moderation failed: ${res.status}`);
     await res.json();
     await refetch();
-    await queryClient.invalidateQueries({ queryKey: ["graph", "nodes"] });
-    await queryClient.invalidateQueries({ queryKey: ["graph", "edges"] });
+    await queryClient.invalidateQueries({ queryKey: invalidationKeys.nodes });
+    await queryClient.invalidateQueries({ queryKey: invalidationKeys.edges });
   };
 
   const approve = async (id: string) => {
