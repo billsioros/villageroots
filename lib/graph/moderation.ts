@@ -1,15 +1,9 @@
 import type { Status } from "@/lib/graph/types";
 
 export type ModerationAction = "approve" | "reject";
-export type ModerationTarget = "nodes" | "edges" | "scan_uploads";
 
 export function statusForAction(action: ModerationAction): Status {
   return action === "approve" ? "approved" : "rejected";
-}
-
-export function nextStatus(current: Status, action: ModerationAction): Status {
-  if (action === "approve") return "approved";
-  return "rejected";
 }
 
 export function applyModeration(
