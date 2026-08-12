@@ -231,7 +231,7 @@ export function AdminReviewQueue() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setActive({ type: tab, id: item.id })}
+                    onClick={() => setActive({ type: API_KEY_BY_TAB[tab], id: item.id })}
                   >
                     History
                   </Button>
