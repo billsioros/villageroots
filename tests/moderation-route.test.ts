@@ -55,15 +55,25 @@ describe("POST /api/moderation/[type]/[id]", () => {
     expect(mocks.transaction).toHaveBeenCalled();
   });
 
-  it("prevents non-admin action via admin check (idempotent no-op takes no new history)", async () => {
+  it("skips the status UPDATE when already approved but still records a moderation history row", async () => {
     mocks.sessionUid.mockResolvedValue("admin");
     mocks.isAdminUid.mockResolvedValue(true);
-    mocks.transaction.mockImplementation(async (fn) => fn({
-      update: () => ({ set: () => ({ where: () => ({ returning: async () => [{ status: "approved" }] }) }) }),
-      insert: () => ({ values: () => ({ returning: async () => [{ id: "m2" }] }) }),
-    }));
+    mocks.select.mockReturnValue({
+      from: () => ({
+        where: () => ({ limit: async () => [{ status: "approved" }] }),
+      }),
+    });
+    const update = vi.fn().mockReturnValue({
+      set: () => ({ where: () => ({}) }),
+    });
+    const insert = vi.fn().mockReturnValue({
+      values: () => ({ returning: async () => [{ id: "m2" }] }),
+    });
+    mocks.transaction.mockImplementation(async (fn) => fn({ update, insert }));
     const res = await POST(mreq({ action: "approve" }), cparams("nodes", "n1"));
     expect(res.status).toBe(200);
     expect((await res.json()).status).toBe("approved");
+    expect(update).not.toHaveBeenCalled();
+    expect(insert).toHaveBeenCalledTimes(1);
   });
 });
