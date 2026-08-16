@@ -6,6 +6,9 @@ describe("slugify", () => {
     expect(slugify("Yiayia 1924")).toBe("yiayia-1924");
     expect(slugify("  UPPER  case  ")).toBe("upper-case");
   });
+  it("slugify strips non-ascii to empty", () => {
+    expect(slugify("Γιάννης")).toBe("");
+  });
 });
 
 describe("derivePrivacyFor", () => {
@@ -51,5 +54,10 @@ describe("createNodeValues", () => {
     const v = createNodeValues({ type: "family", label: "Tsalikis" }, "uid", "approved", 0);
     expect(v.privacy).toBe("public");
     expect(v.properties).toEqual({});
+  });
+
+  it("falls back to a stable base for non-ascii labels", () => {
+    const v = createNodeValues({ type: "person", label: "Γιάννης Τσαλίκης" }, "uid", "pending", 0);
+    expect(v.slug).toMatch(/^node-[a-z0-9]+-0$/);
   });
 });

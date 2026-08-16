@@ -41,7 +41,7 @@ export function createNodeValues(
   status: Status,
   index: number,
 ): NodeInsertValues {
-  const slug = `${slugify(input.label)}-${Date.now().toString(36)}-${index}`;
+  const slug = `${slugify(input.label) || "node"}-${Date.now().toString(36)}-${index}`;
   const properties: Record<string, unknown> = {};
   if (input.facts) properties.facts = input.facts;
   if (input.type === "person") properties.deceased = Boolean(input.deceased);
