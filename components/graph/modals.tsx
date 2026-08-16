@@ -5,18 +5,6 @@ import type { ReactNode } from "react";
 import { X, UploadCloud, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGraphStore } from "@/store/graphStore";
-import { TYPE_META, uid } from "@/lib/graph/helpers";
-import type { NodeType } from "@/lib/graph/types";
-
-const NODE_TYPES: NodeType[] = ["person", "family", "landmark", "toponym", "event", "path"];
-const TYPE_LABELS: Record<NodeType, string> = {
-  person: "Person",
-  family: "Family",
-  landmark: "Landmark",
-  toponym: "Toponym",
-  event: "Event",
-  path: "Path",
-};
 
 function ModalShell({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   useEffect(() => {
@@ -40,76 +28,6 @@ function ModalShell({ title, onClose, children }: { title: string; onClose: () =
         {children}
       </div>
     </div>
-  );
-}
-
-export function NewNodeModal() {
-  const open = useGraphStore((s) => s.newNodeOpen);
-  const setOpen = useGraphStore((s) => s.setNewNodeOpen);
-  const canvasCenter = useGraphStore((s) => s.canvasCenter);
-  const addNode = useGraphStore((s) => s.addNode);
-  const toggleType = useGraphStore((s) => s.toggleType);
-  const pushReview = useGraphStore((s) => s.pushReview);
-  const pushToast = useGraphStore((s) => s.pushToast);
-  const [type, setType] = useState<NodeType>("person");
-  const [name, setName] = useState("");
-
-  if (!open) return null;
-
-  const submit = () => {
-    if (!name.trim()) {
-      pushToast({ tone: "error", message: "Name is required" });
-      return;
-    }
-    const id = `p-new-${uid()}`;
-    addNode({
-      id,
-      type,
-      label: name.trim(),
-      subtitle: "pending review",
-      description: "Pending review — added by a community member.",
-      color: TYPE_META[type].color,
-      mark: TYPE_META[type].glyph,
-      x: canvasCenter.x + (Math.random() - 0.5) * 80,
-      y: canvasCenter.y + (Math.random() - 0.5) * 80,
-    });
-    toggleType(type);
-    pushReview({ kind: "node", title: name.trim(), body: `New ${TYPE_LABELS[type].toLowerCase()} node awaiting approval`, who: "You" });
-    pushToast({ tone: "success", message: "Node created · queued for review" });
-    setOpen(false);
-    setName("");
-  };
-
-  return (
-    <ModalShell title="New node" onClose={() => setOpen(false)}>
-      <div className="flex flex-wrap gap-2">
-        {NODE_TYPES.map((t) => (
-          <button
-            key={t}
-            onClick={() => setType(t)}
-            className={`rounded-full px-3.5 py-1.5 text-[12px] font-medium ${type === t ? "bg-foreground text-background" : "bg-surface-warm text-muted-foreground hover:text-foreground"}`}
-          >
-            {TYPE_LABELS[t]}
-          </button>
-        ))}
-      </div>
-      <input
-        autoFocus
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && submit()}
-        placeholder="Name…"
-        className="mt-4 w-full rounded-xl border bg-surface-warm px-3.5 py-2.5 text-[13px] outline-none placeholder:text-muted-foreground focus:border-primary"
-      />
-      <div className="mt-4 flex justify-end gap-2">
-        <Button variant="ghost" size="sm" className="rounded-full" onClick={() => setOpen(false)}>
-          Cancel
-        </Button>
-        <Button size="sm" className="rounded-full" onClick={submit}>
-          Add node
-        </Button>
-      </div>
-    </ModalShell>
   );
 }
 

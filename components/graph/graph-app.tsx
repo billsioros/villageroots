@@ -16,7 +16,8 @@ import { SidePanel } from "./side-panel";
 import { ChatPanel } from "./chat-panel";
 import { ChatFab } from "./chat-fab";
 import { ReviewQueue } from "./review-queue";
-import { NewNodeModal, OcrModal, AboutModal } from "./modals";
+import { OcrModal, AboutModal } from "./modals";
+import ContributePanel from "./contribute-panel";
 import { GraphLoader } from "./graph-loader";
 import { useGraphStore } from "@/store/graphStore";
 
@@ -29,6 +30,7 @@ export function GraphApp() {
   const aboutOpen = useGraphStore((s) => s.aboutOpen);
   const clearSelection = useGraphStore((s) => s.clearSelection);
   const setSearchOpen = useGraphStore((s) => s.setSearchOpen);
+  const setNewNodeOpen = useGraphStore((s) => s.setNewNodeOpen);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -37,14 +39,18 @@ export function GraphApp() {
         setSearchOpen(true);
       } else if (e.key === "Escape") {
         if (aboutOpen) return; // modal shells handle their own Escape
-        if (newNodeOpen || ocrOpen) return;
+        if (newNodeOpen) {
+          setNewNodeOpen(false);
+          return;
+        }
+        if (ocrOpen) return;
         clearSelection();
         setSearchOpen(false);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [aboutOpen, newNodeOpen, ocrOpen, clearSelection, setSearchOpen]);
+  }, [aboutOpen, newNodeOpen, ocrOpen, clearSelection, setSearchOpen, setNewNodeOpen]);
 
   return (
     <GraphLoader>
@@ -56,6 +62,7 @@ export function GraphApp() {
           <Legend />
           <StageUi />
           <Dock />
+          <ContributePanel />
           <WelcomeCard />
           <HintChip />
           {searchOpen && <SearchPop />}
@@ -66,7 +73,6 @@ export function GraphApp() {
         <ChatPanel />
         <ChatFab />
         <Toast />
-        <NewNodeModal />
         <OcrModal />
         <AboutModal />
       </div>
