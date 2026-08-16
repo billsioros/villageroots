@@ -44,33 +44,38 @@ export async function POST(req: Request) {
   const admin = await isAdminUid(uid);
   const status: Status = admin ? "approved" : "pending";
 
-  const result = await db.transaction(async (tx) => {
-    const draftToId = new Map<string, string>();
-    for (let i = 0; i < shape.value.nodes.length; i++) {
-      const n = shape.value.nodes[i];
-      const [row] = await tx
-        .insert(nodesTable)
-        .values(createNodeValues(n, uid, status, i))
-        .returning();
-      draftToId.set(n.id, row.id);
-    }
-    let edgeCount = 0;
-    for (const e of resolved.edges) {
-      const sourceId = draftToId.get(e.source) ?? e.source;
-      const targetId = draftToId.get(e.target) ?? e.target;
-      await tx.insert(edgesTable).values({
-        slug: `edge-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-        sourceId,
-        targetId,
-        type: e.verb,
-        properties: {},
-        status,
-        createdBy: uid,
-      });
-      edgeCount++;
-    }
-    return { nodes: shape.value.nodes.length, edges: edgeCount };
-  });
+  let result;
+  try {
+    result = await db.transaction(async (tx) => {
+      const draftToId = new Map<string, string>();
+      for (let i = 0; i < shape.value.nodes.length; i++) {
+        const n = shape.value.nodes[i];
+        const [row] = await tx
+          .insert(nodesTable)
+          .values(createNodeValues(n, uid, status, i))
+          .returning();
+        draftToId.set(n.id, row.id);
+      }
+      let edgeCount = 0;
+      for (const e of resolved.edges) {
+        const sourceId = draftToId.get(e.source) ?? e.source;
+        const targetId = draftToId.get(e.target) ?? e.target;
+        await tx.insert(edgesTable).values({
+          slug: `edge-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+          sourceId,
+          targetId,
+          type: e.verb,
+          properties: {},
+          status,
+          createdBy: uid,
+        });
+        edgeCount++;
+      }
+      return { nodes: shape.value.nodes.length, edges: edgeCount };
+    });
+  } catch {
+    return NextResponse.json({ error: "Submission failed" }, { status: 500 });
+  }
 
   return NextResponse.json(result, { status: 201 });
 }
