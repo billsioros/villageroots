@@ -102,6 +102,43 @@ describe("drafts slice", () => {
     expect(s.sidepanelOpen).toBe(true);
   });
 
+  it("removeDraftNode clears the selection when the selected draft is removed", () => {
+    useGraphStore.setState({
+      draftNodes: [draft("draft-a", "person"), draft("draft-b", "family")],
+      selectedId: "draft-a",
+      sidepanelOpen: true,
+    });
+    useGraphStore.getState().removeDraftNode("draft-a");
+    const s = useGraphStore.getState();
+    expect(s.selectedId).toBeNull();
+    expect(s.sidepanelOpen).toBe(false);
+  });
+
+  it("removeDraftNode keeps the selection when a non-selected draft is removed", () => {
+    useGraphStore.setState({
+      draftNodes: [draft("draft-a", "person"), draft("draft-b", "family")],
+      selectedId: "draft-b",
+      sidepanelOpen: true,
+    });
+    useGraphStore.getState().removeDraftNode("draft-a");
+    const s = useGraphStore.getState();
+    expect(s.selectedId).toBe("draft-b");
+    expect(s.sidepanelOpen).toBe(true);
+  });
+
+  it("clearDrafts clears the selection when a draft is selected", () => {
+    useGraphStore.setState({
+      draftNodes: [draft("draft-a", "person")],
+      selectedId: "draft-a",
+      sidepanelOpen: true,
+    });
+    useGraphStore.getState().clearDrafts();
+    const s = useGraphStore.getState();
+    expect(s.draftNodes).toHaveLength(0);
+    expect(s.selectedId).toBeNull();
+    expect(s.sidepanelOpen).toBe(false);
+  });
+
   it("selectVisibleNodes merges drafts flagged draft and honors hidden types", () => {
     useGraphStore.setState({
       nodesMap: { n1: node("n1", "family") },

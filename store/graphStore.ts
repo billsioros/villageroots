@@ -291,10 +291,16 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
     set((s) => ({
       draftNodes: s.draftNodes.filter((d) => d.id !== id),
       draftEdges: s.draftEdges.filter((e) => e.source !== id && e.target !== id),
+      ...(s.selectedId === id ? { selectedId: null, sidepanelOpen: false } : {}),
     })),
   addDraftEdge: (draft) => set((s) => ({ draftEdges: [...s.draftEdges, draft] })),
   removeDraftEdge: (id) => set((s) => ({ draftEdges: s.draftEdges.filter((e) => e.id !== id) })),
-  clearDrafts: () => set({ draftNodes: [], draftEdges: [] }),
+  clearDrafts: () =>
+    set((s) => ({
+      draftNodes: [],
+      draftEdges: [],
+      ...(s.selectedId?.startsWith("draft-") ? { selectedId: null, sidepanelOpen: false } : {}),
+    })),
   selectDraft: (id) =>
     set({ selectedId: id, sidepanelOpen: id !== null, searchOpen: false, layersOpen: false }),
   toggleChat: () => set((s) => ({ chatOpen: !s.chatOpen, chatCollapsed: false })),

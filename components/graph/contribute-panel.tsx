@@ -116,6 +116,10 @@ export default function ContributePanel() {
       pushToast({ tone: "error", message: "Pick a target node" });
       return;
     }
+    if (!targetOptions.some((o) => o.id === target)) {
+      setTarget("");
+      return;
+    }
     if (source === target) {
       pushToast({ tone: "error", message: "Pick two different nodes" });
       return;
@@ -143,6 +147,8 @@ export default function ContributePanel() {
       queryClient.invalidateQueries({ queryKey: invalidationKeys.nodes });
       queryClient.invalidateQueries({ queryKey: invalidationKeys.edges });
       pushToast({ tone: "success", message: isAdmin ? "Published" : "Queued for review" });
+    } catch {
+      pushToast({ tone: "error", message: "Could not reach the server — try again" });
     } finally {
       setSubmitting(false);
     }
