@@ -24,6 +24,11 @@ let toastTimer: ReturnType<typeof setTimeout> | null = null;
 let flashTimer: ReturnType<typeof setTimeout> | null = null;
 let litTimer: ReturnType<typeof setTimeout> | null = null;
 
+const draftGraphCache = new WeakMap<
+  DraftNode[],
+  { hidden: Record<NodeType, boolean>; nodes: GraphNode[] }
+>();
+
 export interface GraphStore {
   // graph
   nodesMap: Record<string, GraphNode>;
@@ -392,19 +397,26 @@ export const selectNodeById = (s: GraphStore, id: string | null): GraphNode | nu
 
 export const selectVisibleNodes = (s: GraphStore): GraphNode[] => {
   const base = Object.values(s.nodesMap).filter((n) => !s.hiddenTypes[n.type]);
-  const drafts: GraphNode[] = s.draftNodes
-    .filter((d) => !s.hiddenTypes[d.type])
-    .map((d) => ({
-      id: d.id,
-      type: d.type,
-      label: d.label,
-      subtitle: d.subtitle ?? "",
-      description: d.description ?? "",
-      color: TYPE_META[d.type].color,
-      mark: TYPE_META[d.type].glyph,
-      x: d.x,
-      y: d.y,
-      draft: true,
-    }));
-  return [...base, ...drafts];
+  let draftEntry = draftGraphCache.get(s.draftNodes);
+  if (!draftEntry || draftEntry.hidden !== s.hiddenTypes) {
+    draftEntry = {
+      hidden: s.hiddenTypes,
+      nodes: s.draftNodes
+        .filter((d) => !s.hiddenTypes[d.type])
+        .map((d) => ({
+          id: d.id,
+          type: d.type,
+          label: d.label,
+          subtitle: d.subtitle ?? "",
+          description: d.description ?? "",
+          color: TYPE_META[d.type].color,
+          mark: TYPE_META[d.type].glyph,
+          x: d.x,
+          y: d.y,
+          draft: true,
+        })),
+    };
+    draftGraphCache.set(s.draftNodes, draftEntry);
+  }
+  return [...base, ...draftEntry.nodes];
 };
