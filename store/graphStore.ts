@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { SUGGESTED_EDGES, REVIEW_SEED } from "@/lib/graph/data";
-import { uid, countByType as countByTypeHelper } from "@/lib/graph/helpers";
+import { uid, countByType as countByTypeHelper, TYPE_META } from "@/lib/graph/helpers";
 import { toNodeRow, toEdgeRow } from "@/lib/graph/mappers";
 import { queryClient } from "@/lib/graph/query-client";
 import { invalidationKeys } from "@/lib/graph/queries";
@@ -16,6 +16,8 @@ import type {
   Toast,
   ZoomIntent,
   PanIntent,
+  DraftNode,
+  DraftEdge,
 } from "@/lib/graph/types";
 
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -27,6 +29,8 @@ export interface GraphStore {
   nodesMap: Record<string, GraphNode>;
   edges: GraphEdge[];
   suggestedEdges: SuggestedEdge[];
+  draftNodes: DraftNode[];
+  draftEdges: DraftEdge[];
   hydrateGraph: (nodes: GraphNode[], edges: GraphEdge[]) => void;
   addNode: (n: GraphNode) => void;
   updateNode: (id: string, patch: Partial<GraphNode>) => void;
@@ -57,6 +61,13 @@ export interface GraphStore {
   hint: boolean;
   selectNode: (id: string | null) => void;
   clearSelection: () => void;
+  addDraftNode: (draft: DraftNode) => void;
+  updateDraftNode: (id: string, patch: Partial<DraftNode>) => void;
+  removeDraftNode: (id: string) => void;
+  addDraftEdge: (draft: DraftEdge) => void;
+  removeDraftEdge: (id: string) => void;
+  clearDrafts: () => void;
+  selectDraft: (id: string | null) => void;
   toggleChat: () => void;
   toggleCollapsed: () => void;
   setSearchOpen: (open: boolean) => void;
@@ -141,6 +152,8 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
   nodesMap: {},
   edges: [],
   suggestedEdges: SUGGESTED_EDGES,
+  draftNodes: [],
+  draftEdges: [],
   hydrateGraph: (nodes, edges) =>
     set((s) => {
       const merged: Record<string, GraphNode> = { ...s.nodesMap };
@@ -266,6 +279,19 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
       layersOpen: false,
     })),
   clearSelection: () => set({ selectedId: null, sidepanelOpen: false }),
+  addDraftNode: (draft) => set((s) => ({ draftNodes: [...s.draftNodes, draft] })),
+  updateDraftNode: (id, patch) =>
+    set((s) => ({ draftNodes: s.draftNodes.map((d) => (d.id === id ? { ...d, ...patch } : d)) })),
+  removeDraftNode: (id) =>
+    set((s) => ({
+      draftNodes: s.draftNodes.filter((d) => d.id !== id),
+      draftEdges: s.draftEdges.filter((e) => e.source !== id && e.target !== id),
+    })),
+  addDraftEdge: (draft) => set((s) => ({ draftEdges: [...s.draftEdges, draft] })),
+  removeDraftEdge: (id) => set((s) => ({ draftEdges: s.draftEdges.filter((e) => e.id !== id) })),
+  clearDrafts: () => set({ draftNodes: [], draftEdges: [] }),
+  selectDraft: (id) =>
+    set({ selectedId: id, sidepanelOpen: id !== null, searchOpen: false, layersOpen: false }),
   toggleChat: () => set((s) => ({ chatOpen: !s.chatOpen, chatCollapsed: false })),
   toggleCollapsed: () => set((s) => ({ chatCollapsed: !s.chatCollapsed })),
   setSearchOpen: (open) => set({ searchOpen: open }),
@@ -364,5 +390,21 @@ export const selectAllNodes = (s: GraphStore): GraphNode[] => Object.values(s.no
 export const selectNodeById = (s: GraphStore, id: string | null): GraphNode | null =>
   id ? s.nodesMap[id] ?? null : null;
 
-export const selectVisibleNodes = (s: GraphStore): GraphNode[] =>
-  Object.values(s.nodesMap).filter((n) => !s.hiddenTypes[n.type]);
+export const selectVisibleNodes = (s: GraphStore): GraphNode[] => {
+  const base = Object.values(s.nodesMap).filter((n) => !s.hiddenTypes[n.type]);
+  const drafts: GraphNode[] = s.draftNodes
+    .filter((d) => !s.hiddenTypes[d.type])
+    .map((d) => ({
+      id: d.id,
+      type: d.type,
+      label: d.label,
+      subtitle: d.subtitle ?? "",
+      description: d.description ?? "",
+      color: TYPE_META[d.type].color,
+      mark: TYPE_META[d.type].glyph,
+      x: d.x,
+      y: d.y,
+      draft: true,
+    }));
+  return [...base, ...drafts];
+};
