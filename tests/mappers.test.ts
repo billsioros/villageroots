@@ -43,6 +43,7 @@ describe("nodeRowToGraph", () => {
     expect(g.mark).toBe("P");
     expect(g.x).toBe(10);
     expect(g.y).toBe(20);
+    expect(g.status).toBe(nodeRow.status);
   });
 
   it("defaults x/y to 0 when properties lack them", () => {
