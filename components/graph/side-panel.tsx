@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { DocumentPanel } from "./document-panel";
 import { RelationsPanel } from "./relations-panel";
@@ -22,11 +22,13 @@ export function SidePanel() {
     | { node: GraphNode; isDraft: false }
     | { node: GraphNode; isDraft: true; draft: DraftNode };
 
-  const selected = useGraphStore((s): Selected | null => {
-    if (!s.selectedId) return null;
-    const existing = s.nodesMap[s.selectedId];
+  const selectedId = useGraphStore((s) => s.selectedId);
+  const existing = useGraphStore((s) => (s.selectedId ? s.nodesMap[s.selectedId] ?? null : null));
+  const draft = useGraphStore((s) => (s.selectedId ? s.draftNodes.find((x) => x.id === s.selectedId) ?? null : null));
+
+  const selected = useMemo<Selected | null>(() => {
+    if (!selectedId) return null;
     if (existing) return { node: existing, isDraft: false };
-    const draft = s.draftNodes.find((x) => x.id === s.selectedId);
     if (!draft) return null;
     return {
       node: {
@@ -39,7 +41,7 @@ export function SidePanel() {
       isDraft: true,
       draft,
     };
-  });
+  }, [selectedId, existing, draft]);
 
   if (!selected) return null;
 
