@@ -24,6 +24,7 @@ export function GraphCanvas() {
   const nodes = useGraphStore(useShallow(selectVisibleNodes));
   const edges = useGraphStore((s) => s.edges);
   const suggestedEdges = useGraphStore((s) => s.suggestedEdges);
+  const draftEdges = useGraphStore((s) => s.draftEdges);
   const selectedId = useGraphStore((s) => s.selectedId);
   const litIds = useGraphStore((s) => s.litIds);
   const litEdgeIds = useGraphStore((s) => s.litEdgeIds);
@@ -43,13 +44,16 @@ export function GraphCanvas() {
       ...edges
         .filter((e) => visibleIds.has(e.source) && visibleIds.has(e.target))
         .map((e) => ({ ...e })),
+      ...draftEdges
+        .filter((e) => visibleIds.has(e.source) && visibleIds.has(e.target))
+        .map((e) => ({ ...e, draft: true })),
       ...suggestedEdges.map((e) => ({ ...e, suggested: true })),
     ];
     return {
       graphData: { nodes, links },
       focusNode: nodes.find((n) => n.id === selectedId),
     };
-  }, [nodes, edges, suggestedEdges, selectedId]);
+  }, [nodes, edges, draftEdges, suggestedEdges, selectedId]);
 
   // --- resize ---
   useEffect(() => {
@@ -152,34 +156,62 @@ export function GraphCanvas() {
       ctx.stroke();
     }
 
-    ctx.fillStyle = tokenColor("surface-warm");
-    ctx.strokeStyle = selected || lit ? tokenColor("primary") : tokenColor("border");
+    const pending = node.draft === true || node.status === "pending";
+    const draft = node.draft === true;
+
+    if (pending) {
+      ctx.globalAlpha = 0.45;
+      ctx.fillStyle = tokenColor("fg", 0.08);
+      ctx.strokeStyle = tokenColor("meta");
+      ctx.setLineDash([6 / globalScale, 4 / globalScale]);
+    } else {
+      ctx.fillStyle = tokenColor("surface-warm");
+      ctx.strokeStyle = selected || lit ? tokenColor("primary") : tokenColor("border");
+      ctx.setLineDash([]);
+    }
     ctx.lineWidth = (selected || lit ? 1.5 : 1) / globalScale;
     ctx.beginPath();
     ctx.roundRect(x - pillW / 2, y - pillH / 2, pillW, pillH, 16 / globalScale);
     ctx.fill();
     ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
 
     const mark = meta.glyph;
     ctx.beginPath();
-    ctx.arc(x - pillW / 2 + markR + 4, y, markR, 0, 2 * Math.PI);
-    ctx.fillStyle = meta.color;
+    ctx.arc(x - pillW / 2 + markR + 4, y, markR, 0, Math.PI * 2);
+    ctx.fillStyle = pending ? tokenColor("meta", 0.6) : meta.color;
     ctx.fill();
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    ctx.font = "12px sans-serif";
+    ctx.fillStyle = "#fff";
+    ctx.font = "600 12px Inter";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(mark, x - pillW / 2 + markR + 4, y + 0.5);
 
     ctx.textAlign = "left";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = tokenColor("fg");
-    ctx.font = `600 ${node.subtitle ? 12 : 13}px Inter, sans-serif`;
-    ctx.fillText(text, x - pillW / 2 + markR * 2 + 19, y - (node.subtitle ? 7 : 0));
-    if (node.subtitle) {
-      ctx.fillStyle = tokenColor("meta");
-      ctx.font = "10.5px Inter, sans-serif";
-      ctx.fillText(node.subtitle, x - pillW / 2 + markR * 2 + 19, y + 11);
+    ctx.fillStyle = pending ? tokenColor("meta", 0.9) : tokenColor("fg");
+    ctx.font = `600 ${node.subtitle ? 12 : 13}px Inter`;
+    ctx.fillText(text, x + 6, y - (node.subtitle ? 4 : 0));
+
+    const statusLine = draft
+      ? "draft · add annotations"
+      : node.status === "pending"
+        ? "pending review"
+        : (node.subtitle ?? "");
+    ctx.fillStyle = pending ? tokenColor("meta", 0.8) : tokenColor("meta");
+    ctx.font = "10.5px Inter";
+    if (node.subtitle || pending) ctx.fillText(statusLine, x + 6, y + 11);
+
+    if (draft) {
+      const pulse = 0.55 + 0.45 * Math.sin(Date.now() / 350 + (node.x ?? 0));
+      ctx.fillStyle = tokenColor("warn", pulse);
+      ctx.font = "11px Inter";
+      ctx.fillText("\u270e", x + pillW / 2 - 10, y - pillH / 2 + 12);
+    } else if (node.status === "pending") {
+      ctx.beginPath();
+      ctx.arc(x + pillW / 2 - 8, y - pillH / 2 + 8, 3, 0, Math.PI * 2);
+      ctx.fillStyle = tokenColor("warn");
+      ctx.fill();
     }
   };
 
@@ -201,13 +233,14 @@ export function GraphCanvas() {
           }}
           linkColor={(l: any) => {
             if (litEdgeIds.includes(l.id)) return tokenColor("primary");
+            if (l.draft) return tokenColor("meta", 0.8);
             if (l.suggested) return tokenColor("primary", 0.8);
             if (l.kind === "geo") return tokenColor("success", 0.55);
             if (l.kind === "hist") return tokenColor("warn", 0.55);
             return tokenColor("fg", 0.45);
           }}
           linkWidth={(l: any) => (l.suggested ? 1.4 : litEdgeIds.includes(l.id) ? 2.4 : 1.2)}
-          linkLineDash={(l: any) => (l.suggested ? ([5, 4] as any) : null)}
+          linkLineDash={(l: any) => (l.suggested || l.draft ? ([5, 4] as any) : null)}
           linkDirectionalParticles={(l: any) => (litEdgeIds.includes(l.id) ? 2 : 0)}
           linkDirectionalParticleSpeed={0.008}
           onNodeClick={(node: any) => {
