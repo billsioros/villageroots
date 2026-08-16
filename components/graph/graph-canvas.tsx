@@ -183,15 +183,16 @@ export function GraphCanvas() {
     ctx.fillStyle = pending ? tokenColor("meta", 0.6) : meta.color;
     ctx.fill();
     ctx.fillStyle = "#fff";
-    ctx.font = "600 12px Inter";
+    ctx.font = "600 12px Inter, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(mark, x - pillW / 2 + markR + 4, y + 0.5);
 
+    const labelX = x - pillW / 2 + markR * 2 + 19;
     ctx.textAlign = "left";
     ctx.fillStyle = pending ? tokenColor("meta", 0.9) : tokenColor("fg");
-    ctx.font = `600 ${node.subtitle ? 12 : 13}px Inter`;
-    ctx.fillText(text, x + 6, y - (node.subtitle ? 4 : 0));
+    ctx.font = `600 ${node.subtitle ? 12 : 13}px Inter, sans-serif`;
+    ctx.fillText(text, labelX, y - (node.subtitle ? 4 : 0));
 
     const statusLine = draft
       ? "draft · add annotations"
@@ -199,13 +200,13 @@ export function GraphCanvas() {
         ? "pending review"
         : (node.subtitle ?? "");
     ctx.fillStyle = pending ? tokenColor("meta", 0.8) : tokenColor("meta");
-    ctx.font = "10.5px Inter";
-    if (node.subtitle || pending) ctx.fillText(statusLine, x + 6, y + 11);
+    ctx.font = "10.5px Inter, sans-serif";
+    if (node.subtitle || pending) ctx.fillText(statusLine, labelX, y + 11);
 
     if (draft) {
       const pulse = 0.55 + 0.45 * Math.sin(Date.now() / 350 + (node.x ?? 0));
       ctx.fillStyle = tokenColor("warn", pulse);
-      ctx.font = "11px Inter";
+      ctx.font = "11px Inter, sans-serif";
       ctx.fillText("\u270e", x + pillW / 2 - 10, y - pillH / 2 + 12);
     } else if (node.status === "pending") {
       ctx.beginPath();
@@ -224,6 +225,7 @@ export function GraphCanvas() {
           width={size.w}
           height={size.h}
           backgroundColor="transparent"
+          autoPauseRedraw={false}
           nodeCanvasObject={(node: any, ctx, globalScale) => paintNode(node, ctx, globalScale)}
           nodePointerAreaPaint={(node: any, color: string, ctx: CanvasRenderingContext2D) => {
             ctx.fillStyle = color;
