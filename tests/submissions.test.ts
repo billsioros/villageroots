@@ -65,6 +65,9 @@ describe("validateSubmissionShape", () => {
   it("rejects duplicate edges (source,target,verb)", () => {
     expect(validateSubmissionShape({ nodes: [n("a"), n("b")], edges: [e("a", "b"), e("a", "b")] }).ok).toBe(false);
   });
+  it("rejects duplicate node ids", () => {
+    expect(validateSubmissionShape({ nodes: [n("draft-a"), n("draft-a", "family")], edges: [] }).ok).toBe(false);
+  });
 });
 
 describe("resolveEdgeEndpoints", () => {
@@ -91,6 +94,14 @@ describe("resolveEdgeEndpoints", () => {
       new Map([["yiayia", "n-9"]]),
     );
     expect(r.ok).toBe(false);
+  });
+  it("rejects an unknown target when the source slug resolves", () => {
+    const r = resolveEdgeEndpoints(
+      [{ source: "yiayia", target: "missing", verb: "child_of" }],
+      new Set(),
+      new Map([["yiayia", "n-9"]]),
+    );
+    expect(r).toEqual({ ok: false, error: "Unknown node: missing" });
   });
 });
 

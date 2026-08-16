@@ -43,10 +43,13 @@ export function validateSubmissionShape(
   if (b.nodes.length > MAX_SUBMISSION_NODES) return { ok: false, error: `Too many nodes (max ${MAX_SUBMISSION_NODES})` };
   if (edges.length > MAX_SUBMISSION_EDGES) return { ok: false, error: `Too many connections (max ${MAX_SUBMISSION_EDGES})` };
 
+  const seenIds = new Set<string>();
   const nodes: SubmissionNode[] = [];
   for (const raw of b.nodes) {
     const n = raw as Record<string, unknown>;
     if (typeof n?.id !== "string" || n.id.length === 0) return { ok: false, error: "Each node needs an id" };
+    if (seenIds.has(n.id)) return { ok: false, error: "Duplicate node id" };
+    seenIds.add(n.id);
     if (!NODE_TYPES.includes(n.type as NodeType)) return { ok: false, error: `Unknown node type: ${String(n.type)}` };
     if (typeof n.label !== "string" || n.label.trim().length === 0) return { ok: false, error: "Each node needs a label" };
     if (n.label.length > MAX_FIELD_LENGTH) return { ok: false, error: `Label too long (max ${MAX_FIELD_LENGTH})` };
@@ -108,7 +111,8 @@ export function resolveEdgeEndpoints(
   for (const e of edges) {
     const source = draftIds.has(e.source) ? e.source : slugToId.get(e.source);
     const target = draftIds.has(e.target) ? e.target : slugToId.get(e.target);
-    if (!source || !target) return { ok: false, error: `Unknown node: ${draftIds.has(e.source) ? e.target : e.source}` };
+    if (!source) return { ok: false, error: `Unknown node: ${e.source}` };
+    if (!target) return { ok: false, error: `Unknown node: ${e.target}` };
     if (source === target) return { ok: false, error: "A connection cannot link a node to itself" };
     resolved.push({ source, target, verb: e.verb });
   }
