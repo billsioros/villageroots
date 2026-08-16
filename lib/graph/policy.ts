@@ -30,10 +30,6 @@ export function graphPolicy(
   return or(approved, and(eq(cols.createdBy, rule.ownerId!), ne(cols.status, "rejected")));
 }
 
-export function derivePrivacy(deceased: boolean): "public" | "private" {
-  return deceased ? "public" : "private";
-}
-
 export function isLivingPerson(row: {
   type: string;
   properties: Record<string, unknown> | null;
