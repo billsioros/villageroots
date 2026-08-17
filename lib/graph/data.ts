@@ -1,4 +1,4 @@
-import type { GraphNode, GraphEdge, SuggestedEdge, ReviewItem, Verb } from "./types";
+import type { GraphNode, GraphEdge, SuggestedEdge, Verb } from "./types";
 import { TYPE_META, VERB_KIND } from "./helpers";
 
 const N = (
@@ -75,10 +75,4 @@ export const EDGES: GraphEdge[] = [
 export const SUGGESTED_EDGES: SuggestedEdge[] = [
   { id: "s1", source: "p-yiannis", target: "p-eleni", verb: "sibling_of", kind: "social", suggested: true, confidence: 82 },
   { id: "s2", source: "p-alexandros", target: "t-lakka", verb: "owns_land_at", kind: "geo", suggested: true, confidence: 67 },
-];
-
-export const REVIEW_SEED: ReviewItem[] = [
-  { id: "r1", kind: "relation", title: "Sibling link suggested", body: "Eleni — Yiannis, SIBLING_OF. AI link prediction at 82% confidence.", who: "AI link prediction · 82%" },
-  { id: "r2", kind: "node", title: "New person node", body: "Stavros Katsaris, b. 1906, Kalyvia.", who: "Anonymous villager" },
-  { id: "r3", kind: "ocr", title: "OCR batch — Christening records", body: "1924 ledger, 14 names, 3 matched to existing records.", who: "OCR pipeline" },
 ];

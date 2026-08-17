@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { SUGGESTED_EDGES, REVIEW_SEED } from "@/lib/graph/data";
+import { SUGGESTED_EDGES } from "@/lib/graph/data";
 import { uid, countByType as countByTypeHelper, TYPE_META } from "@/lib/graph/helpers";
 import { toNodeRow, toEdgeRow } from "@/lib/graph/mappers";
 import { queryClient } from "@/lib/graph/query-client";
@@ -11,7 +11,6 @@ import type {
   SuggestedEdge,
   NodeType,
   EdgeKind,
-  ReviewItem,
   ChatMessage,
   Toast,
   ZoomIntent,
@@ -56,7 +55,6 @@ export interface GraphStore {
   newNodeOpen: boolean;
   ocrOpen: boolean;
   aboutOpen: boolean;
-  reviewOpen: boolean;
   toast: Toast | null;
   zoomPct: number;
   zoomIntent: ZoomIntent;
@@ -80,7 +78,6 @@ export interface GraphStore {
   setNewNodeOpen: (open: boolean) => void;
   setOcrOpen: (open: boolean) => void;
   setAboutOpen: (open: boolean) => void;
-  setReviewOpen: (open: boolean) => void;
   dismissWelcome: () => void;
   dismissHint: () => void;
   pushToast: (t: Toast) => void;
@@ -99,11 +96,6 @@ export interface GraphStore {
   toggleType: (t: NodeType) => void;
   toggleKind: (k: EdgeKind) => void;
   toggleSuggest: () => void;
-
-  // review
-  reviewQueue: ReviewItem[];
-  pushReview: (item: Omit<ReviewItem, "id">) => void;
-  resolveReview: (id: string) => void;
 
   // chat
   chatInput: string;
@@ -268,7 +260,6 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
   newNodeOpen: false,
   ocrOpen: false,
   aboutOpen: false,
-  reviewOpen: false,
   toast: null,
   zoomPct: 100,
   zoomIntent: null,
@@ -310,7 +301,6 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
   setNewNodeOpen: (open) => set({ newNodeOpen: open }),
   setOcrOpen: (open) => set({ ocrOpen: open }),
   setAboutOpen: (open) => set({ aboutOpen: open }),
-  setReviewOpen: (open) => set({ reviewOpen: open }),
   dismissWelcome: () => set({ welcome: false }),
   dismissHint: () => set({ hint: false }),
   pushToast: (t) => {
@@ -343,11 +333,6 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
   toggleType: (t) => set((s) => ({ hiddenTypes: { ...s.hiddenTypes, [t]: !s.hiddenTypes[t] } })),
   toggleKind: (k) => set((s) => ({ kindOn: { ...s.kindOn, [k]: !s.kindOn[k] } })),
   toggleSuggest: () => set((s) => ({ suggestOn: !s.suggestOn })),
-
-  // review
-  reviewQueue: REVIEW_SEED,
-  pushReview: (item) => set((s) => ({ reviewQueue: [...s.reviewQueue, { ...item, id: uid() }] })),
-  resolveReview: (id) => set((s) => ({ reviewQueue: s.reviewQueue.filter((r) => r.id !== id) })),
 
   // chat
   chatInput: "",

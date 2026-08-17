@@ -15,7 +15,6 @@ import { LayersPop } from "./layers-pop";
 import { SidePanel } from "./side-panel";
 import { ChatPanel } from "./chat-panel";
 import { ChatFab } from "./chat-fab";
-import { ReviewQueue } from "./review-queue";
 import { OcrModal, AboutModal } from "./modals";
 import ContributePanel from "./contribute-panel";
 import { GraphLoader } from "./graph-loader";
@@ -24,7 +23,6 @@ import { useGraphStore } from "@/store/graphStore";
 export function GraphApp() {
   const searchOpen = useGraphStore((s) => s.searchOpen);
   const layersOpen = useGraphStore((s) => s.layersOpen);
-  const reviewOpen = useGraphStore((s) => s.reviewOpen);
   const newNodeOpen = useGraphStore((s) => s.newNodeOpen);
   const ocrOpen = useGraphStore((s) => s.ocrOpen);
   const aboutOpen = useGraphStore((s) => s.aboutOpen);
@@ -67,7 +65,6 @@ export function GraphApp() {
           <HintChip />
           {searchOpen && <SearchPop />}
           {layersOpen && <LayersPop />}
-          {reviewOpen && <ReviewQueue />}
           <SidePanel />
         </div>
         <ChatPanel />

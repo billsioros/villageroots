@@ -13,7 +13,6 @@ export function RelationsPanel({ node }: { node: GraphNode }) {
   const nodes = useGraphStore(useShallow(selectAllNodes));
   const suggestedEdges = useGraphStore((s) => s.suggestedEdges);
   const selectNode = useGraphStore((s) => s.selectNode);
-  const pushReview = useGraphStore((s) => s.pushReview);
   const pushToast = useGraphStore((s) => s.pushToast);
 
   const related = edges.filter((e) => e.source === node.id || e.target === node.id);
@@ -36,13 +35,7 @@ export function RelationsPanel({ node }: { node: GraphNode }) {
       pushToast({ tone: "error", message: "Pick a node" });
       return;
     }
-    pushReview({
-      kind: "relation",
-      title: `${node.label} — ${verb.replaceAll("_", " ")} — ${nodes.find((n) => n.id === target)?.label ?? target}`,
-      body: note || "Proposed by you",
-      who: "You",
-    });
-    pushToast({ tone: "success", message: "Proposal queued for review" });
+    pushToast({ tone: "success", message: "Proposal submitted for moderation" });
     setOpen(false);
     setNote("");
     setTarget("");
@@ -90,12 +83,7 @@ export function RelationsPanel({ node }: { node: GraphNode }) {
               <span className="text-[13px]">{e.verb.replaceAll("_", " ")}</span>
               <button
                 onClick={() =>
-                  pushReview({
-                    kind: "relation",
-                    title: `${node.label} — ${e.verb.replaceAll("_", " ")} — ${nodes.find((n) => n.id === other(e))?.label}`,
-                    body: `AI suggests a ${e.confidence}% match`,
-                    who: "AI",
-                  })
+                  pushToast({ tone: "info", message: "AI suggestion submitted for moderation" })
                 }
                 className="ml-auto rounded-full bg-foreground px-3 py-1 text-[11px] font-medium text-background"
               >

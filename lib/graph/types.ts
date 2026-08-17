@@ -62,16 +62,6 @@ export interface SuggestedEdge extends GraphEdge {
   confidence: number;
 }
 
-export type ReviewKind = "relation" | "node" | "ocr";
-
-export interface ReviewItem {
-  id: string;
-  kind: ReviewKind;
-  title: string;
-  body: string;
-  who: string;
-}
-
 export type ChatRole = "user" | "assistant";
 
 export interface ChatMessage {

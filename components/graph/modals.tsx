@@ -34,7 +34,6 @@ function ModalShell({ title, onClose, children }: { title: string; onClose: () =
 export function OcrModal() {
   const open = useGraphStore((s) => s.ocrOpen);
   const setOpen = useGraphStore((s) => s.setOcrOpen);
-  const pushReview = useGraphStore((s) => s.pushReview);
   const pushToast = useGraphStore((s) => s.pushToast);
   const [step, setStep] = useState<"drop" | "progress" | "review">("drop");
   const [progress, setProgress] = useState(0);
@@ -69,13 +68,7 @@ export function OcrModal() {
   };
 
   const submit = () => {
-    pushReview({
-      kind: "ocr",
-      title: name || "Imported record",
-      body: `${born ? `Born ${born}. ` : ""}${note}`,
-      who: "OCR",
-    });
-    pushToast({ tone: "success", message: "Imported record queued for review" });
+    pushToast({ tone: "success", message: "Imported record submitted for moderation" });
     close();
   };
 
