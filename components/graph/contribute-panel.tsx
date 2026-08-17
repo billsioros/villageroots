@@ -63,8 +63,6 @@ export default function ContributePanel() {
   const [target, setTarget] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [adding, setAdding] = useState(false);
-
   useEffect(() => {
     let active = true;
     fetch("/api/me/role")
@@ -105,8 +103,6 @@ export default function ContributePanel() {
       pushToast({ tone: "error", message: "Name is required" });
       return;
     }
-    if (adding) return;
-    setAdding(true);
     const id = "draft-" + uid();
     addDraftNode({
       id,
@@ -118,7 +114,6 @@ export default function ContributePanel() {
     });
     selectDraft(id);
     setName("");
-    setAdding(false);
   };
 
   const addConnection = () => {
@@ -204,7 +199,7 @@ export default function ContributePanel() {
                   onChange={(e) => setName(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") addNode(); }}
                 />
-                <Button size="sm" onClick={addNode} disabled={adding}>
+                <Button size="sm" onClick={addNode}>
                   <Plus className="mr-1 h-4 w-4" /> Add
                 </Button>
               </div>
@@ -249,12 +244,12 @@ export default function ContributePanel() {
                   Your queue is empty — add nodes and connections on the left.
                 </p>
               ) : (
-                <>
+                <ul className="list-none p-0 m-0 space-y-1">
                   {draftNodes.map((d) => (
                     <li
                       key={d.id}
                       onClick={() => selectDraft(d.id)}
-                      className="flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-sm hover:bg-muted list-none mb-1"
+                      className="flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-sm hover:bg-muted"
                     >
                       <span
                         className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
@@ -278,7 +273,7 @@ export default function ContributePanel() {
                   {draftEdges.map((e) => (
                     <li
                       key={e.id}
-                      className="flex items-center gap-2 rounded-md border px-2 py-1 text-xs text-muted-foreground list-none mb-1"
+                      className="flex items-center gap-2 rounded-md border px-2 py-1 text-xs text-muted-foreground"
                     >
                       <span className="flex-1 truncate">
                         {labelLookup.get(e.source) ?? e.source} {VERB_LABELS[e.verb]} {labelLookup.get(e.target) ?? e.target}
@@ -292,7 +287,7 @@ export default function ContributePanel() {
                       </button>
                     </li>
                   ))}
-                </>
+                </ul>
               )}
             </div>
           </div>
