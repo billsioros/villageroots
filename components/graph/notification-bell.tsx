@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Bell, CheckCircle2, XCircle } from "lucide-react";
+import { Bell, CheckCircle2, XCircle, Clock } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +11,7 @@ import {
 
 interface Notification {
   id: string;
-  type: "submission_approved" | "submission_rejected";
+  type: "submission_approved" | "submission_rejected" | "submission_pending";
   message: string;
   read: boolean;
   createdAt: string;
@@ -105,8 +105,10 @@ export function NotificationBell() {
               <span className="mt-0.5 shrink-0">
                 {n.type === "submission_approved" ? (
                   <CheckCircle2 size={15} className="text-success" />
-                ) : (
+                ) : n.type === "submission_rejected" ? (
                   <XCircle size={15} className="text-destructive" />
+                ) : (
+                  <Clock size={15} className="text-muted-foreground" />
                 )}
               </span>
               <div className="flex-1 min-w-0">

@@ -17,6 +17,7 @@ import { ChatPanel } from "./chat-panel";
 import { ChatFab } from "./chat-fab";
 import { OcrModal, AboutModal } from "./modals";
 import ContributePanel from "./contribute-panel";
+import { AdminReviewQueue } from "@/components/admin/review-queue";
 import { GraphLoader } from "./graph-loader";
 import { useGraphStore } from "@/store/graphStore";
 
@@ -26,6 +27,7 @@ export function GraphApp() {
   const newNodeOpen = useGraphStore((s) => s.newNodeOpen);
   const ocrOpen = useGraphStore((s) => s.ocrOpen);
   const aboutOpen = useGraphStore((s) => s.aboutOpen);
+  const reviewQueueOpen = useGraphStore((s) => s.reviewQueueOpen);
   const clearSelection = useGraphStore((s) => s.clearSelection);
   const setSearchOpen = useGraphStore((s) => s.setSearchOpen);
   const setNewNodeOpen = useGraphStore((s) => s.setNewNodeOpen);
@@ -36,7 +38,7 @@ export function GraphApp() {
         e.preventDefault();
         setSearchOpen(true);
       } else if (e.key === "Escape") {
-        if (aboutOpen) return; // modal shells handle their own Escape
+        if (aboutOpen || reviewQueueOpen) return; // modal shells handle their own Escape
         if (newNodeOpen) {
           setNewNodeOpen(false);
           return;
@@ -48,7 +50,7 @@ export function GraphApp() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [aboutOpen, newNodeOpen, ocrOpen, clearSelection, setSearchOpen, setNewNodeOpen]);
+  }, [aboutOpen, reviewQueueOpen, newNodeOpen, ocrOpen, clearSelection, setSearchOpen, setNewNodeOpen]);
 
   return (
     <GraphLoader>
@@ -72,6 +74,7 @@ export function GraphApp() {
         <Toast />
         <OcrModal />
         <AboutModal />
+        <AdminReviewQueue />
       </div>
     </GraphLoader>
   );

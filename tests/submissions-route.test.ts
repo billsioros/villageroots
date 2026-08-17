@@ -63,8 +63,8 @@ describe("POST /api/submissions", () => {
     const res = await POST(mreq(payload()));
     expect(res.status).toBe(201);
     expect(await res.json()).toEqual({ nodes: 2, edges: 1 });
-    // 2 node inserts + 1 edge insert
-    expect(mocks.insert).toHaveBeenCalledTimes(3);
+    // 2 node inserts + 1 edge insert + 1 admin notification insert
+    expect(mocks.insert).toHaveBeenCalledTimes(4);
     const nodeCall = mocks.insertValues.mock.calls[0][0];
     expect(nodeCall.status).toBe("pending");
     expect(nodeCall.privacy).toBe("public"); // deceased person

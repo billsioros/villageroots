@@ -64,6 +64,8 @@ async function fetchQueue(type: ApiType): Promise<ReviewQueueResponse> {
 
 export function AdminReviewQueue() {
   const queryClient = useQueryClient();
+  const open = useGraphStore((s) => s.reviewQueueOpen);
+  const setOpen = useGraphStore((s) => s.setReviewQueueOpen);
   const [tab, setTab] = useState<Tab>("nodes");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [active, setActive] = useState<{ type: string; id: string } | null>(
@@ -161,8 +163,11 @@ export function AdminReviewQueue() {
     setSelected(new Set());
   };
 
+  if (!open) return null;
+
   return (
-    <div className="flex h-full flex-col gap-4">
+    <ModalShell title="Review Queue" onClose={() => setOpen(false)}>
+      <div className="flex flex-col gap-4 max-h-[70vh] w-[600px]">
       <div className="flex gap-2">
         {TABS.map((t) => (
           <Button
@@ -290,5 +295,6 @@ export function AdminReviewQueue() {
         />
       )}
     </div>
+    </ModalShell>
   );
 }

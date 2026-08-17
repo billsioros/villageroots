@@ -1,6 +1,7 @@
 "use client";
 
-import { Search, Plus, Upload, Layers } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Search, Plus, Upload, Layers, ShieldCheck } from "lucide-react";
 import { useGraphStore } from "@/store/graphStore";
 
 export function Dock() {
@@ -9,12 +10,26 @@ export function Dock() {
   const setOcrOpen = useGraphStore((s) => s.setOcrOpen);
   const setLayersOpen = useGraphStore((s) => s.setLayersOpen);
   const layersOpen = useGraphStore((s) => s.layersOpen);
+  const setReviewQueueOpen = useGraphStore((s) => s.setReviewQueueOpen);
+
+  const [isAdmin, setIsAdmin] = useState(false);
+  useEffect(() => {
+    let active = true;
+    fetch("/api/me/role")
+      .then((r) => r.json())
+      .then((j: { role: string | null }) => {
+        if (active) setIsAdmin(j.role === "admin");
+      })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, []);
 
   const items = [
     { label: "Search", icon: Search, onClick: () => setSearchOpen(true), active: false },
     { label: "New node", icon: Plus, onClick: () => setNewNodeOpen(true), active: false },
     { label: "Import document", icon: Upload, onClick: () => setOcrOpen(true), active: false },
     { label: "Layers", icon: Layers, onClick: () => setLayersOpen(!layersOpen), active: layersOpen },
+    ...(isAdmin ? [{ label: "Review queue", icon: ShieldCheck, onClick: () => setReviewQueueOpen(true), active: false }] : []),
   ];
 
   return (

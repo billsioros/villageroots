@@ -191,7 +191,7 @@ export const notifications = pgTable(
       .notNull()
       .references(() => authUsers.id),
     type: text("type", {
-      enum: ["submission_approved", "submission_rejected"],
+      enum: ["submission_approved", "submission_rejected", "submission_pending"],
     }).notNull(),
     message: text("message").notNull(),
     read: boolean("read").notNull().default(false),

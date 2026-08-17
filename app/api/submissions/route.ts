@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/graph/db";
-import { edges as edgesTable, nodes as nodesTable } from "@/drizzle/schema";
+import { edges as edgesTable, nodes as nodesTable, notifications, userRoles } from "@/drizzle/schema";
 import { sessionUid } from "@/lib/graph/session";
 import { isAdminUid } from "@/lib/graph/admin";
 import { createNodeValues } from "@/lib/graph/createNode";
@@ -75,6 +75,30 @@ export async function POST(req: Request) {
     });
   } catch {
     return NextResponse.json({ error: "Submission failed" }, { status: 500 });
+  }
+
+  // Notify admins about pending submission
+  if (status === "pending") {
+    const admins = await db
+      .select({ userId: userRoles.userId })
+      .from(userRoles)
+      .where(eq(userRoles.role, "admin"));
+
+    const nodeCount = shape.value.nodes.length;
+    const edgeCount = resolved.edges.length;
+    const parts: string[] = [];
+    if (nodeCount) parts.push(`${nodeCount} node${nodeCount > 1 ? "s" : ""}`);
+    if (edgeCount) parts.push(`${edgeCount} connection${edgeCount > 1 ? "s" : ""}`);
+    const summary = parts.join(" and ") || "new submission";
+
+    for (const { userId } of admins) {
+      await db.insert(notifications).values({
+        userId,
+        type: "submission_pending",
+        message: `New submission awaiting review: ${summary}`,
+        metadata: { node_count: nodeCount, edge_count: edgeCount },
+      });
+    }
   }
 
   return NextResponse.json(result, { status: 201 });

@@ -14,22 +14,22 @@ const USER_EMAIL = "user@villageroots.local";
 const USER_PASSWORD = "user-password";
 
 async function ensureUser(
-  tx: any,
+  tx: any, // eslint-disable-line @typescript-eslint/no-explicit-any -- drizzle tx type is complex
   email: string,
   password: string,
   name: string,
   role: "admin" | "contributor",
 ) {
-  const existing = await tx.execute<{ id: string }>(
+  const existing = (await tx.execute(
     sql`select id from auth.users where email = ${email}`,
-  );
+  )) as { rows: { id: string }[] };
   let userId: string;
-  if (existing.length > 0) {
-    userId = existing[0].id;
+  if (existing.rows.length > 0) {
+    userId = existing.rows[0].id;
     console.log(`user ${email} already exists (${userId})`);
   } else {
     const hash = await bcrypt.hash(password, 10);
-    const created = await tx.execute<{ id: string }>(
+    const created = (await tx.execute(
       sql`
         insert into auth.users (
           instance_id, id, aud, role, email, encrypted_password,
@@ -45,8 +45,8 @@ async function ensureUser(
           now(), now()
         ) returning id
       `,
-    );
-    userId = created[0].id;
+    )) as { rows: { id: string }[] };
+    userId = created.rows[0].id;
     console.log(`created ${role} user ${email} (${userId})`);
   }
 
