@@ -112,7 +112,6 @@ export default function ContributePanel() {
       x: canvasCenter.x + (Math.random() - 0.5) * 120,
       y: canvasCenter.y + (Math.random() - 0.5) * 120,
     });
-    selectDraft(id);
     setName("");
   };
 
