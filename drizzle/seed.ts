@@ -8,8 +8,77 @@ import { NODES, EDGES } from "../lib/graph/data";
 
 config({ path: ".env.local" });
 
-const TEST_EMAIL = "test@villageroots.local";
-const TEST_PASSWORD = "test-password";
+const ADMIN_EMAIL = "admin@villageroots.local";
+const ADMIN_PASSWORD = "admin-password";
+const USER_EMAIL = "user@villageroots.local";
+const USER_PASSWORD = "user-password";
+
+async function ensureUser(
+  tx: any,
+  email: string,
+  password: string,
+  name: string,
+  role: "admin" | "contributor",
+) {
+  const existing = await tx.execute<{ id: string }>(
+    sql`select id from auth.users where email = ${email}`,
+  );
+  let userId: string;
+  if (existing.length > 0) {
+    userId = existing[0].id;
+    console.log(`user ${email} already exists (${userId})`);
+  } else {
+    const hash = await bcrypt.hash(password, 10);
+    const created = await tx.execute<{ id: string }>(
+      sql`
+        insert into auth.users (
+          instance_id, id, aud, role, email, encrypted_password,
+          email_confirmed_at, confirmation_token, recovery_token, email_change_token_new,
+          email_change,
+          raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+        ) values (
+          '00000000-0000-0000-0000-000000000000', gen_random_uuid(),
+          'authenticated', 'authenticated', ${email}, ${hash},
+          now(), '', '', '',
+          '',
+          '{"provider":"email","providers":["email"]}', ${JSON.stringify({ name })},
+          now(), now()
+        ) returning id
+      `,
+    );
+    userId = created[0].id;
+    console.log(`created ${role} user ${email} (${userId})`);
+  }
+
+  await tx.execute(sql`
+    update auth.users set
+      confirmation_token = coalesce(confirmation_token, ''),
+      recovery_token = coalesce(recovery_token, ''),
+      email_change_token_new = coalesce(email_change_token_new, ''),
+      email_change = coalesce(email_change, '')
+    where id = ${userId}
+  `);
+
+  await tx.execute(sql`
+    insert into auth.identities (
+      id, user_id, provider_id, identity_data, provider,
+      last_sign_in_at, created_at, updated_at
+    ) values (
+      gen_random_uuid(), ${userId}, ${userId},
+      ${JSON.stringify({ sub: userId, email })}, 'email',
+      now(), now(), now()
+    )
+    on conflict (provider, provider_id) do nothing
+  `);
+
+  await tx.execute(sql`
+    insert into user_roles (user_id, role)
+    values (${userId}, ${role})
+    on conflict (user_id) do nothing
+  `);
+
+  return userId;
+}
 
 async function main() {
   const client = postgres(process.env.DATABASE_URL!);
@@ -26,61 +95,8 @@ async function main() {
   }
 
   await db.transaction(async (tx) => {
-    const existingUser = await tx.execute<{ id: string }>(
-      sql`select id from auth.users where email = ${TEST_EMAIL}`,
-    );
-    let userId: string;
-    if (existingUser.length > 0) {
-      userId = existingUser[0].id;
-    } else {
-      const hash = await bcrypt.hash(TEST_PASSWORD, 10);
-      const created = await tx.execute<{ id: string }>(
-        sql`
-          insert into auth.users (
-            instance_id, id, aud, role, email, encrypted_password,
-            email_confirmed_at, confirmation_token, recovery_token, email_change_token_new,
-            email_change,
-            raw_app_meta_data, raw_user_meta_data, created_at, updated_at
-          ) values (
-            '00000000-0000-0000-0000-000000000000', gen_random_uuid(),
-            'authenticated', 'authenticated', ${TEST_EMAIL}, ${hash},
-            now(), '', '', '',
-            '',
-            '{"provider":"email","providers":["email"]}', '{"name":"Test User"}',
-            now(), now()
-          ) returning id
-        `,
-      );
-      userId = created[0].id;
-      console.log(`created test user ${TEST_EMAIL} (${userId})`);
-    }
-
-    await tx.execute(sql`
-      update auth.users set
-        confirmation_token = coalesce(confirmation_token, ''),
-        recovery_token = coalesce(recovery_token, ''),
-        email_change_token_new = coalesce(email_change_token_new, ''),
-        email_change = coalesce(email_change, '')
-      where id = ${userId}
-    `);
-
-    await tx.execute(sql`
-      insert into auth.identities (
-        id, user_id, provider_id, identity_data, provider,
-        last_sign_in_at, created_at, updated_at
-      ) values (
-        gen_random_uuid(), ${userId}, ${userId},
-        ${JSON.stringify({ sub: userId, email: TEST_EMAIL })}, 'email',
-        now(), now(), now()
-      )
-      on conflict (provider, provider_id) do nothing
-    `);
-
-    await tx.execute(sql`
-      insert into user_roles (user_id, role)
-      values (${userId}, 'admin')
-      on conflict (user_id) do nothing
-    `);
+    const adminId = await ensureUser(tx, ADMIN_EMAIL, ADMIN_PASSWORD, "Admin User", "admin");
+    const userId = await ensureUser(tx, USER_EMAIL, USER_PASSWORD, "Contributor User", "contributor");
 
     for (const n of NODES) {
       await tx
@@ -94,7 +110,7 @@ async function main() {
           properties: { x: n.x, y: n.y },
           status: "approved",
           privacy: "public",
-          createdBy: userId,
+          createdBy: adminId,
         })
         .onConflictDoNothing({ target: nodes.slug });
     }
@@ -121,7 +137,7 @@ async function main() {
           type: e.verb,
           properties: {},
           status: "approved",
-          createdBy: userId,
+          createdBy: adminId,
         })
         .onConflictDoNothing({ target: edges.slug });
     }
@@ -133,7 +149,7 @@ async function main() {
         type: "person",
         label: "Stavros Katsaris",
         subtitle: "b. 1906",
-        description: "Seeded pending node owned by the test user.",
+        description: "Seeded pending node owned by the contributor.",
         properties: { x: 1100, y: 500 },
         status: "pending",
         privacy: "public",

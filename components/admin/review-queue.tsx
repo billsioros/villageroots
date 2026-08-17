@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ModerationHistory } from "@/components/admin/moderation-history";
 import { invalidationKeys } from "@/lib/graph/queries";
+import { useGraphStore } from "@/store/graphStore";
+import { ModalShell } from "@/components/graph/modals";
 
 type ApiType = "nodes" | "edges" | "scan_uploads";
 

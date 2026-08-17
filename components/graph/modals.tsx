@@ -18,7 +18,7 @@ const TYPE_LABELS: Record<NodeType, string> = {
   path: "Path",
 };
 
-function ModalShell({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+export function ModalShell({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
