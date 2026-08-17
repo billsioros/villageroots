@@ -44,9 +44,13 @@ describe("POST /api/moderation/[type]/[id]", () => {
   it("applies moderation and records history inside a transaction", async () => {
     mocks.sessionUid.mockResolvedValue("admin");
     mocks.isAdminUid.mockResolvedValue(true);
+    const txSelect = vi.fn().mockReturnValue({
+      from: () => ({ where: () => ({ limit: async () => [{ createdBy: "admin" }] }) }),
+    });
     mocks.transaction.mockImplementation(async (fn) => fn({
       update: () => ({ set: () => ({ where: () => ({ returning: async () => [{ status: "approved" }] }) }) }),
       insert: () => ({ values: () => ({ returning: async () => [{ id: "m1" }] }) }),
+      select: txSelect,
     }));
     const res = await POST(mreq({ action: "approve" }), cparams("nodes", "n1"));
     expect(res.status).toBe(200);
@@ -69,11 +73,46 @@ describe("POST /api/moderation/[type]/[id]", () => {
     const insert = vi.fn().mockReturnValue({
       values: () => ({ returning: async () => [{ id: "m2" }] }),
     });
-    mocks.transaction.mockImplementation(async (fn) => fn({ update, insert }));
+    const txSelect = vi.fn().mockReturnValue({
+      from: () => ({ where: () => ({ limit: async () => [{ createdBy: "admin" }] }) }),
+    });
+    mocks.transaction.mockImplementation(async (fn) => fn({ update, insert, select: txSelect }));
     const res = await POST(mreq({ action: "approve" }), cparams("nodes", "n1"));
     expect(res.status).toBe(200);
     expect((await res.json()).status).toBe("approved");
     expect(update).not.toHaveBeenCalled();
     expect(insert).toHaveBeenCalledTimes(1);
+  });
+
+  it("creates a notification for the submitter on approve", async () => {
+    mocks.sessionUid.mockResolvedValue("admin");
+    mocks.isAdminUid.mockResolvedValue(true);
+    // Mock select to return a node with status pending
+    mocks.select.mockReturnValue({
+      from: () => ({
+        where: () => ({
+          limit: async () => [{ status: "pending" }],
+        }),
+      }),
+    });
+    const insert = vi.fn().mockReturnValue({
+      values: () => ({ returning: async () => [{ id: "m1" }] }),
+    });
+    const update = vi.fn().mockReturnValue({
+      set: () => ({ where: () => ({}) }),
+    });
+    // Transaction mock must include select for the createdBy lookup
+    const txSelect = vi.fn().mockReturnValue({
+      from: () => ({
+        where: () => ({
+          limit: async () => [{ createdBy: "user-1" }],
+        }),
+      }),
+    });
+    mocks.transaction.mockImplementation(async (fn) => fn({ update, insert, select: txSelect }));
+    const res = await POST(mreq({ action: "approve" }), cparams("nodes", "n1"));
+    expect(res.status).toBe(200);
+    // insert called twice: moderations + notifications
+    expect(insert).toHaveBeenCalledTimes(2);
   });
 });
