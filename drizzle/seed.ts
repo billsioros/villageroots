@@ -76,6 +76,12 @@ async function main() {
       on conflict (provider, provider_id) do nothing
     `);
 
+    await tx.execute(sql`
+      insert into user_roles (user_id, role)
+      values (${userId}, 'admin')
+      on conflict (user_id) do nothing
+    `);
+
     for (const n of NODES) {
       await tx
         .insert(nodes)

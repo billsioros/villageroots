@@ -3,6 +3,7 @@ import { SUGGESTED_EDGES, REVIEW_SEED } from "@/lib/graph/data";
 import { uid, countByType as countByTypeHelper } from "@/lib/graph/helpers";
 import { toNodeRow, toEdgeRow } from "@/lib/graph/mappers";
 import { queryClient } from "@/lib/graph/query-client";
+import { invalidationKeys } from "@/lib/graph/queries";
 import type { NodeRow, EdgeRow } from "@/drizzle/schema";
 import type {
   GraphNode,
@@ -151,8 +152,8 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
     }),
   addNode: (n) => {
     set((s) => ({ nodesMap: { ...s.nodesMap, [n.id]: n } }));
-    const cache = queryClient.getQueryData<NodeRow[]>(["graph", "nodes"]);
-    if (cache) queryClient.setQueryData(["graph", "nodes"], [...cache, toNodeRow(n)]);
+    const cache = queryClient.getQueryData<NodeRow[]>(invalidationKeys.nodes);
+    if (cache) queryClient.setQueryData(invalidationKeys.nodes, [...cache, toNodeRow(n)]);
   },
   updateNode: (id, patch) => {
     set((s) => {
@@ -160,10 +161,10 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
       if (!prev) return s;
       return { nodesMap: { ...s.nodesMap, [id]: { ...prev, ...patch } } };
     });
-    const cache = queryClient.getQueryData<NodeRow[]>(["graph", "nodes"]);
+    const cache = queryClient.getQueryData<NodeRow[]>(invalidationKeys.nodes);
     if (!cache) return;
     queryClient.setQueryData(
-      ["graph", "nodes"],
+      invalidationKeys.nodes,
       cache.map((r) => {
         if (r.slug !== id) return r;
         const rowPatch: Partial<NodeRow> = {};
@@ -190,34 +191,34 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
       const edges = s.edges.filter((e) => e.source !== id && e.target !== id);
       return { nodesMap, edges };
     });
-    const cache = queryClient.getQueryData<NodeRow[]>(["graph", "nodes"]);
-    if (cache) queryClient.setQueryData(["graph", "nodes"], cache.filter((r) => r.slug !== id));
-    const edgeCache = queryClient.getQueryData<EdgeRow[]>(["graph", "edges"]);
+    const cache = queryClient.getQueryData<NodeRow[]>(invalidationKeys.nodes);
+    if (cache) queryClient.setQueryData(invalidationKeys.nodes, cache.filter((r) => r.slug !== id));
+    const edgeCache = queryClient.getQueryData<EdgeRow[]>(invalidationKeys.edges);
     if (edgeCache) {
       queryClient.setQueryData(
-        ["graph", "edges"],
+        invalidationKeys.edges,
         edgeCache.filter((r) => r.sourceSlug !== id && r.targetSlug !== id),
       );
     }
   },
   addEdge: (e) => {
     set((s) => ({ edges: [...s.edges, e] }));
-    const cache = queryClient.getQueryData<EdgeRow[]>(["graph", "edges"]);
-    if (cache) queryClient.setQueryData(["graph", "edges"], [...cache, toEdgeRow(e)]);
+    const cache = queryClient.getQueryData<EdgeRow[]>(invalidationKeys.edges);
+    if (cache) queryClient.setQueryData(invalidationKeys.edges, [...cache, toEdgeRow(e)]);
   },
   updateEdge: (id, patch) => {
     set((s) => ({ edges: s.edges.map((e) => (e.id === id ? { ...e, ...patch } : e)) }));
-    const cache = queryClient.getQueryData<EdgeRow[]>(["graph", "edges"]);
+    const cache = queryClient.getQueryData<EdgeRow[]>(invalidationKeys.edges);
     if (!cache) return;
     queryClient.setQueryData(
-      ["graph", "edges"],
+      invalidationKeys.edges,
       cache.map((r) => (r.slug === id ? { ...r, ...patch } : r)),
     );
   },
   removeEdge: (id) => {
     set((s) => ({ edges: s.edges.filter((e) => e.id !== id) }));
-    const cache = queryClient.getQueryData<EdgeRow[]>(["graph", "edges"]);
-    if (cache) queryClient.setQueryData(["graph", "edges"], cache.filter((r) => r.slug !== id));
+    const cache = queryClient.getQueryData<EdgeRow[]>(invalidationKeys.edges);
+    if (cache) queryClient.setQueryData(invalidationKeys.edges, cache.filter((r) => r.slug !== id));
   },
   setNodePosition: (id, x, y) =>
     set((s) => {
@@ -231,10 +232,10 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
       if (!prev) return s;
       return { nodesMap: { ...s.nodesMap, [id]: { ...prev, x, y } } };
     });
-    const cache = queryClient.getQueryData<NodeRow[]>(["graph", "nodes"]);
+    const cache = queryClient.getQueryData<NodeRow[]>(invalidationKeys.nodes);
     if (!cache) return;
     queryClient.setQueryData(
-      ["graph", "nodes"],
+      invalidationKeys.nodes,
       cache.map((r) => (r.slug === id ? { ...r, properties: { ...r.properties, x, y } } : r)),
     );
   },

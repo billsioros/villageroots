@@ -9,6 +9,7 @@ import {
   timestamp,
   index,
   check,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const nodeTypeEnum = pgEnum("node_type", [
@@ -48,6 +49,7 @@ const authSchema = pgSchema("auth");
 
 export const authUsers = authSchema.table("users", {
   id: uuid("id").primaryKey(),
+  email: text("email"),
 });
 
 export const nodes = pgTable(
@@ -128,3 +130,58 @@ export type EdgeRow = Omit<typeof edges.$inferSelect, "sourceId" | "targetId"> &
   sourceSlug: string;
   targetSlug: string;
 };
+
+export const userRoles = pgTable(
+  "user_roles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    role: text("role", { enum: ["admin", "contributor"] }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("user_roles_user_id_key").on(t.userId)],
+);
+
+export const moderations = pgTable(
+  "moderations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    itemType: text("item_type", { enum: ["nodes", "edges", "scan_uploads"] }).notNull(),
+    itemId: uuid("item_id").notNull(),
+    action: text("action", { enum: ["approved", "rejected"] }).notNull(),
+    reason: text("reason"),
+    moderatedBy: uuid("moderated_by")
+      .notNull()
+      .references(() => authUsers.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("moderations_item_idx").on(t.itemType, t.itemId),
+    index("moderations_moderated_by_idx").on(t.moderatedBy),
+  ],
+);
+
+export const scanUploads = pgTable(
+  "scan_uploads",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    slug: text("slug").notNull().unique(),
+    submitterId: uuid("submitter_id")
+      .notNull()
+      .references(() => authUsers.id),
+    storagePath: text("storage_path").notNull(),
+    status: statusEnum("status").notNull().default("pending"),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => authUsers.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("scan_uploads_status_idx").on(t.status)],
+);
+
+export type UserRoleRow = typeof userRoles.$inferSelect;
+export type ModerationRow = typeof moderations.$inferSelect;
+export type ScanUploadRow = typeof scanUploads.$inferSelect;
