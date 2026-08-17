@@ -5,6 +5,7 @@ import {
   pgTable,
   text,
   uuid,
+  boolean,
   jsonb,
   timestamp,
   index,
@@ -182,6 +183,30 @@ export const scanUploads = pgTable(
   (t) => [index("scan_uploads_status_idx").on(t.status)],
 );
 
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => authUsers.id),
+    type: text("type", {
+      enum: ["submission_approved", "submission_rejected"],
+    }).notNull(),
+    message: text("message").notNull(),
+    read: boolean("read").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    metadata: jsonb("metadata"),
+  },
+  (t) => [
+    index("notifications_user_idx").on(t.userId),
+    index("notifications_read_idx").on(t.userId, t.read),
+  ],
+);
+
 export type UserRoleRow = typeof userRoles.$inferSelect;
 export type ModerationRow = typeof moderations.$inferSelect;
 export type ScanUploadRow = typeof scanUploads.$inferSelect;
+export type NotificationRow = typeof notifications.$inferSelect;

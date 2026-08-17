@@ -15,6 +15,13 @@
       "when": 1786896036617,
       "tag": "0001_loving_warhawk",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786983386704,
+      "tag": "0002_nebulous_mister_sinister",
+      "breakpoints": true
     }
   ]
 }
