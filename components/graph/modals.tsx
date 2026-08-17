@@ -6,7 +6,7 @@ import { X, UploadCloud, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGraphStore } from "@/store/graphStore";
 
-function ModalShell({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+export function ModalShell({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);

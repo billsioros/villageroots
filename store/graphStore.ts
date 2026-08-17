@@ -55,6 +55,7 @@ export interface GraphStore {
   newNodeOpen: boolean;
   ocrOpen: boolean;
   aboutOpen: boolean;
+  reviewQueueOpen: boolean;
   toast: Toast | null;
   zoomPct: number;
   zoomIntent: ZoomIntent;
@@ -78,6 +79,7 @@ export interface GraphStore {
   setNewNodeOpen: (open: boolean) => void;
   setOcrOpen: (open: boolean) => void;
   setAboutOpen: (open: boolean) => void;
+  setReviewQueueOpen: (open: boolean) => void;
   dismissWelcome: () => void;
   dismissHint: () => void;
   pushToast: (t: Toast) => void;
@@ -260,6 +262,7 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
   newNodeOpen: false,
   ocrOpen: false,
   aboutOpen: false,
+  reviewQueueOpen: false,
   toast: null,
   zoomPct: 100,
   zoomIntent: null,
@@ -301,6 +304,7 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
   setNewNodeOpen: (open) => set({ newNodeOpen: open }),
   setOcrOpen: (open) => set({ ocrOpen: open }),
   setAboutOpen: (open) => set({ aboutOpen: open }),
+  setReviewQueueOpen: (open) => set({ reviewQueueOpen: open }),
   dismissWelcome: () => set({ welcome: false }),
   dismissHint: () => set({ hint: false }),
   pushToast: (t) => {
