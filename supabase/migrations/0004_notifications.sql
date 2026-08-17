@@ -10,23 +10,13 @@ CREATE TABLE "notifications" (
 --> statement-breakpoint
 ALTER TABLE "notifications" ADD CONSTRAINT "notifications_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "notifications_user_idx" ON "notifications" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "notifications_read_idx" ON "notifications" USING btree ("user_id","read");
---> statement-breakpoint
--- Enable RLS
-ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
---> statement-breakpoint
--- Users can read their own notifications
+CREATE INDEX "notifications_read_idx" ON "notifications" USING btree ("user_id","read");--> statement-breakpoint
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE POLICY "notifications_select_own"
   ON notifications FOR SELECT
-  USING (auth.uid() = user_id);
---> statement-breakpoint
--- Service role can insert (via server routes)
-CREATE POLICY "notifications_insert_service"
-  ON notifications FOR INSERT
-  WITH CHECK (true);
---> statement-breakpoint
--- Users can update their own (mark as read)
+  USING (auth.uid() = user_id);--> statement-breakpoint
 CREATE POLICY "notifications_update_own"
   ON notifications FOR UPDATE
   USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+  WITH CHECK (auth.uid() = user_id);--> statement-breakpoint
+GRANT SELECT ON public.notifications TO authenticated;
