@@ -33,7 +33,7 @@ export async function POST(
   }
 
   const current = await db
-    .select({ status: target.status })
+    .select({ status: target.status, createdBy: target.createdBy })
     .from(target.table)
     .where(eq(target.table.id, id))
     .limit(1);
@@ -59,12 +59,7 @@ export async function POST(
     });
 
     // Create notification for the submitter (all three tables have createdBy)
-    const [owner] = await tx
-      .select({ createdBy: target.createdBy! })
-      .from(target.table)
-      .where(eq(target.table.id, id))
-      .limit(1);
-    const ownerId = owner?.createdBy as string | null;
+    const ownerId = current[0]?.createdBy as string | null;
 
     if (ownerId && ownerId !== uid) {
       const message = action === "approve"

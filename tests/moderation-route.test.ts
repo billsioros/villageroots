@@ -28,7 +28,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   mocks.select.mockReturnValue({
     from: () => ({
-      where: () => ({ limit: async () => [{ status: "pending" }] }),
+      where: () => ({ limit: async () => [{ status: "pending", createdBy: "user-1" }] }),
     }),
   });
 });
@@ -64,7 +64,7 @@ describe("POST /api/moderation/[type]/[id]", () => {
     mocks.isAdminUid.mockResolvedValue(true);
     mocks.select.mockReturnValue({
       from: () => ({
-        where: () => ({ limit: async () => [{ status: "approved" }] }),
+        where: () => ({ limit: async () => [{ status: "approved", createdBy: "admin" }] }),
       }),
     });
     const update = vi.fn().mockReturnValue({
@@ -91,13 +91,12 @@ describe("POST /api/moderation/[type]/[id]", () => {
     mocks.select.mockReturnValue({
       from: () => ({
         where: () => ({
-          limit: async () => [{ status: "pending" }],
+          limit: async () => [{ status: "pending", createdBy: "user-1" }],
         }),
       }),
     });
-    const insert = vi.fn().mockReturnValue({
-      values: () => ({ returning: async () => [{ id: "m1" }] }),
-    });
+    const values = vi.fn().mockReturnValue({ returning: async () => [{ id: "n1" }] });
+    const insert = vi.fn().mockReturnValue({ values });
     const update = vi.fn().mockReturnValue({
       set: () => ({ where: () => ({}) }),
     });
@@ -114,5 +113,11 @@ describe("POST /api/moderation/[type]/[id]", () => {
     expect(res.status).toBe(200);
     // insert called twice: moderations + notifications
     expect(insert).toHaveBeenCalledTimes(2);
+    // Assert notification content
+    expect(values).toHaveBeenCalledWith(expect.objectContaining({
+      userId: "user-1",
+      type: "submission_approved",
+      message: "Your submission was approved and is now live on the graph",
+    }));
   });
 });
