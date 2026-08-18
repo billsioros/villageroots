@@ -31,34 +31,41 @@ export async function GET(request: NextRequest) {
   const searchCol = sql.raw('"search_vector"');
   const policy = graphPolicy(uid, { status: nodes.status, createdBy: nodes.createdBy });
 
-  const rows = await db
-    .select({
-      id: nodes.id,
-      label: nodes.label,
-      subtitle: nodes.subtitle,
-      type: nodes.type,
-      privacy: nodes.privacy,
-      properties: nodes.properties,
-      createdBy: nodes.createdBy,
-      rank: sql<number>`ts_rank(${searchCol}, ${tsquery})`,
-    })
-    .from(nodes)
-    .where(sql`${searchCol} @@ ${tsquery} AND ${policy}`)
-    .orderBy(sql`ts_rank(${searchCol}, ${tsquery}) DESC`)
-    .limit(limit);
+  try {
+    const rows = await db
+      .select({
+        id: nodes.id,
+        label: nodes.label,
+        subtitle: nodes.subtitle,
+        type: nodes.type,
+        privacy: nodes.privacy,
+        properties: nodes.properties,
+        createdBy: nodes.createdBy,
+        rank: sql<number>`ts_rank(COALESCE(${searchCol}, ''::tsvector), ${tsquery})`,
+      })
+      .from(nodes)
+      .where(sql`${searchCol} @@ ${tsquery} AND ${policy}`)
+      .orderBy(sql`ts_rank(COALESCE(${searchCol}, ''::tsvector), ${tsquery}) DESC`)
+      .limit(limit);
 
-  const output = rows.map((row) => {
-    const masked = shouldMaskLivingOnRead(row, { uid, isAdmin })
-      ? { ...row, label: "Living Person", subtitle: "" }
-      : row;
-    return {
-      id: masked.id,
-      label: masked.label,
-      subtitle: masked.subtitle,
-      type: masked.type,
-      rank: masked.rank,
-    };
-  });
+    const output = rows.map((row) => {
+      const masked = shouldMaskLivingOnRead(row, { uid, isAdmin })
+        ? { ...row, label: "Living Person", subtitle: "" }
+        : row;
+      return {
+        id: masked.id,
+        label: masked.label,
+        subtitle: masked.subtitle,
+        type: masked.type,
+        rank: masked.rank,
+      };
+    });
 
-  return NextResponse.json({ results: output });
+    return NextResponse.json({ results: output });
+  } catch {
+    return NextResponse.json(
+      { error: "Search failed" },
+      { status: 500 },
+    );
+  }
 }
