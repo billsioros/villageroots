@@ -10,12 +10,7 @@ import { queryClient } from "@/lib/graph/query-client";
 import { invalidationKeys } from "@/lib/graph/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ModalShell } from "@/components/graph/modals";
 
 const NODE_TYPES: NodeType[] = ["person", "family", "landmark", "toponym", "event", "path"];
 
@@ -162,36 +157,33 @@ export default function ContributePanel() {
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-[680px] sm:max-w-[680px] max-w-[95vw]">
-        <DialogHeader>
-          <DialogTitle>Contribute</DialogTitle>
-        </DialogHeader>
+  if (!open) return null;
 
-        <div className="flex flex-col gap-4 sm:flex-row">
+  return (
+    <ModalShell title="Contribute" onClose={() => handleOpenChange(false)} className="w-[820px] max-w-[95vw]">
+        <div className="flex flex-col gap-6 sm:flex-row">
           {/* Left column: Compose */}
-          <div className="flex-1 min-w-0 space-y-4">
+          <div className="flex-1 min-w-0 space-y-6">
             <div>
-              <div className="mb-1 text-xs font-medium text-muted-foreground">Add a node</div>
-              <div className="mb-2 flex flex-wrap gap-1.5">
+              <div className="mb-2 text-xs font-medium text-muted-foreground">Add a node</div>
+              <div className="mb-3 flex flex-wrap gap-2">
                 {NODE_TYPES.map((t) => (
                   <button
                     key={t}
                     onClick={() => setType(t)}
                     className={
-                      "rounded-full border px-2.5 py-1 text-xs " +
+                      "rounded-full border px-3 py-1.5 text-xs " +
                       (type === t
                         ? "border-foreground bg-foreground text-background"
                         : "text-muted-foreground hover:bg-muted")
                     }
                   >
-                    <span className="mr-1 inline-block h-2 w-2 rounded-full" style={{ background: TYPE_META[t].color }} />
+                    <span className="mr-1.5 inline-block h-2 w-2 rounded-full" style={{ background: TYPE_META[t].color }} />
                     {TYPE_META[t].label}
                   </button>
                 ))}
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 <Input
                   placeholder="Name the node…"
                   value={name}
@@ -205,13 +197,13 @@ export default function ContributePanel() {
             </div>
 
             <div>
-              <div className="mb-1 text-xs font-medium text-muted-foreground">Add a connection</div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="max-w-[90px] truncate text-sm">{source ? labelLookup.get(source) : "Pick a draft"}</span>
+              <div className="mb-2 text-xs font-medium text-muted-foreground">Add a connection</div>
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="max-w-[120px] truncate text-sm">{source ? labelLookup.get(source) : "Pick a draft"}</span>
                 <select
                   value={verb}
                   onChange={(e) => setVerb(e.target.value as Verb)}
-                  className="h-9 rounded-md border bg-card px-2 text-sm"
+                  className="h-9 rounded-md border bg-card px-2.5 text-sm"
                 >
                   {VERBS.map((v) => (
                     <option key={v} value={v}>{VERB_LABELS[v]}</option>
@@ -220,7 +212,7 @@ export default function ContributePanel() {
                 <select
                   value={target}
                   onChange={(e) => setTarget(e.target.value)}
-                  className="h-9 rounded-md border bg-card px-2 text-sm"
+                  className="h-9 rounded-md border bg-card px-2.5 text-sm"
                 >
                   <option value="">Target…</option>
                   {targetOptions.map((o) => (
@@ -236,22 +228,22 @@ export default function ContributePanel() {
 
           {/* Right column: Queue */}
           <div className="flex-1 min-w-0">
-            <div className="mb-1 text-xs font-medium text-muted-foreground">Queue</div>
-            <div className="max-h-[300px] overflow-y-auto rounded-md border p-2">
+            <div className="mb-2 text-xs font-medium text-muted-foreground">Queue</div>
+            <div className="max-h-[350px] overflow-y-auto rounded-lg border p-3">
               {draftNodes.length === 0 && draftEdges.length === 0 ? (
-                <p className="py-6 text-center text-[13px] text-muted-foreground">
+                <p className="py-8 text-center text-[13px] text-muted-foreground">
                   Your queue is empty — add nodes and connections on the left.
                 </p>
               ) : (
-                <ul className="list-none p-0 m-0 space-y-1">
+                <ul className="list-none p-0 m-0 space-y-2">
                   {draftNodes.map((d) => (
                     <li
                       key={d.id}
                       onClick={() => selectDraft(d.id)}
-                      className="flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-sm hover:bg-muted"
+                      className="flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 text-sm hover:bg-muted"
                     >
                       <span
-                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
                         style={{ background: TYPE_META[d.type].color }}
                       >
                         {TYPE_META[d.type].glyph}
@@ -272,7 +264,7 @@ export default function ContributePanel() {
                   {draftEdges.map((e) => (
                     <li
                       key={e.id}
-                      className="flex items-center gap-2 rounded-md border px-2 py-1 text-xs text-muted-foreground"
+                      className="flex items-center gap-3 rounded-lg border px-3 py-2 text-xs text-muted-foreground"
                     >
                       <span className="flex-1 truncate">
                         {labelLookup.get(e.source) ?? e.source} {VERB_LABELS[e.verb]} {labelLookup.get(e.target) ?? e.target}
@@ -293,11 +285,11 @@ export default function ContributePanel() {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between border-t pt-3">
+        <div className="flex items-center justify-between border-t pt-4 mt-2">
           <span className="text-xs text-muted-foreground">
             {draftNodes.length} nodes · {draftEdges.length} connections
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <Button size="sm" variant="ghost" onClick={clearDrafts}>Clear all</Button>
             <Button size="sm" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
             <Button size="sm" onClick={submit} disabled={draftNodes.length === 0 || submitting}>
@@ -306,8 +298,7 @@ export default function ContributePanel() {
             </Button>
           </div>
         </div>
-        {isAdmin && <p className="text-xs text-muted-foreground">Admin — publishes directly to the graph.</p>}
-      </DialogContent>
-    </Dialog>
+        {isAdmin && <p className="mt-1 text-xs text-muted-foreground">Admin — publishes directly to the graph.</p>}
+    </ModalShell>
   );
 }

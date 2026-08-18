@@ -97,6 +97,19 @@ export function GraphCanvas() {
   useEffect(() => {
     const fg = graphRef.current;
     if (!fg) return;
+
+    // Configure d3 forces imperatively (not available as props in this lib version)
+    // Use setTimeout to ensure the force engine has initialized
+    const forceTimer = setTimeout(() => {
+      const charge = fg.d3Force("charge");
+      if (charge) charge.strength = -400;
+      const collision = fg.d3Force("collision");
+      if (collision) collision.radius = 70;
+      const link = fg.d3Force("link");
+      if (link) link.distance = 180;
+      fg.d3ReheatSimulation();
+    }, 0);
+
     const onStop = () => {
       const bbox = fg.getGraphBbox(3);
       if (!bbox) return;
@@ -109,6 +122,7 @@ export function GraphCanvas() {
     const t = setTimeout(() => fg.zoomToFit(400, 60), 150);
     return () => {
       fg.off("engineStop", onStop);
+      clearTimeout(forceTimer);
       clearTimeout(t);
     };
   }, [setCanvasCenter]);
@@ -250,8 +264,10 @@ export function GraphCanvas() {
             setCanvasCenter({ x: node.x ?? 0, y: node.y ?? 0 });
           }}
           onBackgroundClick={clearSelection}
-          cooldownTicks={120}
-          d3AlphaDecay={0.05}
+          nodeVal={15}
+          nodeRelSize={4}
+          cooldownTicks={200}
+          d3AlphaDecay={0.02}
         />
       )}
     </div>

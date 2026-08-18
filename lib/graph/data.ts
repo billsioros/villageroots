@@ -1,4 +1,4 @@
-import type { GraphNode, GraphEdge, SuggestedEdge, Verb } from "./types";
+import type { GraphNode, GraphEdge, Verb } from "./types";
 import { TYPE_META, VERB_KIND } from "./helpers";
 
 const N = (
@@ -70,9 +70,4 @@ export const EDGES: GraphEdge[] = [
   E("e-nik-feast", "p-nikolas", "e-feast", "participated_in"),
   E("e-yiannis-school", "p-yiannis", "e-school", "participated_in"),
   E("e-kats-plane", "f-katsaris", "l-plane", "gathered_at"),
-];
-
-export const SUGGESTED_EDGES: SuggestedEdge[] = [
-  { id: "s1", source: "p-yiannis", target: "p-eleni", verb: "sibling_of", kind: "social", suggested: true, confidence: 82 },
-  { id: "s2", source: "p-alexandros", target: "t-lakka", verb: "owns_land_at", kind: "geo", suggested: true, confidence: 67 },
 ];
