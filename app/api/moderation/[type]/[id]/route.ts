@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/graph/db";
-import { nodes, edges, scanUploads, moderations } from "@/drizzle/schema";
+import { nodes, edges, scanUploads, moderations, notifications } from "@/drizzle/schema";
 import { sessionUid } from "@/lib/graph/session";
 import { isAdminUid } from "@/lib/graph/admin";
 import { applyModeration, type ModerationAction } from "@/lib/graph/moderation";
 import type { Status } from "@/lib/graph/types";
 
 const TABLE = {
-  nodes: { table: nodes, status: nodes.status },
-  edges: { table: edges, status: edges.status },
-  scan_uploads: { table: scanUploads, status: scanUploads.status },
+  nodes: { table: nodes, status: nodes.status, createdBy: nodes.createdBy },
+  edges: { table: edges, status: edges.status, createdBy: edges.createdBy },
+  scan_uploads: { table: scanUploads, status: scanUploads.status, createdBy: scanUploads.createdBy },
 } as const;
 
 export async function POST(
@@ -33,7 +33,7 @@ export async function POST(
   }
 
   const current = await db
-    .select({ status: target.status })
+    .select({ status: target.status, createdBy: target.createdBy })
     .from(target.table)
     .where(eq(target.table.id, id))
     .limit(1);
@@ -57,6 +57,24 @@ export async function POST(
       reason: body.reason ?? null,
       moderatedBy: uid,
     });
+
+    // Create notification for the submitter (all three tables have createdBy)
+    const ownerId = current[0]?.createdBy as string | null;
+
+    if (ownerId && ownerId !== uid) {
+      const message = action === "approve"
+        ? "Your submission was approved and is now live on the graph"
+        : body.reason
+          ? `Your submission was not approved: ${body.reason}`
+          : "Your submission was not approved";
+      await tx.insert(notifications).values({
+        userId: ownerId,
+        type: action === "approve" ? "submission_approved" : "submission_rejected",
+        message,
+        metadata: { submission_id: id, node_count: 1 },
+      });
+    }
+
     return { id, status };
   });
 

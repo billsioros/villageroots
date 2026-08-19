@@ -39,7 +39,7 @@ export function PopoverShell({
   return (
     <div
       ref={ref}
-      className={`absolute ${pos} z-40 w-[360px] animate-[vrr_0.25s_ease] rounded-2xl border bg-card shadow-elev-raised`}
+      className={`absolute ${pos} z-40 w-[360px] animate-[modal-in_0.2s_ease] rounded-2xl border bg-card shadow-elev-raised`}
     >
       <div className="flex items-center justify-between border-b px-4 py-3">
         <div className="text-[13px] font-semibold">{title}</div>

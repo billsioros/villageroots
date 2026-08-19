@@ -16,6 +16,7 @@ export function nodeRowToGraph(row: NodeRow): GraphNode {
     mark: TYPE_META[row.type].glyph,
     x,
     y,
+    status: row.status,
   };
 }
 

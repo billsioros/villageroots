@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ModerationHistory } from "@/components/admin/moderation-history";
 import { invalidationKeys } from "@/lib/graph/queries";
+import { useGraphStore } from "@/store/graphStore";
+import { ModalShell } from "@/components/graph/modals";
 
 type ApiType = "nodes" | "edges" | "scan_uploads";
 
@@ -62,6 +64,8 @@ async function fetchQueue(type: ApiType): Promise<ReviewQueueResponse> {
 
 export function AdminReviewQueue() {
   const queryClient = useQueryClient();
+  const open = useGraphStore((s) => s.reviewQueueOpen);
+  const setOpen = useGraphStore((s) => s.setReviewQueueOpen);
   const [tab, setTab] = useState<Tab>("nodes");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [active, setActive] = useState<{ type: string; id: string } | null>(
@@ -159,9 +163,12 @@ export function AdminReviewQueue() {
     setSelected(new Set());
   };
 
+  if (!open) return null;
+
   return (
-    <div className="flex h-full flex-col gap-4">
-      <div className="flex gap-2">
+    <ModalShell title="Review Queue" onClose={() => setOpen(false)} className="w-[820px] max-w-[95vw]">
+      <div className="flex flex-col gap-5 max-h-[70vh] overflow-hidden">
+      <div className="flex gap-3">
         {TABS.map((t) => (
           <Button
             key={t}
@@ -203,11 +210,11 @@ export function AdminReviewQueue() {
       ) : isError ? (
         <p className="text-sm text-destructive">Failed to load review queue.</p>
       ) : data && data.items.length > 0 ? (
-        <ul className="flex flex-col gap-3 overflow-y-auto">
+        <ul className="flex flex-col gap-4 overflow-y-auto">
           {data.items.map((item) => (
             <li
               key={item.id}
-              className="flex flex-col gap-3 rounded-lg border bg-card p-4"
+              className="flex flex-col gap-3 rounded-lg border bg-card p-5"
             >
               <div className="flex items-start gap-3">
                 <div className="pt-0.5">
@@ -288,5 +295,6 @@ export function AdminReviewQueue() {
         />
       )}
     </div>
+    </ModalShell>
   );
 }

@@ -1,6 +1,5 @@
 import { create } from "zustand";
-import { SUGGESTED_EDGES, REVIEW_SEED } from "@/lib/graph/data";
-import { uid, countByType as countByTypeHelper } from "@/lib/graph/helpers";
+import { uid, countByType as countByTypeHelper, TYPE_META } from "@/lib/graph/helpers";
 import { toNodeRow, toEdgeRow } from "@/lib/graph/mappers";
 import { queryClient } from "@/lib/graph/query-client";
 import { invalidationKeys } from "@/lib/graph/queries";
@@ -11,22 +10,30 @@ import type {
   SuggestedEdge,
   NodeType,
   EdgeKind,
-  ReviewItem,
   ChatMessage,
   Toast,
   ZoomIntent,
   PanIntent,
+  DraftNode,
+  DraftEdge,
 } from "@/lib/graph/types";
 
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
 let flashTimer: ReturnType<typeof setTimeout> | null = null;
 let litTimer: ReturnType<typeof setTimeout> | null = null;
 
+const draftGraphCache = new WeakMap<
+  DraftNode[],
+  { hidden: Record<NodeType, boolean>; nodes: GraphNode[] }
+>();
+
 export interface GraphStore {
   // graph
   nodesMap: Record<string, GraphNode>;
   edges: GraphEdge[];
   suggestedEdges: SuggestedEdge[];
+  draftNodes: DraftNode[];
+  draftEdges: DraftEdge[];
   hydrateGraph: (nodes: GraphNode[], edges: GraphEdge[]) => void;
   addNode: (n: GraphNode) => void;
   updateNode: (id: string, patch: Partial<GraphNode>) => void;
@@ -47,7 +54,7 @@ export interface GraphStore {
   newNodeOpen: boolean;
   ocrOpen: boolean;
   aboutOpen: boolean;
-  reviewOpen: boolean;
+  reviewQueueOpen: boolean;
   toast: Toast | null;
   zoomPct: number;
   zoomIntent: ZoomIntent;
@@ -57,6 +64,13 @@ export interface GraphStore {
   hint: boolean;
   selectNode: (id: string | null) => void;
   clearSelection: () => void;
+  addDraftNode: (draft: DraftNode) => void;
+  updateDraftNode: (id: string, patch: Partial<DraftNode>) => void;
+  removeDraftNode: (id: string) => void;
+  addDraftEdge: (draft: DraftEdge) => void;
+  removeDraftEdge: (id: string) => void;
+  clearDrafts: () => void;
+  selectDraft: (id: string | null) => void;
   toggleChat: () => void;
   toggleCollapsed: () => void;
   setSearchOpen: (open: boolean) => void;
@@ -64,7 +78,7 @@ export interface GraphStore {
   setNewNodeOpen: (open: boolean) => void;
   setOcrOpen: (open: boolean) => void;
   setAboutOpen: (open: boolean) => void;
-  setReviewOpen: (open: boolean) => void;
+  setReviewQueueOpen: (open: boolean) => void;
   dismissWelcome: () => void;
   dismissHint: () => void;
   pushToast: (t: Toast) => void;
@@ -83,11 +97,6 @@ export interface GraphStore {
   toggleType: (t: NodeType) => void;
   toggleKind: (k: EdgeKind) => void;
   toggleSuggest: () => void;
-
-  // review
-  reviewQueue: ReviewItem[];
-  pushReview: (item: Omit<ReviewItem, "id">) => void;
-  resolveReview: (id: string) => void;
 
   // chat
   chatInput: string;
@@ -112,24 +121,54 @@ const MILL_PATH = {
   edgeIds: ["e-mill-nikolas", "e-nik-yiannis"],
 };
 
+const CHURCH_PATH = {
+  nodeIds: ["l-church", "p-yiannis", "p-maria"],
+  edgeIds: ["e-yiannis-church", "e-maria-church"],
+};
+
 function cannedAnswer(text: string): {
   answer: string;
   path?: { nodeIds: string[]; edgeIds: string[] };
 } {
   const q = text.toLowerCase();
-  if (q.includes("mill") || q.includes("kalyvia")) {
-    return {
-      answer:
-        "The mill was built in 1920 and ground wheat for Kalyvia until 1965. Nikolas Katsaris ran it — ask him about the flood of '52.",
-      path: MILL_PATH,
-    };
+
+  const KNOWN_QUERIES: { match: RegExp; nodeId: string; path?: typeof MILL_PATH }[] = [
+    { match: /mill|kalyvia/, nodeId: "l-mill", path: MILL_PATH },
+    { match: /church|ioannis/, nodeId: "l-church", path: CHURCH_PATH },
+    { match: /bridge|kamares/, nodeId: "l-bridge" },
+    { match: /plane|tree|gathering/, nodeId: "l-plane" },
+    { match: /petra|rock/, nodeId: "t-petra" },
+    { match: /lakka|hollow/, nodeId: "t-lakka" },
+    { match: /school/, nodeId: "e-school" },
+    { match: /feast|harvest/, nodeId: "e-feast" },
+    { match: /charter|founding/, nodeId: "e-charter" },
+    { match: /emigrat/, nodeId: "e-emigrate" },
+    { match: /drakia|mule|track/, nodeId: "d-drakia" },
+  ];
+
+  const store = useGraphStore.getState();
+
+  for (const { match, nodeId, path } of KNOWN_QUERIES) {
+    if (match.test(q)) {
+      const node = store.nodesMap[nodeId];
+      if (node) {
+        const desc = node.description || node.subtitle || "";
+        return { answer: `${node.label} — ${desc}`, path };
+      }
+    }
   }
-  if (q.includes("church") || q.includes("ioannis")) {
-    return {
-      answer:
-        "Agios Ioannis is the village church, built in 1890. Most Potidaneians were baptized here, including Nikolas Katsaris.",
-    };
+
+  const nodeValues = Object.values(store.nodesMap);
+  const match = nodeValues.find(
+    (n) =>
+      n.label.toLowerCase().includes(q) ||
+      n.subtitle.toLowerCase().includes(q)
+  );
+  if (match) {
+    const desc = match.description || match.subtitle || "";
+    return { answer: `${match.label} — ${desc}` };
   }
+
   return {
     answer:
       "I don't know the answer yet — the knowledge graph is still growing. Try asking about the mill, Kalyvia, or Agios Ioannis.",
@@ -140,7 +179,9 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
   // graph
   nodesMap: {},
   edges: [],
-  suggestedEdges: SUGGESTED_EDGES,
+  suggestedEdges: [],
+  draftNodes: [],
+  draftEdges: [],
   hydrateGraph: (nodes, edges) =>
     set((s) => {
       const merged: Record<string, GraphNode> = { ...s.nodesMap };
@@ -250,7 +291,7 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
   newNodeOpen: false,
   ocrOpen: false,
   aboutOpen: false,
-  reviewOpen: false,
+  reviewQueueOpen: false,
   toast: null,
   zoomPct: 100,
   zoomIntent: null,
@@ -266,6 +307,25 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
       layersOpen: false,
     })),
   clearSelection: () => set({ selectedId: null, sidepanelOpen: false }),
+  addDraftNode: (draft) => set((s) => ({ draftNodes: [...s.draftNodes, draft] })),
+  updateDraftNode: (id, patch) =>
+    set((s) => ({ draftNodes: s.draftNodes.map((d) => (d.id === id ? { ...d, ...patch } : d)) })),
+  removeDraftNode: (id) =>
+    set((s) => ({
+      draftNodes: s.draftNodes.filter((d) => d.id !== id),
+      draftEdges: s.draftEdges.filter((e) => e.source !== id && e.target !== id),
+      ...(s.selectedId === id ? { selectedId: null, sidepanelOpen: false } : {}),
+    })),
+  addDraftEdge: (draft) => set((s) => ({ draftEdges: [...s.draftEdges, draft] })),
+  removeDraftEdge: (id) => set((s) => ({ draftEdges: s.draftEdges.filter((e) => e.id !== id) })),
+  clearDrafts: () =>
+    set((s) => ({
+      draftNodes: [],
+      draftEdges: [],
+      ...(s.selectedId?.startsWith("draft-") ? { selectedId: null, sidepanelOpen: false } : {}),
+    })),
+  selectDraft: (id) =>
+    set({ selectedId: id, sidepanelOpen: id !== null, searchOpen: false, layersOpen: false }),
   toggleChat: () => set((s) => ({ chatOpen: !s.chatOpen, chatCollapsed: false })),
   toggleCollapsed: () => set((s) => ({ chatCollapsed: !s.chatCollapsed })),
   setSearchOpen: (open) => set({ searchOpen: open }),
@@ -273,7 +333,7 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
   setNewNodeOpen: (open) => set({ newNodeOpen: open }),
   setOcrOpen: (open) => set({ ocrOpen: open }),
   setAboutOpen: (open) => set({ aboutOpen: open }),
-  setReviewOpen: (open) => set({ reviewOpen: open }),
+  setReviewQueueOpen: (open) => set({ reviewQueueOpen: open }),
   dismissWelcome: () => set({ welcome: false }),
   dismissHint: () => set({ hint: false }),
   pushToast: (t) => {
@@ -306,11 +366,6 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
   toggleType: (t) => set((s) => ({ hiddenTypes: { ...s.hiddenTypes, [t]: !s.hiddenTypes[t] } })),
   toggleKind: (k) => set((s) => ({ kindOn: { ...s.kindOn, [k]: !s.kindOn[k] } })),
   toggleSuggest: () => set((s) => ({ suggestOn: !s.suggestOn })),
-
-  // review
-  reviewQueue: REVIEW_SEED,
-  pushReview: (item) => set((s) => ({ reviewQueue: [...s.reviewQueue, { ...item, id: uid() }] })),
-  resolveReview: (id) => set((s) => ({ reviewQueue: s.reviewQueue.filter((r) => r.id !== id) })),
 
   // chat
   chatInput: "",
@@ -364,5 +419,28 @@ export const selectAllNodes = (s: GraphStore): GraphNode[] => Object.values(s.no
 export const selectNodeById = (s: GraphStore, id: string | null): GraphNode | null =>
   id ? s.nodesMap[id] ?? null : null;
 
-export const selectVisibleNodes = (s: GraphStore): GraphNode[] =>
-  Object.values(s.nodesMap).filter((n) => !s.hiddenTypes[n.type]);
+export const selectVisibleNodes = (s: GraphStore): GraphNode[] => {
+  const base = Object.values(s.nodesMap).filter((n) => !s.hiddenTypes[n.type]);
+  let draftEntry = draftGraphCache.get(s.draftNodes);
+  if (!draftEntry || draftEntry.hidden !== s.hiddenTypes) {
+    draftEntry = {
+      hidden: s.hiddenTypes,
+      nodes: s.draftNodes
+        .filter((d) => !s.hiddenTypes[d.type])
+        .map((d) => ({
+          id: d.id,
+          type: d.type,
+          label: d.label,
+          subtitle: d.subtitle ?? "",
+          description: d.description ?? "",
+          color: TYPE_META[d.type].color,
+          mark: TYPE_META[d.type].glyph,
+          x: d.x,
+          y: d.y,
+          draft: true,
+        })),
+    };
+    draftGraphCache.set(s.draftNodes, draftEntry);
+  }
+  return [...base, ...draftEntry.nodes];
+};

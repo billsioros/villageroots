@@ -8,6 +8,8 @@ export type NodeType =
 
 export type Status = "pending" | "approved" | "rejected";
 
+export type Privacy = "public" | "private";
+
 export type EdgeKind = "social" | "geo" | "hist";
 
 export type Verb =
@@ -40,6 +42,8 @@ export interface GraphNode {
   mark: string; // glyph, derived from TYPE_META[type].glyph
   x: number; // seed position (mockup coords)
   y: number;
+  status?: Status;
+  draft?: boolean;
 }
 
 export interface GraphEdge {
@@ -50,21 +54,12 @@ export interface GraphEdge {
   kind: EdgeKind;
   suggested?: boolean;
   confidence?: number;
+  draft?: boolean;
 }
 
 export interface SuggestedEdge extends GraphEdge {
   suggested: true;
   confidence: number;
-}
-
-export type ReviewKind = "relation" | "node" | "ocr";
-
-export interface ReviewItem {
-  id: string;
-  kind: ReviewKind;
-  title: string;
-  body: string;
-  who: string;
 }
 
 export type ChatRole = "user" | "assistant";
@@ -87,4 +82,26 @@ export type ZoomIntent = "in" | "out" | "fit" | null;
 
 export interface PanIntent {
   nodeId: string;
+}
+
+export interface DraftNode {
+  id: string;
+  type: NodeType;
+  label: string;
+  subtitle?: string;
+  description?: string;
+  facts?: Record<string, string>;
+  deceased?: boolean;
+  x: number;
+  y: number;
+  draft: true;
+}
+
+export interface DraftEdge {
+  id: string;
+  source: string;
+  target: string;
+  verb: Verb;
+  kind: EdgeKind;
+  draft: true;
 }

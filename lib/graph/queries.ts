@@ -1,7 +1,8 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { fetchAllNodes, fetchAllEdges } from "@/lib/graph/api";
+import { fetchSearchNodes } from "@/lib/graph/search";
 
 export const invalidationKeys = {
   nodes: ["graph", "nodes"] as const,
@@ -35,4 +36,14 @@ export function useGraphData() {
       ? { nodes: nodes.data, edges: edges.data }
       : undefined;
   return { data, isLoading, isError, error, refetch };
+}
+
+export function useSearchNodes(q: string) {
+  return useQuery({
+    queryKey: ["graph", "search", q],
+    queryFn: () => fetchSearchNodes(q),
+    enabled: q.trim().length >= 2,
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
+  });
 }

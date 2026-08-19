@@ -1,87 +1,114 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
-import { PopoverShell } from "./popover-shell";
-import { useShallow } from "zustand/react/shallow";
-import { useGraphStore, selectAllNodes } from "@/store/graphStore";
+import { ModalShell } from "./modals";
+import { useGraphStore } from "@/store/graphStore";
+import { useSearchNodes } from "@/lib/graph/queries";
+import { TYPE_META } from "@/lib/graph/helpers";
 
 export function SearchPop() {
-  const nodes = useGraphStore(useShallow(selectAllNodes));
   const selectNode = useGraphStore((s) => s.selectNode);
   const flashNodes = useGraphStore((s) => s.flashNodes);
   const pushToast = useGraphStore((s) => s.pushToast);
   const setSearchOpen = useGraphStore((s) => s.setSearchOpen);
   const [q, setQ] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
 
-  const results = useMemo(() => {
-    const t = q.trim().toLowerCase();
-    if (!t) return [];
-    return nodes
-      .filter((n) => n.label.toLowerCase().includes(t) || (n.subtitle ?? "").toLowerCase().includes(t))
-      .slice(0, 5);
-  }, [q, nodes]);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQ(q), 300);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  const { data, isLoading, isError } = useSearchNodes(debouncedQ);
+
+  const results = data ?? [];
+  const isPending = q.trim().length >= 2 && debouncedQ !== q.trim();
+  const showHint = q.trim() === "";
+  const showLoading = isLoading || isPending;
+  const showNoResults = !showHint && !showLoading && results.length === 0;
+  const showResults = !showHint && !showLoading && results.length > 0;
 
   const run = (ids: string[]) => {
     if (ids.length === 1) {
       selectNode(ids[0]);
       setSearchOpen(false);
       setQ("");
-    } else {
+    } else if (ids.length > 1) {
       flashNodes(ids);
       pushToast({ tone: "info", message: `${ids.length} matches flash on the canvas` });
       setQ("");
     }
   };
 
+  const handleEnter = () => {
+    const trimmed = q.trim();
+    if (trimmed.length < 2) return;
+    if (debouncedQ !== trimmed) {
+      setDebouncedQ(trimmed);
+    } else {
+      run(results.map((r) => r.id));
+    }
+  };
+
   return (
-    <PopoverShell title="Search" onClose={() => setSearchOpen(false)}>
-      <div className="p-3">
-        <div className="flex items-center gap-2 rounded-xl border bg-surface-warm px-3 py-2.5">
-          <Search size={15} className="text-muted-foreground" />
+    <ModalShell title="Search" onClose={() => setSearchOpen(false)} className="w-[640px] max-w-[95vw]">
+      <div>
+        <div className="flex items-center gap-3 rounded-xl border bg-surface-warm px-4 py-3">
+          <Search size={16} className="text-muted-foreground" />
           <input
             autoFocus
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                const ids = results.map((r) => r.id);
-                run(ids);
-              }
+              if (e.key === "Enter") handleEnter();
             }}
             placeholder="Search people, places, stories…"
-            className="w-full bg-transparent text-[13px] outline-none placeholder:text-muted-foreground"
+            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
         </div>
-        <div className="mt-2">
-          {q.trim() === "" ? (
-            <div className="px-2 py-3 text-center text-[12px] text-muted-foreground">
-              Try “mill”, “kalyvia” or “church”
+        <div className="mt-3">
+          {showHint ? (
+            <div className="px-2 py-6 text-center text-xs text-muted-foreground">
+              Try &ldquo;mill&rdquo;, &ldquo;kalyvia&rdquo; or &ldquo;church&rdquo;
             </div>
-          ) : results.length === 0 ? (
-            <div className="px-2 py-3 text-center text-[12px] text-muted-foreground">
+          ) : showLoading ? (
+            <div className="px-2 py-6 text-center text-xs text-muted-foreground">
+              Searching…
+            </div>
+          ) : isError ? (
+            <div className="px-2 py-6 text-center text-xs text-muted-foreground">
+              Search unavailable — try again
+            </div>
+          ) : showNoResults ? (
+            <div className="px-2 py-6 text-center text-xs text-muted-foreground">
               No matches — nothing lives here yet
             </div>
-          ) : (
-            results.map((r) => (
-              <button
-                key={r.id}
-                onClick={() => run([r.id])}
-                className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[13px] hover:bg-surface-warm"
-              >
-                <span
-                  className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[11px] font-semibold text-white"
-                  style={{ backgroundColor: r.color }}
-                >
-                  {r.mark}
-                </span>
-                <span className="font-medium">{r.label}</span>
-                {r.subtitle && <span className="ml-auto text-muted-foreground">{r.subtitle}</span>}
-              </button>
-            ))
-          )}
+          ) : showResults ? (
+            <div className="flex flex-col gap-1">
+              {results.map((r) => {
+                const meta = TYPE_META[r.type as keyof typeof TYPE_META];
+                return (
+                  <button
+                    key={r.id}
+                    onClick={() => run([r.id])}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm hover:bg-surface-warm"
+                  >
+                    <span
+                      className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[11px] font-semibold text-white"
+                      style={{ backgroundColor: meta?.color ?? "#999" }}
+                    >
+                      {meta?.glyph ?? "?"}
+                    </span>
+                    <span className="font-medium">{r.label}</span>
+                    {r.subtitle && <span className="ml-auto text-muted-foreground">{r.subtitle}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
       </div>
-    </PopoverShell>
+    </ModalShell>
   );
 }

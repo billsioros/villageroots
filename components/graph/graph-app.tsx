@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { Topbar } from "./topbar";
 import { GraphCanvas } from "./graph-canvas";
 import { GraphGrid } from "./graph-grid";
-import { Legend } from "./legend";
+
 import { StageUi } from "./stage-ui";
 import { Dock } from "./dock";
 import { WelcomeCard } from "./welcome-card";
@@ -14,21 +14,23 @@ import { SearchPop } from "./search-pop";
 import { LayersPop } from "./layers-pop";
 import { SidePanel } from "./side-panel";
 import { ChatPanel } from "./chat-panel";
-import { ChatFab } from "./chat-fab";
-import { ReviewQueue } from "./review-queue";
-import { NewNodeModal, OcrModal, AboutModal } from "./modals";
+import { OcrModal, AboutModal } from "./modals";
+import ContributePanel from "./contribute-panel";
+import { AdminReviewQueue } from "@/components/admin/review-queue";
 import { GraphLoader } from "./graph-loader";
 import { useGraphStore } from "@/store/graphStore";
 
 export function GraphApp() {
   const searchOpen = useGraphStore((s) => s.searchOpen);
   const layersOpen = useGraphStore((s) => s.layersOpen);
-  const reviewOpen = useGraphStore((s) => s.reviewOpen);
   const newNodeOpen = useGraphStore((s) => s.newNodeOpen);
   const ocrOpen = useGraphStore((s) => s.ocrOpen);
   const aboutOpen = useGraphStore((s) => s.aboutOpen);
+  const chatOpen = useGraphStore((s) => s.chatOpen);
+  const reviewQueueOpen = useGraphStore((s) => s.reviewQueueOpen);
   const clearSelection = useGraphStore((s) => s.clearSelection);
   const setSearchOpen = useGraphStore((s) => s.setSearchOpen);
+  const setNewNodeOpen = useGraphStore((s) => s.setNewNodeOpen);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -36,15 +38,19 @@ export function GraphApp() {
         e.preventDefault();
         setSearchOpen(true);
       } else if (e.key === "Escape") {
-        if (aboutOpen) return; // modal shells handle their own Escape
-        if (newNodeOpen || ocrOpen) return;
+        if (aboutOpen || reviewQueueOpen || chatOpen) return; // modal shells handle their own Escape
+        if (newNodeOpen) {
+          setNewNodeOpen(false);
+          return;
+        }
+        if (ocrOpen) return;
         clearSelection();
         setSearchOpen(false);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [aboutOpen, newNodeOpen, ocrOpen, clearSelection, setSearchOpen]);
+  }, [aboutOpen, reviewQueueOpen, chatOpen, newNodeOpen, ocrOpen, clearSelection, setSearchOpen, setNewNodeOpen]);
 
   return (
     <GraphLoader>
@@ -53,22 +59,21 @@ export function GraphApp() {
         <div className="relative min-h-0 flex-1">
           <GraphGrid />
           <GraphCanvas />
-          <Legend />
+
           <StageUi />
           <Dock />
+          <ContributePanel />
           <WelcomeCard />
           <HintChip />
           {searchOpen && <SearchPop />}
           {layersOpen && <LayersPop />}
-          {reviewOpen && <ReviewQueue />}
           <SidePanel />
         </div>
         <ChatPanel />
-        <ChatFab />
         <Toast />
-        <NewNodeModal />
         <OcrModal />
         <AboutModal />
+        <AdminReviewQueue />
       </div>
     </GraphLoader>
   );

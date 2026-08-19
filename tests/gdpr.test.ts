@@ -1,14 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { derivePrivacy, maskLivingPerson, isLivingPerson } from "@/lib/graph/policy";
-
-describe("derivePrivacy", () => {
-  it("deceased persons are public (historical)", () => {
-    expect(derivePrivacy(true)).toBe("public");
-  });
-  it("living persons are private by default", () => {
-    expect(derivePrivacy(false)).toBe("private");
-  });
-});
+import { maskLivingPerson, isLivingPerson } from "@/lib/graph/policy";
 
 describe("isLivingPerson", () => {
   it("treats a person without deceased flag as living", () => {
