@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/billsioros/villageroots/compare/v1.1.0...v1.2.0) (2026-08-19)
+
+
+### Features
+
+* PTDN-20/21 admin moderation & living person contribution flow ([#19](https://github.com/billsioros/villageroots/issues/19)) ([4965d7f](https://github.com/billsioros/villageroots/commit/4965d7f2a8f72e0cc8f6df5414b133841f16a469))
+
 # [1.1.0](https://github.com/billsioros/villageroots/compare/v1.0.0...v1.1.0) (2026-08-17)
 
 
