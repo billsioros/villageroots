@@ -7,6 +7,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { GraphData } from "react-force-graph-2d";
+import { forceCollide, forceManyBody } from "d3-force-3d";
 import { useShallow } from "zustand/react/shallow";
 import { useGraphStore, selectVisibleNodes } from "@/store/graphStore";
 import { tokenColor, TYPE_META } from "@/lib/graph/helpers";
@@ -93,22 +94,19 @@ export function GraphCanvas() {
     setPanIntent(null);
   }, [panIntent, setPanIntent]);
 
-  // --- engine stop -> record center + initial fit ---
+  // --- engine stop -> record center + initial fit & custom forces ---
   useEffect(() => {
     const fg = graphRef.current;
     if (!fg) return;
 
-    // Configure d3 forces imperatively (not available as props in this lib version)
-    // Use setTimeout to ensure the force engine has initialized
-    const forceTimer = setTimeout(() => {
-      const charge = fg.d3Force("charge");
-      if (charge) charge.strength = -400;
-      const collision = fg.d3Force("collision");
-      if (collision) collision.radius = 70;
-      const link = fg.d3Force("link");
-      if (link) link.distance = 180;
-      fg.d3ReheatSimulation();
-    }, 0);
+    // Apply custom D3 forces once graph is mounted
+    fg.d3Force("collision", forceCollide(100));
+    fg.d3Force("charge", forceManyBody().strength(-800));
+
+    const link = fg.d3Force("link");
+    if (link) link.distance(220);
+
+    fg.d3ReheatSimulation();
 
     const onStop = () => {
       const bbox = fg.getGraphBbox(3);
@@ -122,10 +120,9 @@ export function GraphCanvas() {
     const t = setTimeout(() => fg.zoomToFit(400, 60), 150);
     return () => {
       fg.off("engineStop", onStop);
-      clearTimeout(forceTimer);
       clearTimeout(t);
     };
-  }, [setCanvasCenter]);
+  }, [setCanvasCenter, size.w]);
 
   // --- zoom % rAF poll ---
   useEffect(() => {
@@ -138,7 +135,7 @@ export function GraphCanvas() {
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [setZoomPct]);
+  }, [setZoomPct, size.w]);
 
   const paintNode = (node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const meta = TYPE_META[(node as GraphNode).type];

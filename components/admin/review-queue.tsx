@@ -166,9 +166,9 @@ export function AdminReviewQueue() {
   if (!open) return null;
 
   return (
-    <ModalShell title="Review Queue" onClose={() => setOpen(false)}>
-      <div className="flex flex-col gap-4 max-h-[70vh] w-[600px]">
-      <div className="flex gap-2">
+    <ModalShell title="Review Queue" onClose={() => setOpen(false)} className="w-[820px] max-w-[95vw]">
+      <div className="flex flex-col gap-5 max-h-[70vh] overflow-hidden">
+      <div className="flex gap-3">
         {TABS.map((t) => (
           <Button
             key={t}
@@ -210,11 +210,11 @@ export function AdminReviewQueue() {
       ) : isError ? (
         <p className="text-sm text-destructive">Failed to load review queue.</p>
       ) : data && data.items.length > 0 ? (
-        <ul className="flex flex-col gap-3 overflow-y-auto">
+        <ul className="flex flex-col gap-4 overflow-y-auto">
           {data.items.map((item) => (
             <li
               key={item.id}
-              className="flex flex-col gap-3 rounded-lg border bg-card p-4"
+              className="flex flex-col gap-3 rounded-lg border bg-card p-5"
             >
               <div className="flex items-start gap-3">
                 <div className="pt-0.5">

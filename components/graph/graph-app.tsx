@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { Topbar } from "./topbar";
 import { GraphCanvas } from "./graph-canvas";
 import { GraphGrid } from "./graph-grid";
-import { Legend } from "./legend";
+
 import { StageUi } from "./stage-ui";
 import { Dock } from "./dock";
 import { WelcomeCard } from "./welcome-card";
@@ -14,7 +14,6 @@ import { SearchPop } from "./search-pop";
 import { LayersPop } from "./layers-pop";
 import { SidePanel } from "./side-panel";
 import { ChatPanel } from "./chat-panel";
-import { ChatFab } from "./chat-fab";
 import { OcrModal, AboutModal } from "./modals";
 import ContributePanel from "./contribute-panel";
 import { AdminReviewQueue } from "@/components/admin/review-queue";
@@ -27,6 +26,7 @@ export function GraphApp() {
   const newNodeOpen = useGraphStore((s) => s.newNodeOpen);
   const ocrOpen = useGraphStore((s) => s.ocrOpen);
   const aboutOpen = useGraphStore((s) => s.aboutOpen);
+  const chatOpen = useGraphStore((s) => s.chatOpen);
   const reviewQueueOpen = useGraphStore((s) => s.reviewQueueOpen);
   const clearSelection = useGraphStore((s) => s.clearSelection);
   const setSearchOpen = useGraphStore((s) => s.setSearchOpen);
@@ -38,7 +38,7 @@ export function GraphApp() {
         e.preventDefault();
         setSearchOpen(true);
       } else if (e.key === "Escape") {
-        if (aboutOpen || reviewQueueOpen) return; // modal shells handle their own Escape
+        if (aboutOpen || reviewQueueOpen || chatOpen) return; // modal shells handle their own Escape
         if (newNodeOpen) {
           setNewNodeOpen(false);
           return;
@@ -50,7 +50,7 @@ export function GraphApp() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [aboutOpen, reviewQueueOpen, newNodeOpen, ocrOpen, clearSelection, setSearchOpen, setNewNodeOpen]);
+  }, [aboutOpen, reviewQueueOpen, chatOpen, newNodeOpen, ocrOpen, clearSelection, setSearchOpen, setNewNodeOpen]);
 
   return (
     <GraphLoader>
@@ -59,7 +59,7 @@ export function GraphApp() {
         <div className="relative min-h-0 flex-1">
           <GraphGrid />
           <GraphCanvas />
-          <Legend />
+
           <StageUi />
           <Dock />
           <ContributePanel />
@@ -70,7 +70,6 @@ export function GraphApp() {
           <SidePanel />
         </div>
         <ChatPanel />
-        <ChatFab />
         <Toast />
         <OcrModal />
         <AboutModal />
