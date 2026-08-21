@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/billsioros/villageroots/compare/v1.2.0...v1.3.0) (2026-08-21)
+
+
+### Features
+
+* PTDN-35 two-step contribute modal ([#20](https://github.com/billsioros/villageroots/issues/20)) ([3faaee4](https://github.com/billsioros/villageroots/commit/3faaee495466a72140323867fb5ec1b0c56e0823))
+
 # [1.2.0](https://github.com/billsioros/villageroots/compare/v1.1.0...v1.2.0) (2026-08-19)
 
 
