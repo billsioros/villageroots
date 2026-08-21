@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Link2, PencilLine, Plus, Send, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link2, Plus, Send, Trash2 } from "lucide-react";
 import { useGraphStore } from "@/store/graphStore";
 import { TYPE_META, VERB_KIND, VERBS, uid } from "@/lib/graph/helpers";
 import { type NodeType, type Verb } from "@/lib/graph/types";
@@ -10,7 +10,13 @@ import { queryClient } from "@/lib/graph/query-client";
 import { invalidationKeys } from "@/lib/graph/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ModalShell } from "@/components/graph/modals";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 const NODE_TYPES: NodeType[] = ["person", "family", "landmark", "toponym", "event", "path"];
 
@@ -39,25 +45,23 @@ export default function ContributePanel() {
   const open = useGraphStore((s) => s.newNodeOpen);
   const setOpen = useGraphStore((s) => s.setNewNodeOpen);
   const draftNodes = useGraphStore((s) => s.draftNodes);
-  const draftEdges = useGraphStore((s) => s.draftEdges);
   const addDraftNode = useGraphStore((s) => s.addDraftNode);
   const removeDraftNode = useGraphStore((s) => s.removeDraftNode);
   const addDraftEdge = useGraphStore((s) => s.addDraftEdge);
-  const removeDraftEdge = useGraphStore((s) => s.removeDraftEdge);
   const clearDrafts = useGraphStore((s) => s.clearDrafts);
-  const selectDraft = useGraphStore((s) => s.selectDraft);
-  const clearSelection = useGraphStore((s) => s.clearSelection);
   const canvasCenter = useGraphStore((s) => s.canvasCenter);
   const nodesMap = useGraphStore((s) => s.nodesMap);
-  const selectedId = useGraphStore((s) => s.selectedId);
   const pushToast = useGraphStore((s) => s.pushToast);
 
   const [type, setType] = useState<NodeType>("person");
   const [name, setName] = useState("");
-  const [verb, setVerb] = useState<Verb>("related_to");
-  const [target, setTarget] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [step, setStep] = useState<"roster" | "weave">("roster");
+  const [connections, setConnections] = useState<
+    Record<string, { verb: Verb; target: string }[]>
+  >({});
+  const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     let active = true;
     fetch("/api/me/role")
@@ -69,27 +73,19 @@ export default function ContributePanel() {
     return () => { active = false; };
   }, []);
 
-  const source = draftNodes.some((d) => d.id === selectedId) ? selectedId : draftNodes[0]?.id;
-
   const targetOptions = useMemo(() => {
     const out: { id: string; label: string }[] = [];
-    for (const d of draftNodes) if (d.id !== source) out.push({ id: d.id, label: d.label });
-    for (const n of Object.values(nodesMap)) if (n.id !== source) out.push({ id: n.id, label: n.label });
+    for (const d of draftNodes) out.push({ id: d.id, label: d.label });
+    for (const n of Object.values(nodesMap)) out.push({ id: n.id, label: n.label });
     return out;
-  }, [draftNodes, nodesMap, source]);
-
-  const labelLookup = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const d of draftNodes) m.set(d.id, d.label);
-    for (const n of Object.values(nodesMap)) m.set(n.id, n.label);
-    return m;
   }, [draftNodes, nodesMap]);
 
   const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) {
-      clearSelection();
-    }
     setOpen(nextOpen);
+    if (!nextOpen) {
+      setStep("roster");
+      setConnections({});
+    }
   };
 
   const addNode = () => {
@@ -108,37 +104,36 @@ export default function ContributePanel() {
       y: canvasCenter.y + (Math.random() - 0.5) * 120,
     });
     setName("");
-  };
-
-  const addConnection = () => {
-    if (!source) {
-      pushToast({ tone: "error", message: "Pick a source node" });
-      return;
-    }
-    if (!target) {
-      pushToast({ tone: "error", message: "Pick a target node" });
-      return;
-    }
-    if (!targetOptions.some((o) => o.id === target)) {
-      setTarget("");
-      return;
-    }
-    if (source === target) {
-      pushToast({ tone: "error", message: "Pick two different nodes" });
-      return;
-    }
-    addDraftEdge({ id: "draft-edge-" + uid(), source, target, verb, kind: VERB_KIND[verb], draft: true });
-    setTarget("");
+    inputRef.current?.focus();
   };
 
   const submit = async () => {
     if (draftNodes.length === 0 || submitting) return;
     setSubmitting(true);
     try {
+      for (const [nodeId, conns] of Object.entries(connections)) {
+        for (const conn of conns) {
+          if (!conn.target) continue;
+          addDraftEdge({
+            id: "draft-edge-" + uid(),
+            source: nodeId,
+            target: conn.target,
+            verb: conn.verb,
+            kind: VERB_KIND[conn.verb],
+            draft: true,
+          });
+        }
+      }
+
       const res = await fetch("/api/submissions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(submissionPayloadFromDrafts(draftNodes, draftEdges)),
+        body: JSON.stringify(
+          submissionPayloadFromDrafts(
+            draftNodes,
+            useGraphStore.getState().draftEdges,
+          ),
+        ),
       });
       if (!res.ok) {
         const b = (await res.json().catch(() => null)) as { error?: string } | null;
@@ -146,6 +141,8 @@ export default function ContributePanel() {
         return;
       }
       clearDrafts();
+      setConnections({});
+      setStep("roster");
       setOpen(false);
       queryClient.invalidateQueries({ queryKey: invalidationKeys.nodes });
       queryClient.invalidateQueries({ queryKey: invalidationKeys.edges });
@@ -160,13 +157,23 @@ export default function ContributePanel() {
   if (!open) return null;
 
   return (
-    <ModalShell title="Contribute" onClose={() => handleOpenChange(false)} className="w-[820px] max-w-[95vw]">
-        <div className="flex flex-col gap-6 sm:flex-row">
-          {/* Left column: Compose */}
-          <div className="flex-1 min-w-0 space-y-6">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-w-[680px]">
+        <DialogHeader>
+          <DialogTitle>
+            {step === "roster" ? "Add to the map" : "Map connections"}
+          </DialogTitle>
+          <DialogDescription>
+            Step {step === "roster" ? "1 of 2" : "2 of 2"}
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Step 1: Roster */}
+        {step === "roster" && (
+          <div className="space-y-5">
             <div>
-              <div className="mb-2 text-xs font-medium text-muted-foreground">Add a node</div>
-              <div className="mb-3 flex flex-wrap gap-2">
+              <div className="mb-2 text-xs font-medium text-muted-foreground">Category</div>
+              <div className="flex flex-wrap gap-2">
                 {NODE_TYPES.map((t) => (
                   <button
                     key={t}
@@ -178,17 +185,27 @@ export default function ContributePanel() {
                         : "text-muted-foreground hover:bg-muted")
                     }
                   >
-                    <span className="mr-1.5 inline-block h-2 w-2 rounded-full" style={{ background: TYPE_META[t].color }} />
+                    <span
+                      className="mr-1.5 inline-block h-2 w-2 rounded-full"
+                      style={{ background: TYPE_META[t].color }}
+                    />
                     {TYPE_META[t].label}
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div>
+              <div className="mb-2 text-xs font-medium text-muted-foreground">Name this entry</div>
               <div className="flex gap-3">
                 <Input
-                  placeholder="Name the node…"
+                  ref={inputRef}
+                  placeholder="Name this entry..."
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") addNode(); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") addNode();
+                  }}
                 />
                 <Button size="sm" onClick={addNode}>
                   <Plus className="mr-1 h-4 w-4" /> Add
@@ -197,108 +214,165 @@ export default function ContributePanel() {
             </div>
 
             <div>
-              <div className="mb-2 text-xs font-medium text-muted-foreground">Add a connection</div>
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="max-w-[120px] truncate text-sm">{source ? labelLookup.get(source) : "Pick a draft"}</span>
-                <select
-                  value={verb}
-                  onChange={(e) => setVerb(e.target.value as Verb)}
-                  className="h-9 rounded-md border bg-card px-2.5 text-sm"
-                >
-                  {VERBS.map((v) => (
-                    <option key={v} value={v}>{VERB_LABELS[v]}</option>
-                  ))}
-                </select>
-                <select
-                  value={target}
-                  onChange={(e) => setTarget(e.target.value)}
-                  className="h-9 rounded-md border bg-card px-2.5 text-sm"
-                >
-                  <option value="">Target…</option>
-                  {targetOptions.map((o) => (
-                    <option key={o.id} value={o.id}>{o.label}</option>
-                  ))}
-                </select>
-                <Button size="sm" variant="outline" onClick={addConnection} disabled={!source || !target}>
-                  <Link2 className="mr-1 h-4 w-4" /> Add
-                </Button>
+              <div className="mb-2 text-xs font-medium text-muted-foreground">Drafted entries</div>
+              <div className="max-h-[300px] overflow-y-auto rounded-lg border p-3">
+                {draftNodes.length === 0 ? (
+                  <p className="py-8 text-center text-[13px] text-muted-foreground">
+                    Add at least one entry to continue.
+                  </p>
+                ) : (
+                  <ul className="list-none p-0 m-0 space-y-2">
+                    {draftNodes.map((d) => (
+                      <li
+                        key={d.id}
+                        className="flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm"
+                      >
+                        <span
+                          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                          style={{ background: TYPE_META[d.type].color }}
+                        >
+                          {TYPE_META[d.type].glyph}
+                        </span>
+                        <span className="flex-1 truncate">{d.label}</span>
+                        <button
+                          onClick={() => removeDraftNode(d.id)}
+                          className="text-muted-foreground hover:text-foreground"
+                          aria-label={`Remove ${d.label}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
           </div>
+        )}
 
-          {/* Right column: Queue */}
-          <div className="flex-1 min-w-0">
-            <div className="mb-2 text-xs font-medium text-muted-foreground">Queue</div>
-            <div className="max-h-[350px] overflow-y-auto rounded-lg border p-3">
-              {draftNodes.length === 0 && draftEdges.length === 0 ? (
-                <p className="py-8 text-center text-[13px] text-muted-foreground">
-                  Your queue is empty — add nodes and connections on the left.
+        {/* Step 2: Weave */}
+        {step === "weave" && (
+          <div className="space-y-4">
+            {draftNodes.length === 0 ? (
+              <p className="py-8 text-center text-[13px] text-muted-foreground">
+                No entries to connect. Go back to add some.
+              </p>
+            ) : (
+              draftNodes.map((d) => {
+                const nodeConnections = connections[d.id] ?? [];
+                return (
+                  <div key={d.id} className="rounded-lg border p-3 space-y-3">
+                    {nodeConnections.map((conn, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-sm flex-wrap">
+                        <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium shrink-0">
+                          <span
+                            className="h-2 w-2 rounded-full"
+                            style={{ background: TYPE_META[d.type].color }}
+                          />
+                          {d.label}
+                        </span>
+                        <span className="text-muted-foreground">&rarr;</span>
+                        <select
+                          value={conn.verb}
+                          onChange={(e) => {
+                            const updated = [...nodeConnections];
+                            updated[idx] = { ...updated[idx], verb: e.target.value as Verb };
+                            setConnections((prev) => ({ ...prev, [d.id]: updated }));
+                          }}
+                          className="h-8 rounded-md border bg-card px-2 text-xs"
+                        >
+                          {VERBS.map((v) => (
+                            <option key={v} value={v}>{VERB_LABELS[v]}</option>
+                          ))}
+                        </select>
+                        <span className="text-muted-foreground">&rarr;</span>
+                        <select
+                          value={conn.target}
+                          onChange={(e) => {
+                            const updated = [...nodeConnections];
+                            updated[idx] = { ...updated[idx], target: e.target.value };
+                            setConnections((prev) => ({ ...prev, [d.id]: updated }));
+                          }}
+                          className="h-8 rounded-md border bg-card px-2 text-xs"
+                        >
+                          <option value="">Select target...</option>
+                          {targetOptions
+                            .filter((o) => o.id !== d.id)
+                            .map((o) => (
+                              <option key={o.id} value={o.id}>{o.label}</option>
+                            ))}
+                        </select>
+                        <button
+                          onClick={() => {
+                            const updated = nodeConnections.filter((_, i) => i !== idx);
+                            setConnections((prev) => ({ ...prev, [d.id]: updated }));
+                          }}
+                          className="text-muted-foreground hover:text-foreground"
+                          aria-label="Remove connection"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => {
+                        setConnections((prev) => ({
+                          ...prev,
+                          [d.id]: [...(prev[d.id] ?? []), { verb: "related_to" as Verb, target: "" }],
+                        }));
+                      }}
+                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      <Link2 className="h-3 w-3" /> Add another link
+                    </button>
+                  </div>
+                );
+              })
+            )}
+
+            {draftNodes.length > 0 &&
+              Object.values(connections).every((c) => c.length === 0) && (
+                <p className="text-center text-[13px] text-muted-foreground">
+                  You can submit without connections, or link your entries to existing nodes below.
                 </p>
-              ) : (
-                <ul className="list-none p-0 m-0 space-y-2">
-                  {draftNodes.map((d) => (
-                    <li
-                      key={d.id}
-                      onClick={() => selectDraft(d.id)}
-                      className="flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 text-sm hover:bg-muted"
-                    >
-                      <span
-                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
-                        style={{ background: TYPE_META[d.type].color }}
-                      >
-                        {TYPE_META[d.type].glyph}
-                      </span>
-                      <span className="flex-1 truncate">{d.label}</span>
-                      {!d.description && (!d.facts || Object.keys(d.facts).length === 0) && (
-                        <PencilLine className="h-3.5 w-3.5 text-amber-600" aria-label="Needs annotations" />
-                      )}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); removeDraftNode(d.id); }}
-                        className="text-muted-foreground hover:text-foreground"
-                        aria-label={`Remove ${d.label}`}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </li>
-                  ))}
-                  {draftEdges.map((e) => (
-                    <li
-                      key={e.id}
-                      className="flex items-center gap-3 rounded-lg border px-3 py-2 text-xs text-muted-foreground"
-                    >
-                      <span className="flex-1 truncate">
-                        {labelLookup.get(e.source) ?? e.source} {VERB_LABELS[e.verb]} {labelLookup.get(e.target) ?? e.target}
-                      </span>
-                      <button
-                        onClick={() => removeDraftEdge(e.id)}
-                        className="text-muted-foreground hover:text-foreground"
-                        aria-label="Remove connection"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
               )}
-            </div>
           </div>
-        </div>
+        )}
 
-        {/* Footer */}
         <div className="flex items-center justify-between border-t pt-4 mt-2">
           <span className="text-xs text-muted-foreground">
-            {draftNodes.length} nodes · {draftEdges.length} connections
+            {draftNodes.length} {draftNodes.length === 1 ? "entry" : "entries"} drafted
           </span>
           <div className="flex items-center gap-3">
-            <Button size="sm" variant="ghost" onClick={clearDrafts}>Clear all</Button>
-            <Button size="sm" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button size="sm" onClick={submit} disabled={draftNodes.length === 0 || submitting}>
-              <Send className="mr-1 h-4 w-4" />
-              {submitting ? "Submitting…" : isAdmin ? "Publish" : "Submit for review"}
+            <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>
+              Cancel
             </Button>
+            {step === "roster" ? (
+              <Button
+                size="sm"
+                onClick={() => setStep("weave")}
+                disabled={draftNodes.length === 0}
+              >
+                Next: Map connections
+              </Button>
+            ) : (
+              <>
+                <Button size="sm" variant="ghost" onClick={() => setStep("roster")}>
+                  Back
+                </Button>
+                <Button size="sm" onClick={submit} disabled={submitting}>
+                  <Send className="mr-1 h-4 w-4" />
+                  {submitting
+                    ? "Submitting..."
+                    : isAdmin
+                      ? `Publish ${draftNodes.length} ${draftNodes.length === 1 ? "entry" : "entries"}`
+                      : `Submit ${draftNodes.length} ${draftNodes.length === 1 ? "contribution" : "contributions"}`}
+                </Button>
+              </>
+            )}
           </div>
         </div>
-        {isAdmin && <p className="mt-1 text-xs text-muted-foreground">Admin — publishes directly to the graph.</p>}
-    </ModalShell>
+      </DialogContent>
+    </Dialog>
   );
 }
