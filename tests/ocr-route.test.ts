@@ -51,6 +51,7 @@ describe("POST /api/ocr", () => {
     const res = await POST(mreq({ path: OWN_PATH }));
     expect(res.status).toBe(401);
     expect(mocks.downloadScanObject).not.toHaveBeenCalled();
+    expect(mocks.deleteScanObject).not.toHaveBeenCalled();
   });
 
   it("returns 400 for paths outside the caller's folder", async () => {
@@ -64,10 +65,18 @@ describe("POST /api/ocr", () => {
     expect((await POST(mreq({ path: "u-1/scan.pdf" }))).status).toBe(400);
   });
 
+  it("rejects traversal-style paths outside the caller's folder", async () => {
+    const res = await POST(mreq({ path: "u-1/../u-2/x.jpg" }));
+    expect(res.status).toBe(400);
+    expect(mocks.downloadScanObject).not.toHaveBeenCalled();
+    expect(mocks.deleteScanObject).not.toHaveBeenCalled();
+  });
+
   it("returns 404 when the object is missing", async () => {
     mocks.downloadScanObject.mockResolvedValue({ data: null, error: "not found" });
     const res = await POST(mreq({ path: OWN_PATH }));
     expect(res.status).toBe(404);
+    expect(mocks.deleteScanObject).toHaveBeenCalledWith(OWN_PATH);
   });
 
   it("extracts drafts and always deletes the scan on success", async () => {
@@ -116,5 +125,21 @@ describe("POST /api/ocr", () => {
     expect(res.status).toBe(503);
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(mocks.deleteScanObject).toHaveBeenCalledWith(OWN_PATH);
+  });
+
+  it("returns 502 and still deletes when OpenRouter returns non-JSON with 200", async () => {
+    fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("<html>oops</html>", { status: 200 }));
+    const res = await POST(mreq({ path: OWN_PATH }));
+    expect(res.status).toBe(502);
+    expect(mocks.deleteScanObject).toHaveBeenCalledWith(OWN_PATH);
+  });
+
+  it("uses OPENROUTER_MODEL when configured", async () => {
+    vi.stubEnv("OPENROUTER_MODEL", "google/gemini-2.0-flash-exp:free");
+    fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(completion(JSON.stringify(EXTRACTION)));
+    const res = await POST(mreq({ path: OWN_PATH }));
+    expect(res.status).toBe(200);
+    const requestBody = JSON.parse((fetchSpy.mock.calls[0] as unknown as [string, { body: string }])[1].body);
+    expect(requestBody.model).toBe("google/gemini-2.0-flash-exp:free");
   });
 });

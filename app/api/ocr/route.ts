@@ -34,12 +34,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Scan not found — please re-upload" }, { status: 400 });
   }
 
-  const { data, error } = await downloadScanObject(path);
-  if (error || !data) {
-    return NextResponse.json({ error: "Scan not found — please re-upload" }, { status: 404 });
-  }
-
   try {
+    const { data, error } = await downloadScanObject(path);
+    if (error || !data) {
+      return NextResponse.json({ error: "Scan not found — please re-upload" }, { status: 404 });
+    }
+
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
       return NextResponse.json({ error: "OCR is not configured yet" }, { status: 503 });
@@ -83,7 +83,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Extraction failed — try again" }, { status: 502 });
   } finally {
     // Cleanup contract: the scan never outlives this request, success or failure.
-    const { error: deleteError } = await deleteScanObject(path);
-    if (deleteError) console.error("Failed to delete scan", path, deleteError);
+    try {
+      const { error: deleteError } = await deleteScanObject(path);
+      if (deleteError) console.error("Failed to delete scan", path, deleteError);
+    } catch (deleteCause) {
+      console.error("Scan cleanup threw", path, deleteCause);
+    }
   }
 }
