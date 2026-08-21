@@ -27,4 +27,13 @@ describe("validateScanFile", () => {
       /under 10MB/,
     );
   });
+
+  it("rejects files whose extension collides with Object.prototype keys", () => {
+    expect(validateScanFile(file("scan.constructor", ""))).toMatch(/under 10MB/);
+    expect(validateScanFile(file("scan.toString", ""))).toMatch(/under 10MB/);
+  });
+
+  it("rejects empty files", () => {
+    expect(validateScanFile(file("scan.jpg", "image/jpeg", 0))).toMatch(/under 10MB/);
+  });
 });

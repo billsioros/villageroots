@@ -21,6 +21,8 @@ export interface OcrExtraction {
   document_summary?: string;
 }
 
+export const ENTITY_TYPES = ["person", "family", "toponym", "landmark", "event"] as const;
+
 /**
  * Structured-output schema sent to OpenRouter. Optional fields are nullable
  * and listed in `required` because strict JSON schemas demand it; the
@@ -41,7 +43,7 @@ export const OCR_EXTRACTION_JSON_SCHEMA = {
             name: { type: "string", description: "Name exactly as written in the document" },
             type: {
               type: "string",
-              enum: ["person", "family", "toponym", "landmark", "event"],
+              enum: [...ENTITY_TYPES],
             },
             subtitle: { type: ["string", "null"] },
             description: { type: ["string", "null"] },

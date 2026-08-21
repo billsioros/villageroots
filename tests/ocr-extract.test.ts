@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildOcrMessages, parseOcrResponse, toDrafts } from "@/lib/ocr/extract";
+import { VERBS } from "@/lib/graph/helpers";
 import { MAX_FACT_LENGTH, MAX_FIELD_LENGTH } from "@/lib/graph/submissions";
 
 describe("buildOcrMessages", () => {
@@ -39,6 +40,28 @@ describe("parseOcrResponse", () => {
     expect(parseOcrResponse(42)).toBeNull();
     expect(parseOcrResponse('{"foo": 1}')).toBeNull();
     expect(parseOcrResponse("{broken")).toBeNull();
+  });
+
+  it("normalizes malformed relationships to an empty array", () => {
+    expect(parseOcrResponse('{"entities": [], "relationships": 5}')).toEqual({
+      entities: [],
+      relationships: [],
+    });
+  });
+
+  it("parses content with backticks inside string values", () => {
+    const tricky = JSON.stringify({ entities: [{ name: "o`clock", type: "landmark" }] });
+    expect(parseOcrResponse(tricky)).toEqual({ entities: [{ name: "o`clock", type: "landmark" }] });
+  });
+
+  it("recovers JSON when trailing prose contains braces", () => {
+    expect(parseOcrResponse(`Result:\n${good}\nNote: {see page 3}`)).toEqual({
+      entities: [{ name: "Nikos", type: "person" }],
+    });
+  });
+
+  it("returns null when no slice parses", () => {
+    expect(parseOcrResponse("{a {b} c}")).toBeNull();
   });
 });
 
@@ -105,13 +128,13 @@ describe("toDrafts", () => {
 
   it("caps output at 20 nodes and 50 edges", () => {
     const many = Array.from({ length: 30 }, (_, i) => person({ name: `P${i}` }));
-    const rels = Array.from({ length: 80 }, (_, i) => ({
-      source: `P${i % 30}`,
-      target: `P${(i + 1) % 30}`,
-      verb: "related_to",
+    const rels = Array.from({ length: 90 }, (_, i) => ({
+      source: `P${i % 20}`,
+      target: `P${(i + 1) % 20}`,
+      verb: VERBS[i % VERBS.length],
     }));
     const { nodes, edges } = toDrafts({ entities: many, relationships: rels });
     expect(nodes).toHaveLength(20);
-    expect(edges.length).toBeLessThanOrEqual(50);
+    expect(edges).toHaveLength(50);
   });
 });

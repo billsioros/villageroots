@@ -7,7 +7,7 @@ import {
   MAX_SUBMISSION_EDGES,
   MAX_SUBMISSION_NODES,
 } from "@/lib/graph/submissions";
-import type { OcrExtraction } from "@/lib/ocr/schema";
+import { ENTITY_TYPES, type OcrExtraction } from "@/lib/ocr/schema";
 
 const SYSTEM_PROMPT = `You transcribe structured data from scans of handwritten Greek village archival documents (birth, marriage, death, land, and census records).
 
@@ -34,28 +34,49 @@ export function buildOcrMessages(dataUri: string) {
   ];
 }
 
+/** JSON.parse wrapper: returns undefined on failure (JSON.parse never yields undefined). */
+function tryParse(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+}
+
+function stripFences(text: string): string {
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  return fenced ? fenced[1].trim() : text;
+}
+
+/** Tries slices ending at each "}" from the right, so trailing prose braces can't hide valid JSON. */
+function recoverJsonFromProse(text: string): unknown {
+  const start = text.indexOf("{");
+  if (start === -1) return undefined;
+  for (let end = text.lastIndexOf("}"); end > start; end = text.lastIndexOf("}", end - 1)) {
+    const value = tryParse(text.slice(start, end + 1));
+    if (value !== undefined) return value;
+  }
+  return undefined;
+}
+
 /** Tolerant parser: free models sometimes wrap JSON in fences or prose despite strict mode. */
 export function parseOcrResponse(raw: unknown): OcrExtraction | null {
   if (typeof raw !== "string") return null;
-  let text = raw.trim();
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  if (fenced) text = fenced[1].trim();
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-  if (start === -1 || end <= start) return null;
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text.slice(start, end + 1));
-  } catch {
-    return null;
+  const text = raw.trim();
+  let parsed: unknown = tryParse(text);
+  if (parsed === undefined) {
+    const stripped = stripFences(text);
+    parsed = tryParse(stripped) ?? recoverJsonFromProse(stripped);
   }
   if (typeof parsed !== "object" || parsed === null) return null;
   const candidate = parsed as Partial<OcrExtraction>;
   if (!Array.isArray(candidate.entities)) return null;
+  if ("relationships" in candidate && !Array.isArray(candidate.relationships))
+    candidate.relationships = [];
   return candidate as OcrExtraction;
 }
 
-const ENTITY_TYPES = new Set(["person", "family", "toponym", "landmark", "event"]);
+const ENTITY_TYPE_SET = new Set<string>(ENTITY_TYPES);
 
 function clamp(value: string, max: number): string {
   return value.slice(0, max);
@@ -76,7 +97,8 @@ export function toDrafts(extraction: OcrExtraction): { nodes: DraftNode[]; edges
     if (!name) continue;
     const key = name.toLowerCase();
     if (idsByName.has(key)) continue;
-    const type = typeof entity.type === "string" && ENTITY_TYPES.has(entity.type) ? entity.type : null;
+    const type =
+      typeof entity.type === "string" && ENTITY_TYPE_SET.has(entity.type) ? entity.type : null;
     if (!type) continue;
     const draft: DraftNode = {
       id: `draft-${uid()}`,
