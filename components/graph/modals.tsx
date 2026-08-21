@@ -123,7 +123,12 @@ export function OcrModal() {
     if (response.status === 503) return handleError("OCR is not configured yet");
     if (!response.ok) return handleError("Extraction failed — try again");
 
-    const drafts = (await response.json()) as { nodes: DraftNode[]; edges: DraftEdge[] };
+    let drafts: { nodes: DraftNode[]; edges: DraftEdge[] };
+    try {
+      drafts = (await response.json()) as { nodes: DraftNode[]; edges: DraftEdge[] };
+    } catch {
+      return handleError("Extraction failed — try again");
+    }
     if (!drafts.nodes?.length) {
       return handleError("Nothing could be read from this scan");
     }
@@ -193,7 +198,7 @@ export function OcrModal() {
           </div>
 
           {busy ? (
-            <div className="flex items-center justify-center gap-2 py-2 text-sm text-muted-foreground">
+            <div role="status" className="flex items-center justify-center gap-2 py-2 text-sm text-muted-foreground">
               <LoaderCircle size={16} className="animate-spin" />
               {phase === "uploading" ? "Uploading scan…" : "Reading document…"}
             </div>

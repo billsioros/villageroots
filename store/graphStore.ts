@@ -333,7 +333,8 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
   toggleCollapsed: () => set((s) => ({ chatCollapsed: !s.chatCollapsed })),
   setSearchOpen: (open) => set({ searchOpen: open }),
   setLayersOpen: (open) => set({ layersOpen: open }),
-  setNewNodeOpen: (open) => set({ newNodeOpen: open }),
+  setNewNodeOpen: (open) =>
+    set(open ? { newNodeOpen: true } : { newNodeOpen: false, newNodeStartStep: "roster" }),
   setNewNodeStartStep: (step) => set({ newNodeStartStep: step }),
   setOcrOpen: (open) => set({ ocrOpen: open }),
   setAboutOpen: (open) => set({ aboutOpen: open }),
