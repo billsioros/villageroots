@@ -3,10 +3,11 @@ import { sessionUid } from "@/lib/graph/session";
 import { buildOcrMessages, parseOcrResponse, toDrafts } from "@/lib/ocr/extract";
 import { OCR_EXTRACTION_JSON_SCHEMA } from "@/lib/ocr/schema";
 import { deleteScanObject, downloadScanObject } from "@/lib/ocr/storage";
+import { resolveOcrTimeoutMs } from "@/lib/ocr/config";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const DEFAULT_MODEL = "openrouter/free";
-const REQUEST_TIMEOUT_MS = 60_000;
+const REQUEST_TIMEOUT_MS = resolveOcrTimeoutMs();
 
 const PATH_PATTERN = /^[^/]+\/[\w.-]+\.(jpg|jpeg|png|webp)$/i;
 const MIME_BY_EXTENSION: Record<string, string> = {
