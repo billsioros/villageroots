@@ -52,6 +52,8 @@ export default function ContributePanel() {
   const canvasCenter = useGraphStore((s) => s.canvasCenter);
   const nodesMap = useGraphStore((s) => s.nodesMap);
   const pushToast = useGraphStore((s) => s.pushToast);
+  const startStep = useGraphStore((s) => s.newNodeStartStep);
+  const setNewNodeStartStep = useGraphStore((s) => s.setNewNodeStartStep);
 
   const [type, setType] = useState<NodeType>("person");
   const [name, setName] = useState("");
@@ -85,8 +87,13 @@ export default function ContributePanel() {
     if (!nextOpen) {
       setStep("roster");
       setConnections({});
+      setNewNodeStartStep("roster");
     }
   };
+
+  useEffect(() => {
+    if (open) setStep(startStep);
+  }, [open, startStep]);
 
   const addNode = () => {
     const trimmed = name.trim();
