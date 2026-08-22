@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { X, UploadCloud, Sparkles, LoaderCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useGraphStore } from "@/store/graphStore";
 import { createClient } from "@/lib/supabase/client";
 import { validateScanFile } from "@/lib/ocr/validate-file";
@@ -84,12 +83,12 @@ export function OcrModal() {
       pushToast({ tone: "error", message: problem });
       return;
     }
-    setPhase("idle");
     setFile(picked);
+    void run(picked);
   };
 
-  const run = async () => {
-    if (!file || busy) return;
+  const run = async (scan: File) => {
+    if (busy) return;
     setPhase("uploading");
 
     const supabase = createClient();
@@ -97,12 +96,12 @@ export function OcrModal() {
     const userId = userData.user?.id;
     if (!userId) return handleError("Sign in to import documents");
 
-    const extension = file.name.split(".").pop()!.toLowerCase();
+    const extension = scan.name.split(".").pop()!.toLowerCase();
     const path = `${userId}/${crypto.randomUUID()}.${extension}`;
 
     const { error: uploadError } = await supabase.storage
       .from("archive-scans")
-      .upload(path, file, { contentType: file.type });
+      .upload(path, scan, { contentType: scan.type });
     if (uploadError) return handleError("Upload failed — try again");
 
     setPhase("extracting");
@@ -190,24 +189,12 @@ export function OcrModal() {
               <p className="truncate text-sm font-medium">{file.name}</p>
               <p className="text-xs text-muted-foreground">{Math.ceil(file.size / 1024)} KB</p>
             </div>
-            {!busy && (
-              <Button size="sm" variant="ghost" onClick={reset}>
-                Remove
-              </Button>
-            )}
           </div>
 
-          {busy ? (
-            <div role="status" className="flex items-center justify-center gap-2 py-2 text-sm text-muted-foreground">
-              <LoaderCircle size={16} className="animate-spin" />
-              {phase === "uploading" ? "Uploading scan…" : "Reading document…"}
-            </div>
-          ) : (
-            <Button className="w-full gap-2" onClick={run}>
-              <Sparkles size={14} />
-              Extract with AI
-            </Button>
-          )}
+          <div role="status" className="flex items-center justify-center gap-2 py-2 text-sm text-muted-foreground">
+            <LoaderCircle size={16} className="animate-spin" />
+            {phase === "uploading" ? "Uploading scan…" : "Reading document…"}
+          </div>
         </div>
       )}
     </ModalShell>
