@@ -35,9 +35,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Scan not found — please re-upload" }, { status: 400 });
   }
 
+  const startedAt = Date.now();
+  const model = process.env.OPENROUTER_MODEL || DEFAULT_MODEL;
+  console.log("[ocr] start", { path, model, timeoutMs: REQUEST_TIMEOUT_MS });
+
   try {
     const { data, error } = await downloadScanObject(path);
     if (error || !data) {
+      console.error("[ocr] scan download failed", path, error);
       return NextResponse.json({ error: "Scan not found — please re-upload" }, { status: 404 });
     }
 
@@ -50,6 +55,7 @@ export async function POST(request: Request) {
     const extension = path.split(".").pop()?.toLowerCase() ?? "jpg";
     const mimeType = MIME_BY_EXTENSION[extension] ?? "image/jpeg";
     const dataUri = `data:${mimeType};base64,${bytes.toString("base64")}`;
+    console.log("[ocr] scan ready", { bytes: bytes.byteLength, mimeType });
 
     const completion = await fetch(OPENROUTER_URL, {
       method: "POST",
@@ -64,8 +70,13 @@ export async function POST(request: Request) {
       }),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
+    console.log("[ocr] openrouter responded", {
+      status: completion.status,
+      elapsedMs: Date.now() - startedAt,
+    });
     if (!completion.ok) {
-      console.error("OpenRouter request failed", completion.status);
+      const detail = (await completion.text()).slice(0, 500);
+      console.error("[ocr] openrouter request failed", completion.status, detail);
       return NextResponse.json({ error: "Extraction failed — try again" }, { status: 502 });
     }
 
@@ -74,21 +85,34 @@ export async function POST(request: Request) {
     };
     const extraction = parseOcrResponse(payload.choices?.[0]?.message?.content);
     if (!extraction) {
-      console.error("OpenRouter returned unparseable content");
+      const raw = String(payload.choices?.[0]?.message?.content ?? "").slice(0, 300);
+      console.error("[ocr] unparseable content", raw);
       return NextResponse.json({ error: "Extraction failed — try again" }, { status: 502 });
     }
 
-    return NextResponse.json(toDrafts(extraction));
+    const drafts = toDrafts(extraction);
+    console.log("[ocr] extracted", {
+      nodes: drafts.nodes.length,
+      edges: drafts.edges.length,
+      totalMs: Date.now() - startedAt,
+    });
+    return NextResponse.json(drafts);
   } catch (cause) {
-    console.error("OCR extraction threw", cause);
+    if (cause instanceof Error && cause.name === "TimeoutError") {
+      console.error(
+        `[ocr] openrouter timed out after ${Date.now() - startedAt}ms (limit ${REQUEST_TIMEOUT_MS}ms)`,
+      );
+    } else {
+      console.error("[ocr] extraction threw", cause);
+    }
     return NextResponse.json({ error: "Extraction failed — try again" }, { status: 502 });
   } finally {
     // Cleanup contract: the scan never outlives this request, success or failure.
     try {
       const { error: deleteError } = await deleteScanObject(path);
-      if (deleteError) console.error("Failed to delete scan", path, deleteError);
+      if (deleteError) console.error("[ocr] failed to delete scan", path, deleteError);
     } catch (deleteCause) {
-      console.error("Scan cleanup threw", path, deleteCause);
+      console.error("[ocr] scan cleanup threw", path, deleteCause);
     }
   }
 }
