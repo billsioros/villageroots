@@ -394,14 +394,6 @@ export default function ContributePanel() {
                     const targetLabel = labelById.get(edge.target) ?? edge.target;
                     return (
                       <div key={edge.id} className="flex items-center gap-2 text-sm flex-wrap">
-                        <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium shrink-0">
-                          <span
-                            className="h-2 w-2 rounded-full"
-                            style={{ background: TYPE_META[mappedNode.type].color }}
-                          />
-                          {mappedNode.label}
-                        </span>
-                        <span className="text-muted-foreground">&rarr;</span>
                         <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
                           {VERB_LABELS[edge.verb]}
                         </span>
@@ -422,14 +414,6 @@ export default function ContributePanel() {
 
                   {mappedManual.map((conn, idx) => (
                     <div key={idx} className="flex items-center gap-2 text-sm flex-wrap">
-                      <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium shrink-0">
-                        <span
-                          className="h-2 w-2 rounded-full"
-                          style={{ background: TYPE_META[mappedNode.type].color }}
-                        />
-                        {mappedNode.label}
-                      </span>
-                      <span className="text-muted-foreground">&rarr;</span>
                       <select
                         value={conn.verb}
                         onChange={(e) => {
