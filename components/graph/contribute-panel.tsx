@@ -45,6 +45,8 @@ export default function ContributePanel() {
   const open = useGraphStore((s) => s.newNodeOpen);
   const setOpen = useGraphStore((s) => s.setNewNodeOpen);
   const draftNodes = useGraphStore((s) => s.draftNodes);
+  const draftEdges = useGraphStore((s) => s.draftEdges);
+  const removeDraftEdge = useGraphStore((s) => s.removeDraftEdge);
   const addDraftNode = useGraphStore((s) => s.addDraftNode);
   const removeDraftNode = useGraphStore((s) => s.removeDraftNode);
   const addDraftEdge = useGraphStore((s) => s.addDraftEdge);
@@ -81,6 +83,12 @@ export default function ContributePanel() {
     for (const n of Object.values(nodesMap)) out.push({ id: n.id, label: n.label });
     return out;
   }, [draftNodes, nodesMap]);
+
+  const labelById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const o of targetOptions) map.set(o.id, o.label);
+    return map;
+  }, [targetOptions]);
 
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen);
@@ -267,8 +275,38 @@ export default function ContributePanel() {
             ) : (
               draftNodes.map((d) => {
                 const nodeConnections = connections[d.id] ?? [];
+                const importedEdges = draftEdges.filter((e) => e.source === d.id);
                 return (
                   <div key={d.id} className="rounded-lg border p-3 space-y-3">
+                    {importedEdges.map((edge) => {
+                      const targetLabel = labelById.get(edge.target) ?? edge.target;
+                      return (
+                        <div key={edge.id} className="flex items-center gap-2 text-sm flex-wrap">
+                          <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium shrink-0">
+                            <span
+                              className="h-2 w-2 rounded-full"
+                              style={{ background: TYPE_META[d.type].color }}
+                            />
+                            {d.label}
+                          </span>
+                          <span className="text-muted-foreground">&rarr;</span>
+                          <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                            {VERB_LABELS[edge.verb]}
+                          </span>
+                          <span className="text-muted-foreground">&rarr;</span>
+                          <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium shrink-0">
+                            {targetLabel}
+                          </span>
+                          <button
+                            onClick={() => removeDraftEdge(edge.id)}
+                            className="text-muted-foreground hover:text-foreground"
+                            aria-label={`Remove link from ${d.label} to ${targetLabel}`}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
                     {nodeConnections.map((conn, idx) => (
                       <div key={idx} className="flex items-center gap-2 text-sm flex-wrap">
                         <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium shrink-0">
@@ -338,7 +376,8 @@ export default function ContributePanel() {
             )}
 
             {draftNodes.length > 0 &&
-              Object.values(connections).every((c) => c.length === 0) && (
+              Object.values(connections).every((c) => c.length === 0) &&
+              draftEdges.length === 0 && (
                 <p className="text-center text-[13px] text-muted-foreground">
                   You can submit without connections, or link your entries to existing nodes below.
                 </p>
