@@ -96,6 +96,7 @@ export async function POST(request: Request) {
     console.log("[ocr] extracted", {
       nodes: drafts.nodes.length,
       edges: drafts.edges.length,
+      relationshipsIn: extraction.relationships?.length ?? 0,
       totalMs: Date.now() - startedAt,
     });
     return NextResponse.json(drafts);

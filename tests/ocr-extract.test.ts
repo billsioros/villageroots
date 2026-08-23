@@ -14,6 +14,19 @@ describe("buildOcrMessages", () => {
       content: [{ type: "text" }, { type: "image_url", image_url: { url: "data:image/jpeg;base64,QUJD" } }],
     });
   });
+
+  it("enumerates every allowed verb in the system prompt", () => {
+    const messages = buildOcrMessages("data:image/jpeg;base64,QUJD");
+    const prompt = String(messages[0].content);
+    for (const verb of VERBS) expect(prompt).toContain(verb);
+  });
+
+  it("demands relationship endpoints reuse entity names verbatim", () => {
+    const messages = buildOcrMessages("data:image/jpeg;base64,QUJD");
+    const prompt = String(messages[0].content);
+    expect(prompt).toMatch(/exactly as written/i);
+    expect(prompt).toMatch(/relationship/i);
+  });
 });
 
 describe("parseOcrResponse", () => {

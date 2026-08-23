@@ -9,13 +9,14 @@ import {
 } from "@/lib/graph/submissions";
 import { ENTITY_TYPES, type OcrExtraction } from "@/lib/ocr/schema";
 
-const SYSTEM_PROMPT = `You transcribe structured data from scans of handwritten Greek village archival documents (birth, marriage, death, land, and census records).
+const SYSTEM_PROMPT = `You transcribe structured data from scans of Greek village archival documents (birth, marriage, death, land, and census records), often handwritten.
 
 Rules:
-- Extract only what is actually visible in the document. Never invent or guess entities or relationships.
+- Extract only what is actually visible in the document. Never invent entities.
 - Keep person and place names exactly as written in the source, including Greek script when used.
 - Classify every entity as exactly one of the allowed types: person, family, toponym, landmark, event.
-- Express relationships using only the provided verb enumeration; pick the closest match.
+- Extract relationships exhaustively. Whenever the document states or clearly implies a link between two entities, add a relationship whose source and target copy the entity names exactly as written in the entities array. Use only these verbs: related_to, born_in, child_of, married_to, sibling_of, belongs_to_clan, owns_land_at, lived_at, farmed_at, baptized_at, buried_at, ran_by, built_by, participated_in, gathered_at, attended, fought_in, migrated_from. Pick the closest match.
+- Typical examples: spouses → married_to; siblings → sibling_of; a row listing parents → child_of from the child to each parent; a birthplace → born_in; residence → lived_at; land held or cultivated → owns_land_at or farmed_at; baptisms and burials at a church → baptized_at or buried_at toward that landmark; festivals and gatherings → attended or gathered_at; military service → fought_in or participated_in; a person who founded or ran an institution → built_by or ran_by from the institution to the person; unclear but evident association → related_to.
 - Put dates, occupations, and other attributes into an entity's facts with short English keys (born, died, married, occupation).
 - Set deceased=true for people the document indicates are dead.
 - If the document is unreadable, return an empty entities array.
