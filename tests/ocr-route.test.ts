@@ -92,6 +92,7 @@ describe("POST /api/ocr", () => {
     const requestBody = JSON.parse(fetchSpy.mock.calls[0][1].body);
     expect(requestBody.model).toBe("openrouter/free");
     expect(requestBody.response_format.json_schema.strict).toBe(true);
+    expect(requestBody.provider).toEqual({ require_parameters: true });
     expect(mocks.deleteScanObject).toHaveBeenCalledWith(OWN_PATH);
   });
 

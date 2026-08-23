@@ -67,6 +67,8 @@ export async function POST(request: Request) {
         model: process.env.OPENROUTER_MODEL || DEFAULT_MODEL,
         messages: buildOcrMessages(dataUri),
         response_format: { type: "json_schema", json_schema: OCR_EXTRACTION_JSON_SCHEMA },
+        // Exclude providers that silently drop response_format (they reply with prose).
+        provider: { require_parameters: true },
       }),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
