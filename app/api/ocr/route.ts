@@ -69,6 +69,8 @@ export async function POST(request: Request) {
         response_format: { type: "json_schema", json_schema: OCR_EXTRACTION_JSON_SCHEMA },
         // Exclude providers that silently drop response_format (they reply with prose).
         provider: { require_parameters: true },
+        // Extraction needs no chain-of-thought; reasoning models otherwise burn minutes.
+        reasoning: { enabled: false },
       }),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
