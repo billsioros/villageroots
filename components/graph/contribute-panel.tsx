@@ -65,6 +65,7 @@ export default function ContributePanel() {
   const [connections, setConnections] = useState<
     Record<string, { verb: Verb; target: string }[]>
   >({});
+  const [mappingNodeId, setMappingNodeId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     let active = true;
@@ -95,6 +96,7 @@ export default function ContributePanel() {
     if (!nextOpen) {
       setStep("roster");
       setConnections({});
+      setMappingNodeId(null);
       setNewNodeStartStep("roster");
     }
   };
@@ -102,6 +104,10 @@ export default function ContributePanel() {
   useEffect(() => {
     if (open) setStep(startStep);
   }, [open, startStep]);
+
+  useEffect(() => {
+    if (mappingNodeId && !draftNodes.some((d) => d.id === mappingNodeId)) setMappingNodeId(null);
+  }, [draftNodes, mappingNodeId]);
 
   const addNode = () => {
     const trimmed = name.trim();
@@ -157,6 +163,7 @@ export default function ContributePanel() {
       }
       clearDrafts();
       setConnections({});
+      setMappingNodeId(null);
       setStep("roster");
       setOpen(false);
       queryClient.invalidateQueries({ queryKey: invalidationKeys.nodes });
@@ -170,6 +177,14 @@ export default function ContributePanel() {
   };
 
   if (!open) return null;
+
+  const mappedNode = mappingNodeId
+    ? draftNodes.find((d) => d.id === mappingNodeId)
+    : undefined;
+  const mappedImports = mappedNode
+    ? draftEdges.filter((e) => e.source === mappedNode.id)
+    : [];
+  const mappedManual = mappedNode ? connections[mappedNode.id] ?? [] : [];
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -230,7 +245,7 @@ export default function ContributePanel() {
 
             <div>
               <div className="mb-2 text-xs font-medium text-muted-foreground">Drafted entries</div>
-              <div className="max-h-[300px] overflow-y-auto rounded-lg border p-3">
+              <div className="max-h-[40vh] overflow-y-auto rounded-lg border p-3">
                 {draftNodes.length === 0 ? (
                   <p className="py-8 text-center text-[13px] text-muted-foreground">
                     Add at least one entry to continue.
@@ -250,6 +265,13 @@ export default function ContributePanel() {
                         </span>
                         <span className="flex-1 truncate">{d.label}</span>
                         <button
+                          onClick={() => setMappingNodeId(d.id)}
+                          className="text-muted-foreground hover:text-foreground"
+                          aria-label={`Map connections for ${d.label}`}
+                        >
+                          <Link2 className="h-3.5 w-3.5" />
+                        </button>
+                        <button
                           onClick={() => removeDraftNode(d.id)}
                           className="text-muted-foreground hover:text-foreground"
                           aria-label={`Remove ${d.label}`}
@@ -267,119 +289,50 @@ export default function ContributePanel() {
 
         {/* Step 2: Weave */}
         {step === "weave" && (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {draftNodes.length === 0 ? (
               <p className="py-8 text-center text-[13px] text-muted-foreground">
                 No entries to connect. Go back to add some.
               </p>
             ) : (
-              draftNodes.map((d) => {
-                const nodeConnections = connections[d.id] ?? [];
-                const importedEdges = draftEdges.filter((e) => e.source === d.id);
-                return (
-                  <div key={d.id} className="rounded-lg border p-3 space-y-3">
-                    {importedEdges.map((edge) => {
-                      const targetLabel = labelById.get(edge.target) ?? edge.target;
-                      return (
-                        <div key={edge.id} className="flex items-center gap-2 text-sm flex-wrap">
-                          <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium shrink-0">
-                            <span
-                              className="h-2 w-2 rounded-full"
-                              style={{ background: TYPE_META[d.type].color }}
-                            />
-                            {d.label}
-                          </span>
-                          <span className="text-muted-foreground">&rarr;</span>
-                          <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                            {VERB_LABELS[edge.verb]}
-                          </span>
-                          <span className="text-muted-foreground">&rarr;</span>
-                          <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium shrink-0">
-                            {targetLabel}
-                          </span>
-                          <button
-                            onClick={() => removeDraftEdge(edge.id)}
-                            className="text-muted-foreground hover:text-foreground"
-                            aria-label={`Remove link from ${d.label} to ${targetLabel}`}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      );
-                    })}
-                    {nodeConnections.map((conn, idx) => (
-                      <div key={idx} className="flex items-center gap-2 text-sm flex-wrap">
-                        <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium shrink-0">
-                          <span
-                            className="h-2 w-2 rounded-full"
-                            style={{ background: TYPE_META[d.type].color }}
-                          />
-                          {d.label}
-                        </span>
-                        <span className="text-muted-foreground">&rarr;</span>
-                        <select
-                          value={conn.verb}
-                          onChange={(e) => {
-                            const updated = [...nodeConnections];
-                            updated[idx] = { ...updated[idx], verb: e.target.value as Verb };
-                            setConnections((prev) => ({ ...prev, [d.id]: updated }));
-                          }}
-                          className="h-8 rounded-md border bg-card px-2 text-xs"
-                        >
-                          {VERBS.map((v) => (
-                            <option key={v} value={v}>{VERB_LABELS[v]}</option>
-                          ))}
-                        </select>
-                        <span className="text-muted-foreground">&rarr;</span>
-                        <select
-                          value={conn.target}
-                          onChange={(e) => {
-                            const updated = [...nodeConnections];
-                            updated[idx] = { ...updated[idx], target: e.target.value };
-                            setConnections((prev) => ({ ...prev, [d.id]: updated }));
-                          }}
-                          className="h-8 rounded-md border bg-card px-2 text-xs"
-                        >
-                          <option value="">Select target...</option>
-                          {targetOptions
-                            .filter((o) => o.id !== d.id)
-                            .map((o) => (
-                              <option key={o.id} value={o.id}>{o.label}</option>
-                            ))}
-                        </select>
-                        <button
-                          onClick={() => {
-                            const updated = nodeConnections.filter((_, i) => i !== idx);
-                            setConnections((prev) => ({ ...prev, [d.id]: updated }));
-                          }}
-                          className="text-muted-foreground hover:text-foreground"
-                          aria-label="Remove connection"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      onClick={() => {
-                        setConnections((prev) => ({
-                          ...prev,
-                          [d.id]: [...(prev[d.id] ?? []), { verb: "related_to" as Verb, target: "" }],
-                        }));
-                      }}
-                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+              <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1">
+                {draftNodes.map((d) => {
+                  const linkCount =
+                    draftEdges.filter((e) => e.source === d.id).length +
+                    (connections[d.id] ?? []).filter((c) => c.target).length;
+                  return (
+                    <div
+                      key={d.id}
+                      className="flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm"
                     >
-                      <Link2 className="h-3 w-3" /> Add another link
-                    </button>
-                  </div>
-                );
-              })
+                      <span
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                        style={{ background: TYPE_META[d.type].color }}
+                      >
+                        {TYPE_META[d.type].glyph}
+                      </span>
+                      <span className="flex-1 truncate">{d.label}</span>
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                        {linkCount} {linkCount === 1 ? "link" : "links"}
+                      </span>
+                      <button
+                        onClick={() => setMappingNodeId(d.id)}
+                        className="text-muted-foreground hover:text-foreground"
+                        aria-label={`Map connections for ${d.label}`}
+                      >
+                        <Link2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             )}
 
             {draftNodes.length > 0 &&
               Object.values(connections).every((c) => c.length === 0) &&
               draftEdges.length === 0 && (
                 <p className="text-center text-[13px] text-muted-foreground">
-                  You can submit without connections, or link your entries to existing nodes below.
+                  You can submit without connections, or link your entries to existing nodes.
                 </p>
               )}
           </div>
@@ -418,6 +371,146 @@ export default function ContributePanel() {
             )}
           </div>
         </div>
+
+        {/* Per-node Map connections dialog */}
+        <Dialog
+          open={mappingNodeId !== null}
+          onOpenChange={(next) => {
+            if (!next) setMappingNodeId(null);
+          }}
+        >
+          <DialogContent className="max-w-[560px]">
+            {mappedNode && (
+              <>
+                <DialogHeader>
+                  <DialogTitle>Map connections — {mappedNode.label}</DialogTitle>
+                  <DialogDescription>
+                    Step 2 of 2 · links starting from this entry
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
+                  {mappedImports.map((edge) => {
+                    const targetLabel = labelById.get(edge.target) ?? edge.target;
+                    return (
+                      <div key={edge.id} className="flex items-center gap-2 text-sm flex-wrap">
+                        <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium shrink-0">
+                          <span
+                            className="h-2 w-2 rounded-full"
+                            style={{ background: TYPE_META[mappedNode.type].color }}
+                          />
+                          {mappedNode.label}
+                        </span>
+                        <span className="text-muted-foreground">&rarr;</span>
+                        <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                          {VERB_LABELS[edge.verb]}
+                        </span>
+                        <span className="text-muted-foreground">&rarr;</span>
+                        <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium shrink-0">
+                          {targetLabel}
+                        </span>
+                        <button
+                          onClick={() => removeDraftEdge(edge.id)}
+                          className="text-muted-foreground hover:text-foreground"
+                          aria-label={`Remove link from ${mappedNode.label} to ${targetLabel}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+
+                  {mappedManual.map((conn, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-sm flex-wrap">
+                      <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium shrink-0">
+                        <span
+                          className="h-2 w-2 rounded-full"
+                          style={{ background: TYPE_META[mappedNode.type].color }}
+                        />
+                        {mappedNode.label}
+                      </span>
+                      <span className="text-muted-foreground">&rarr;</span>
+                      <select
+                        value={conn.verb}
+                        onChange={(e) => {
+                          const updated = [...mappedManual];
+                          updated[idx] = { ...updated[idx], verb: e.target.value as Verb };
+                          setConnections((prev) =>
+                            prev && mappedNode
+                              ? { ...prev, [mappedNode.id]: updated }
+                              : prev,
+                          );
+                        }}
+                        className="h-8 rounded-md border bg-card px-2 text-xs"
+                      >
+                        {VERBS.map((v) => (
+                          <option key={v} value={v}>{VERB_LABELS[v]}</option>
+                        ))}
+                      </select>
+                      <span className="text-muted-foreground">&rarr;</span>
+                      <select
+                        value={conn.target}
+                        onChange={(e) => {
+                          const updated = [...mappedManual];
+                          updated[idx] = { ...updated[idx], target: e.target.value };
+                          setConnections((prev) =>
+                            prev && mappedNode
+                              ? { ...prev, [mappedNode.id]: updated }
+                              : prev,
+                          );
+                        }}
+                        className="h-8 rounded-md border bg-card px-2 text-xs"
+                      >
+                        <option value="">Select target...</option>
+                        {targetOptions
+                          .filter((o) => o.id !== mappedNode.id)
+                          .map((o) => (
+                            <option key={o.id} value={o.id}>{o.label}</option>
+                          ))}
+                      </select>
+                      <button
+                        onClick={() => {
+                          const updated = mappedManual.filter((_, i) => i !== idx);
+                          setConnections((prev) =>
+                            prev && mappedNode
+                              ? { ...prev, [mappedNode.id]: updated }
+                              : prev,
+                          );
+                        }}
+                        className="text-muted-foreground hover:text-foreground"
+                        aria-label="Remove connection"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+
+                  <button
+                    onClick={() => {
+                      if (!mappedNode) return;
+                      setConnections((prev) => ({
+                        ...(prev ?? {}),
+                        [mappedNode.id]: [
+                          ...(prev?.[mappedNode.id] ?? []),
+                          { verb: "related_to" as Verb, target: "" },
+                        ],
+                      }));
+                    }}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    <Link2 className="h-3 w-3" /> Add another link
+                  </button>
+                </div>
+
+                <div className="flex justify-end border-t pt-4 mt-2">
+                  <Button size="sm" variant="ghost" onClick={() => setMappingNodeId(null)}>
+                    Done
+                  </Button>
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
       </DialogContent>
     </Dialog>
   );
