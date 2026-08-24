@@ -7,7 +7,7 @@ import { GraphGrid } from "./graph-grid";
 
 import { StageUi } from "./stage-ui";
 import { Dock } from "./dock";
-import { WelcomeCard } from "./welcome-card";
+import { EmptyState } from "./empty-state";
 import { HintChip } from "./hint-chip";
 import { Toast } from "./toast";
 import { SearchPop } from "./search-pop";
@@ -28,6 +28,7 @@ export function GraphApp() {
   const aboutOpen = useGraphStore((s) => s.aboutOpen);
   const chatOpen = useGraphStore((s) => s.chatOpen);
   const reviewQueueOpen = useGraphStore((s) => s.reviewQueueOpen);
+  const nodeCount = useGraphStore((s) => Object.keys(s.nodesMap).length);
   const clearSelection = useGraphStore((s) => s.clearSelection);
   const setSearchOpen = useGraphStore((s) => s.setSearchOpen);
   const setNewNodeOpen = useGraphStore((s) => s.setNewNodeOpen);
@@ -63,7 +64,7 @@ export function GraphApp() {
           <StageUi />
           <Dock />
           <ContributePanel />
-          <WelcomeCard />
+          {nodeCount === 0 && <EmptyState />}
           <HintChip />
           {searchOpen && <SearchPop />}
           {layersOpen && <LayersPop />}
