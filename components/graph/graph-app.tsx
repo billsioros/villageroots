@@ -12,6 +12,7 @@ import { HintChip } from "./hint-chip";
 import { Toast } from "./toast";
 import { SearchPop } from "./search-pop";
 import { LayersPop } from "./layers-pop";
+import { PhysicsPop } from "./physics-pop";
 import { SidePanel } from "./side-panel";
 import { ChatPanel } from "./chat-panel";
 import { OcrModal, AboutModal } from "./modals";
@@ -23,6 +24,7 @@ import { useGraphStore } from "@/store/graphStore";
 export function GraphApp() {
   const searchOpen = useGraphStore((s) => s.searchOpen);
   const layersOpen = useGraphStore((s) => s.layersOpen);
+  const physicsOpen = useGraphStore((s) => s.physicsOpen);
   const newNodeOpen = useGraphStore((s) => s.newNodeOpen);
   const ocrOpen = useGraphStore((s) => s.ocrOpen);
   const aboutOpen = useGraphStore((s) => s.aboutOpen);
@@ -68,6 +70,7 @@ export function GraphApp() {
           <HintChip />
           {searchOpen && <SearchPop />}
           {layersOpen && <LayersPop />}
+          {physicsOpen && <PhysicsPop />}
           <SidePanel />
         </div>
         <ChatPanel />
