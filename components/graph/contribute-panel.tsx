@@ -379,7 +379,7 @@ export default function ContributePanel() {
             if (!next) setMappingNodeId(null);
           }}
         >
-          <DialogContent className="max-w-[560px]">
+          <DialogContent className="max-w-[640px]">
             {mappedNode && (
               <>
                 <DialogHeader>
@@ -389,104 +389,128 @@ export default function ContributePanel() {
                   </DialogDescription>
                 </DialogHeader>
 
-                <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
-                  {mappedImports.map((edge) => {
-                    const targetLabel = labelById.get(edge.target) ?? edge.target;
-                    return (
-                      <div key={edge.id} className="flex items-center gap-2 text-sm flex-wrap">
-                        <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                          {VERB_LABELS[edge.verb]}
-                        </span>
+                <div className="max-h-[62vh] space-y-5 overflow-y-auto pr-1 pb-1">
+                  {mappedImports.length > 0 && (
+                    <section className="space-y-2.5">
+                      <div className="text-xs font-medium text-muted-foreground">
+                        From the document
+                      </div>
+                      {mappedImports.map((edge) => {
+                        const targetLabel = labelById.get(edge.target) ?? edge.target;
+                        return (
+                          <div
+                            key={edge.id}
+                            className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border bg-card px-3.5 py-3 text-sm"
+                          >
+                            <span className="rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
+                              {VERB_LABELS[edge.verb]}
+                            </span>
+                            <span className="text-muted-foreground">&rarr;</span>
+                            <span className="inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium">
+                              {targetLabel}
+                            </span>
+                            <button
+                              onClick={() => removeDraftEdge(edge.id)}
+                              className="ml-auto text-muted-foreground hover:text-foreground"
+                              aria-label={`Remove link from ${mappedNode.label} to ${targetLabel}`}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </section>
+                  )}
+
+                  <section className="space-y-2.5">
+                    {mappedManual.length > 0 && (
+                      <div className="text-xs font-medium text-muted-foreground">Added by you</div>
+                    )}
+                    {mappedManual.map((conn, idx) => (
+                      <div
+                        key={idx}
+                        className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border bg-card px-3.5 py-3 text-sm"
+                      >
+                        <select
+                          value={conn.verb}
+                          onChange={(e) => {
+                            const updated = [...mappedManual];
+                            updated[idx] = { ...updated[idx], verb: e.target.value as Verb };
+                            setConnections((prev) =>
+                              prev && mappedNode
+                                ? { ...prev, [mappedNode.id]: updated }
+                                : prev,
+                            );
+                          }}
+                          className="h-9 min-w-[150px] rounded-md border bg-card px-2.5 text-[13px]"
+                        >
+                          {VERBS.map((v) => (
+                            <option key={v} value={v}>{VERB_LABELS[v]}</option>
+                          ))}
+                        </select>
                         <span className="text-muted-foreground">&rarr;</span>
-                        <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium shrink-0">
-                          {targetLabel}
-                        </span>
+                        <select
+                          value={conn.target}
+                          onChange={(e) => {
+                            const updated = [...mappedManual];
+                            updated[idx] = { ...updated[idx], target: e.target.value };
+                            setConnections((prev) =>
+                              prev && mappedNode
+                                ? { ...prev, [mappedNode.id]: updated }
+                                : prev,
+                            );
+                          }}
+                          className="h-9 min-w-[190px] flex-1 rounded-md border bg-card px-2.5 text-[13px]"
+                        >
+                          <option value="">Select target...</option>
+                          {targetOptions
+                            .filter((o) => o.id !== mappedNode.id)
+                            .map((o) => (
+                              <option key={o.id} value={o.id}>{o.label}</option>
+                            ))}
+                        </select>
                         <button
-                          onClick={() => removeDraftEdge(edge.id)}
+                          onClick={() => {
+                            const updated = mappedManual.filter((_, i) => i !== idx);
+                            setConnections((prev) =>
+                              prev && mappedNode
+                                ? { ...prev, [mappedNode.id]: updated }
+                                : prev,
+                            );
+                          }}
                           className="text-muted-foreground hover:text-foreground"
-                          aria-label={`Remove link from ${mappedNode.label} to ${targetLabel}`}
+                          aria-label="Remove connection"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
-                    );
-                  })}
+                    ))}
 
-                  {mappedManual.map((conn, idx) => (
-                    <div key={idx} className="flex items-center gap-2 text-sm flex-wrap">
-                      <select
-                        value={conn.verb}
-                        onChange={(e) => {
-                          const updated = [...mappedManual];
-                          updated[idx] = { ...updated[idx], verb: e.target.value as Verb };
-                          setConnections((prev) =>
-                            prev && mappedNode
-                              ? { ...prev, [mappedNode.id]: updated }
-                              : prev,
-                          );
-                        }}
-                        className="h-8 rounded-md border bg-card px-2 text-xs"
-                      >
-                        {VERBS.map((v) => (
-                          <option key={v} value={v}>{VERB_LABELS[v]}</option>
-                        ))}
-                      </select>
-                      <span className="text-muted-foreground">&rarr;</span>
-                      <select
-                        value={conn.target}
-                        onChange={(e) => {
-                          const updated = [...mappedManual];
-                          updated[idx] = { ...updated[idx], target: e.target.value };
-                          setConnections((prev) =>
-                            prev && mappedNode
-                              ? { ...prev, [mappedNode.id]: updated }
-                              : prev,
-                          );
-                        }}
-                        className="h-8 rounded-md border bg-card px-2 text-xs"
-                      >
-                        <option value="">Select target...</option>
-                        {targetOptions
-                          .filter((o) => o.id !== mappedNode.id)
-                          .map((o) => (
-                            <option key={o.id} value={o.id}>{o.label}</option>
-                          ))}
-                      </select>
-                      <button
-                        onClick={() => {
-                          const updated = mappedManual.filter((_, i) => i !== idx);
-                          setConnections((prev) =>
-                            prev && mappedNode
-                              ? { ...prev, [mappedNode.id]: updated }
-                              : prev,
-                          );
-                        }}
-                        className="text-muted-foreground hover:text-foreground"
-                        aria-label="Remove connection"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ))}
+                    <button
+                      onClick={() => {
+                        if (!mappedNode) return;
+                        setConnections((prev) => ({
+                          ...(prev ?? {}),
+                          [mappedNode.id]: [
+                            ...(prev?.[mappedNode.id] ?? []),
+                            { verb: "related_to" as Verb, target: "" },
+                          ],
+                        }));
+                      }}
+                      className="flex items-center gap-1.5 px-1 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      <Link2 className="h-3 w-3" /> Add another link
+                    </button>
 
-                  <button
-                    onClick={() => {
-                      if (!mappedNode) return;
-                      setConnections((prev) => ({
-                        ...(prev ?? {}),
-                        [mappedNode.id]: [
-                          ...(prev?.[mappedNode.id] ?? []),
-                          { verb: "related_to" as Verb, target: "" },
-                        ],
-                      }));
-                    }}
-                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    <Link2 className="h-3 w-3" /> Add another link
-                  </button>
+                    {mappedImports.length === 0 && mappedManual.length === 0 && (
+                      <p className="py-8 text-center text-[13px] text-muted-foreground">
+                        No links yet. Connect this entry to a person, place, or event.
+                      </p>
+                    )}
+                  </section>
                 </div>
 
-                <div className="flex justify-end border-t pt-4 mt-2">
+                <div className="mt-4 flex justify-end border-t pt-5">
                   <Button size="sm" variant="ghost" onClick={() => setMappingNodeId(null)}>
                     Done
                   </Button>
