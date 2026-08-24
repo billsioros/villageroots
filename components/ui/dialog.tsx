@@ -61,7 +61,7 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed left-[50%] top-[50%] z-50 grid translate-x-[-50%] translate-y-[-50%] outline-none",
+          "fixed left-[50%] top-[50%] z-50 grid [translate:-50%_-50%] outline-none",
           "w-full max-w-lg rounded-lg border bg-background p-6 shadow-lg animate-[modal-in_0.2s_ease]",
           className,
         )}
