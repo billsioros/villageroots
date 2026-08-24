@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/billsioros/villageroots/compare/v1.3.0...v1.4.0) (2026-08-24)
+
+
+### Features
+
+* PTDN-12 document OCR pipeline ([#21](https://github.com/billsioros/villageroots/issues/21)) ([69b3e75](https://github.com/billsioros/villageroots/commit/69b3e7562543c5db9a81f1c8f89b65f55fb36584))
+
 # [1.3.0](https://github.com/billsioros/villageroots/compare/v1.2.0...v1.3.0) (2026-08-21)
 
 
