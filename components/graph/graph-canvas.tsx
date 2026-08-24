@@ -38,6 +38,7 @@ export function GraphCanvas() {
   const setZoomIntent = useGraphStore((s) => s.setZoomIntent);
   const setPanIntent = useGraphStore((s) => s.setPanIntent);
   const setCanvasCenter = useGraphStore((s) => s.setCanvasCenter);
+  const forceConfig = useGraphStore((s) => s.forceConfig);
 
   const { graphData, degreeMap } = useMemo(() => {
     const visibleIds = new Set(nodes.map((n) => n.id));
@@ -109,21 +110,36 @@ export function GraphCanvas() {
     setPanIntent(null);
   }, [panIntent, setPanIntent]);
 
-  // --- engine stop -> record center + initial fit & custom forces ---
+  // --- custom forces, engine stop, initial fit ---
   useEffect(() => {
     const fg = graphRef.current;
     if (!fg) return;
 
-    // Apply custom D3 forces once graph is mounted
-    fg.d3Force("collision", forceCollide(100));
-    fg.d3Force("charge", forceManyBody().strength(-800));
+    // Apply config-driven D3 forces
+    fg.d3Force(
+      "collision",
+      forceCollide((node: any) => {
+        const degree = degreeMap.get(node.id) ?? 0;
+        return forceConfig.collisionBaseRadius + degree * forceConfig.collisionDegreeScale;
+      }),
+    );
+
+    const charge = forceManyBody() as any;
+    charge.strength(forceConfig.chargeStrength);
+    charge.distanceMin(forceConfig.chargeDistanceMin);
+    charge.distanceMax(forceConfig.chargeDistanceMax);
+    fg.d3Force("charge", charge);
 
     const link = fg.d3Force("link");
-    if (link) link.distance(220);
+    if (link) link.distance(forceConfig.linkDistance);
+
+    fg.d3VelocityDecay(forceConfig.velocityDecay);
+    fg.d3AlphaDecay(forceConfig.alphaDecay);
 
     fg.d3ReheatSimulation();
 
     const onStop = () => {
+      fg.d3AlphaTarget(0); // guarantee simulation stays frozen
       const bbox = fg.getGraphBbox(3);
       if (!bbox) return;
       setCanvasCenter({
@@ -137,7 +153,7 @@ export function GraphCanvas() {
       fg.off("engineStop", onStop);
       clearTimeout(t);
     };
-  }, [setCanvasCenter, size.w]);
+  }, [setCanvasCenter, size.w, forceConfig, degreeMap]);
 
   // --- zoom % rAF poll ---
   useEffect(() => {
@@ -278,8 +294,8 @@ export function GraphCanvas() {
           onBackgroundClick={clearSelection}
           nodeVal={15}
           nodeRelSize={4}
-          cooldownTicks={200}
-          d3AlphaDecay={0.02}
+          cooldownTicks={forceConfig.cooldownTicks}
+          d3AlphaDecay={forceConfig.alphaDecay}
         />
       )}
     </div>
