@@ -292,6 +292,9 @@ export function GraphCanvas() {
             setCanvasCenter({ x: node.x ?? 0, y: node.y ?? 0 });
           }}
           onBackgroundClick={clearSelection}
+          onNodeDragEnd={() => {
+            graphRef.current?.d3AlphaTarget(0);
+          }}
           nodeVal={15}
           nodeRelSize={4}
           cooldownTicks={forceConfig.cooldownTicks}
