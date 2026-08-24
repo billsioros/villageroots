@@ -2,7 +2,6 @@
 
 import { useGraphStore } from "@/store/graphStore";
 import { PopoverShell } from "./popover-shell";
-import { DEFAULT_FORCE_CONFIG } from "@/lib/graph/force-config";
 
 interface SliderProps {
   label: string;
