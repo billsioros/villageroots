@@ -39,7 +39,7 @@ export function GraphCanvas() {
   const setPanIntent = useGraphStore((s) => s.setPanIntent);
   const setCanvasCenter = useGraphStore((s) => s.setCanvasCenter);
 
-  const { graphData, focusNode } = useMemo(() => {
+  const { graphData, degreeMap } = useMemo(() => {
     const visibleIds = new Set(nodes.map((n) => n.id));
     const links: GraphData["links"] = [
       ...edges
@@ -50,11 +50,26 @@ export function GraphCanvas() {
         .map((e) => ({ ...e, draft: true })),
       ...suggestedEdges.map((e) => ({ ...e, suggested: true })),
     ];
+
+    // Precompute node degrees for degree-based collision
+    const degreeMap = new Map<string, number>();
+    for (const link of links) {
+      const src = typeof link.source === "object" ? (link.source as GraphNode).id : (link.source as string);
+      const tgt = typeof link.target === "object" ? (link.target as GraphNode).id : (link.target as string);
+      degreeMap.set(src, (degreeMap.get(src) ?? 0) + 1);
+      degreeMap.set(tgt, (degreeMap.get(tgt) ?? 0) + 1);
+    }
+
     return {
       graphData: { nodes, links },
-      focusNode: nodes.find((n) => n.id === selectedId),
+      degreeMap,
     };
-  }, [nodes, edges, draftEdges, suggestedEdges, selectedId]);
+  }, [nodes, edges, draftEdges, suggestedEdges]);
+
+  const focusNode = useMemo(
+    () => nodes.find((n) => n.id === selectedId),
+    [nodes, selectedId],
+  );
 
   // --- resize ---
   useEffect(() => {
