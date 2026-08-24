@@ -13,6 +13,9 @@ import { useGraphStore, selectVisibleNodes } from "@/store/graphStore";
 import { tokenColor, TYPE_META } from "@/lib/graph/helpers";
 import type { GraphNode } from "@/lib/graph/types";
 
+const CULL_THRESHOLD = 200;
+const CULL_BUFFER = 200;
+
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   ssr: false,
 });
@@ -39,6 +42,11 @@ export function GraphCanvas() {
   const setPanIntent = useGraphStore((s) => s.setPanIntent);
   const setCanvasCenter = useGraphStore((s) => s.setCanvasCenter);
   const forceConfig = useGraphStore((s) => s.forceConfig);
+  const viewportRef = useRef({ x1: -500, y1: -500, x2: 500, y2: 500 });
+  const lastViewportUpdate = useRef(0);
+  const setViewportBounds = useGraphStore((s) => s.setViewportBounds);
+  const viewportBounds = useGraphStore((s) => s.viewportBounds);
+  const nodeCount = useGraphStore((s) => Object.keys(s.nodesMap).length);
 
   const { graphData, degreeMap } = useMemo(() => {
     const visibleIds = new Set(nodes.map((n) => n.id));
@@ -66,6 +74,30 @@ export function GraphCanvas() {
       degreeMap,
     };
   }, [nodes, edges, draftEdges, suggestedEdges]);
+
+  const culledData = useMemo(() => {
+    if (nodeCount < CULL_THRESHOLD) return graphData;
+    const { x1, y1, x2, y2 } = viewportBounds;
+    const visible = new Set(
+      graphData.nodes
+        .filter(
+          (n) =>
+            (n.x ?? 0) >= x1 - CULL_BUFFER &&
+            (n.x ?? 0) <= x2 + CULL_BUFFER &&
+            (n.y ?? 0) >= y1 - CULL_BUFFER &&
+            (n.y ?? 0) <= y2 + CULL_BUFFER,
+        )
+        .map((n) => n.id),
+    );
+    return {
+      nodes: graphData.nodes.filter((n) => visible.has(n.id)),
+      links: graphData.links.filter(
+        (l) =>
+          visible.has(typeof l.source === "object" ? (l.source as GraphNode).id : String(l.source ?? "")) &&
+          visible.has(typeof l.target === "object" ? (l.target as GraphNode).id : String(l.target ?? "")),
+      ),
+    };
+  }, [graphData, viewportBounds, nodeCount]);
 
   const focusNode = useMemo(
     () => nodes.find((n) => n.id === selectedId),
@@ -162,11 +194,31 @@ export function GraphCanvas() {
     let raf = 0;
     const tick = () => {
       setZoomPct(Math.round(fg.zoom() * 100));
+
+      // Track viewport bounds (throttled to 100ms)
+      const now = Date.now();
+      if (now - lastViewportUpdate.current > 100) {
+        lastViewportUpdate.current = now;
+        const zoom = fg.zoom();
+        const cx = fg.center().x;
+        const cy = fg.center().y;
+        const w = size.w / zoom;
+        const h = size.h / zoom;
+        const bounds = {
+          x1: cx - w / 2,
+          y1: cy - h / 2,
+          x2: cx + w / 2,
+          y2: cy + h / 2,
+        };
+        viewportRef.current = bounds;
+        setViewportBounds(bounds);
+      }
+
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [setZoomPct, size.w]);
+  }, [setZoomPct, size.w, setViewportBounds]);
 
   const paintNode = (node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const meta = TYPE_META[(node as GraphNode).type];
@@ -263,7 +315,7 @@ export function GraphCanvas() {
       {size.w > 0 && (
         <ForceGraph2D
           ref={graphRef}
-          graphData={graphData}
+          graphData={culledData}
           width={size.w}
           height={size.h}
           backgroundColor="transparent"
