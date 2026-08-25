@@ -13,6 +13,9 @@ import { useGraphStore, selectVisibleNodes } from "@/store/graphStore";
 import { tokenColor, TYPE_META } from "@/lib/graph/helpers";
 import type { GraphNode } from "@/lib/graph/types";
 
+const CULL_THRESHOLD = 200;
+const CULL_BUFFER = 200;
+
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   ssr: false,
 });
@@ -21,6 +24,7 @@ export function GraphCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<any>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
+  const [graphReady, setGraphReady] = useState(false);
 
   const nodes = useGraphStore(useShallow(selectVisibleNodes));
   const edges = useGraphStore((s) => s.edges);
@@ -38,8 +42,14 @@ export function GraphCanvas() {
   const setZoomIntent = useGraphStore((s) => s.setZoomIntent);
   const setPanIntent = useGraphStore((s) => s.setPanIntent);
   const setCanvasCenter = useGraphStore((s) => s.setCanvasCenter);
+  const forceConfig = useGraphStore((s) => s.forceConfig);
+  const viewportRef = useRef({ x1: -500, y1: -500, x2: 500, y2: 500 });
+  const lastViewportUpdate = useRef(0);
+  const setViewportBounds = useGraphStore((s) => s.setViewportBounds);
+  const viewportBounds = useGraphStore((s) => s.viewportBounds);
+  const nodeCount = useGraphStore((s) => Object.keys(s.nodesMap).length);
 
-  const { graphData, focusNode } = useMemo(() => {
+  const { graphData, degreeMap } = useMemo(() => {
     const visibleIds = new Set(nodes.map((n) => n.id));
     const links: GraphData["links"] = [
       ...edges
@@ -50,11 +60,50 @@ export function GraphCanvas() {
         .map((e) => ({ ...e, draft: true })),
       ...suggestedEdges.map((e) => ({ ...e, suggested: true })),
     ];
+
+    // Precompute node degrees for degree-based collision
+    const degreeMap = new Map<string, number>();
+    for (const link of links) {
+      const src = typeof link.source === "object" ? (link.source as GraphNode).id : (link.source as string);
+      const tgt = typeof link.target === "object" ? (link.target as GraphNode).id : (link.target as string);
+      degreeMap.set(src, (degreeMap.get(src) ?? 0) + 1);
+      degreeMap.set(tgt, (degreeMap.get(tgt) ?? 0) + 1);
+    }
+
     return {
       graphData: { nodes, links },
-      focusNode: nodes.find((n) => n.id === selectedId),
+      degreeMap,
     };
-  }, [nodes, edges, draftEdges, suggestedEdges, selectedId]);
+  }, [nodes, edges, draftEdges, suggestedEdges]);
+
+  const culledData = useMemo(() => {
+    if (nodeCount < CULL_THRESHOLD) return graphData;
+    const { x1, y1, x2, y2 } = viewportBounds;
+    const visible = new Set(
+      graphData.nodes
+        .filter(
+          (n) =>
+            (n.x ?? 0) >= x1 - CULL_BUFFER &&
+            (n.x ?? 0) <= x2 + CULL_BUFFER &&
+            (n.y ?? 0) >= y1 - CULL_BUFFER &&
+            (n.y ?? 0) <= y2 + CULL_BUFFER,
+        )
+        .map((n) => n.id),
+    );
+    return {
+      nodes: graphData.nodes.filter((n) => visible.has(n.id)),
+      links: graphData.links.filter(
+        (l) =>
+          visible.has(typeof l.source === "object" ? (l.source as GraphNode).id : String(l.source ?? "")) &&
+          visible.has(typeof l.target === "object" ? (l.target as GraphNode).id : String(l.target ?? "")),
+      ),
+    };
+  }, [graphData, viewportBounds, nodeCount]);
+
+  const focusNode = useMemo(
+    () => nodes.find((n) => n.id === selectedId),
+    [nodes, selectedId],
+  );
 
   // --- resize ---
   useEffect(() => {
@@ -94,35 +143,34 @@ export function GraphCanvas() {
     setPanIntent(null);
   }, [panIntent, setPanIntent]);
 
-  // --- engine stop -> record center + initial fit & custom forces ---
+  // --- custom forces, engine stop, initial fit ---
   useEffect(() => {
     const fg = graphRef.current;
     if (!fg) return;
 
-    // Apply custom D3 forces once graph is mounted
-    fg.d3Force("collision", forceCollide(100));
-    fg.d3Force("charge", forceManyBody().strength(-800));
+    // Apply config-driven D3 forces
+    fg.d3Force(
+      "collision",
+      forceCollide((node: any) => {
+        const degree = degreeMap.get(node.id) ?? 0;
+        return forceConfig.collisionBaseRadius + degree * forceConfig.collisionDegreeScale;
+      }),
+    );
+
+    const charge = forceManyBody() as any;
+    charge.strength(forceConfig.chargeStrength);
+    charge.distanceMin(forceConfig.chargeDistanceMin);
+    charge.distanceMax(forceConfig.chargeDistanceMax);
+    fg.d3Force("charge", charge);
 
     const link = fg.d3Force("link");
-    if (link) link.distance(220);
+    if (link) link.distance(forceConfig.linkDistance);
 
     fg.d3ReheatSimulation();
 
-    const onStop = () => {
-      const bbox = fg.getGraphBbox(3);
-      if (!bbox) return;
-      setCanvasCenter({
-        x: bbox.x + bbox.w / 2,
-        y: bbox.y + bbox.h / 2,
-      });
-    };
-    fg.on("engineStop", onStop);
     const t = setTimeout(() => fg.zoomToFit(400, 60), 150);
-    return () => {
-      fg.off("engineStop", onStop);
-      clearTimeout(t);
-    };
-  }, [setCanvasCenter, size.w]);
+    return () => clearTimeout(t);
+  }, [setCanvasCenter, size.w, forceConfig, degreeMap, graphReady]);
 
   // --- zoom % rAF poll ---
   useEffect(() => {
@@ -131,11 +179,31 @@ export function GraphCanvas() {
     let raf = 0;
     const tick = () => {
       setZoomPct(Math.round(fg.zoom() * 100));
+
+      // Track viewport bounds (throttled to 100ms)
+      const now = Date.now();
+      if (now - lastViewportUpdate.current > 100) {
+        lastViewportUpdate.current = now;
+        const zoom = fg.zoom();
+        const cx = fg.center().x;
+        const cy = fg.center().y;
+        const w = size.w / zoom;
+        const h = size.h / zoom;
+        const bounds = {
+          x1: cx - w / 2,
+          y1: cy - h / 2,
+          x2: cx + w / 2,
+          y2: cy + h / 2,
+        };
+        viewportRef.current = bounds;
+        setViewportBounds(bounds);
+      }
+
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [setZoomPct, size.w]);
+  }, [setZoomPct, size.w, setViewportBounds]);
 
   const paintNode = (node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const meta = TYPE_META[(node as GraphNode).type];
@@ -231,8 +299,11 @@ export function GraphCanvas() {
     <div ref={containerRef} className="absolute inset-0">
       {size.w > 0 && (
         <ForceGraph2D
-          ref={graphRef}
-          graphData={graphData}
+          ref={((el: any) => {
+            graphRef.current = el;
+            if (el && !graphReady) setGraphReady(true);
+          }) as any}
+          graphData={culledData}
           width={size.w}
           height={size.h}
           backgroundColor="transparent"
@@ -261,10 +332,20 @@ export function GraphCanvas() {
             setCanvasCenter({ x: node.x ?? 0, y: node.y ?? 0 });
           }}
           onBackgroundClick={clearSelection}
+          onNodeDragEnd={() => {}}
+          onEngineStop={() => {
+            const bbox = graphRef.current?.getGraphBbox(() => true);
+            if (!bbox) return;
+            setCanvasCenter({
+              x: bbox.x + bbox.w / 2,
+              y: bbox.y + bbox.h / 2,
+            });
+          }}
           nodeVal={15}
           nodeRelSize={4}
-          cooldownTicks={200}
-          d3AlphaDecay={0.02}
+          cooldownTicks={forceConfig.cooldownTicks}
+          d3AlphaDecay={forceConfig.alphaDecay}
+          d3VelocityDecay={forceConfig.velocityDecay}
         />
       )}
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, Plus, Upload, Layers, ShieldCheck, Sparkles } from "lucide-react";
+import { Search, Plus, Upload, Layers, ShieldCheck, Sparkles, SlidersHorizontal } from "lucide-react";
 import { useGraphStore } from "@/store/graphStore";
 
 export function Dock() {
@@ -10,6 +10,8 @@ export function Dock() {
   const setOcrOpen = useGraphStore((s) => s.setOcrOpen);
   const setLayersOpen = useGraphStore((s) => s.setLayersOpen);
   const layersOpen = useGraphStore((s) => s.layersOpen);
+  const physicsOpen = useGraphStore((s) => s.physicsOpen);
+  const setPhysicsOpen = useGraphStore((s) => s.setPhysicsOpen);
   const setReviewQueueOpen = useGraphStore((s) => s.setReviewQueueOpen);
   const toggleChat = useGraphStore((s) => s.toggleChat);
 
@@ -38,6 +40,9 @@ export function Dock() {
       </button>
       <button title="Layers" onClick={() => setLayersOpen(!layersOpen)} className={`grid h-12 w-12 place-items-center rounded-full border shadow-elev-raised transition-colors ${layersOpen ? "bg-primary text-primary-foreground" : "bg-card/90 text-foreground backdrop-blur hover:bg-surface-warm"}`} aria-label="Layers">
         <Layers size={18} />
+      </button>
+      <button title="Physics" onClick={() => setPhysicsOpen(!physicsOpen)} className={`grid h-12 w-12 place-items-center rounded-full border shadow-elev-raised transition-colors ${physicsOpen ? "bg-primary text-primary-foreground" : "bg-card/90 text-foreground backdrop-blur hover:bg-surface-warm"}`} aria-label="Physics">
+        <SlidersHorizontal size={18} />
       </button>
       <button title="Chat" onClick={toggleChat} className="grid h-12 w-12 place-items-center rounded-full border shadow-elev-raised transition-colors bg-card/90 text-foreground backdrop-blur hover:bg-surface-warm" aria-label="Chat">
         <Sparkles size={18} />

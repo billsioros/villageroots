@@ -3,6 +3,8 @@ import { uid, countByType as countByTypeHelper, TYPE_META } from "@/lib/graph/he
 import { toNodeRow, toEdgeRow } from "@/lib/graph/mappers";
 import { queryClient } from "@/lib/graph/query-client";
 import { invalidationKeys } from "@/lib/graph/queries";
+import type { ForceConfig } from "@/lib/graph/force-config";
+import { DEFAULT_FORCE_CONFIG } from "@/lib/graph/force-config";
 import type { NodeRow, EdgeRow } from "@/drizzle/schema";
 import type {
   GraphNode,
@@ -61,7 +63,18 @@ export interface GraphStore {
   zoomIntent: ZoomIntent;
   panIntent: PanIntent | null;
   canvasCenter: { x: number; y: number };
-  welcome: boolean;
+
+  // physics
+  forceConfig: ForceConfig;
+  setForceConfig: (patch: Partial<ForceConfig>) => void;
+  resetForceConfig: () => void;
+  physicsOpen: boolean;
+  setPhysicsOpen: (open: boolean) => void;
+
+  // viewport
+  viewportBounds: { x1: number; y1: number; x2: number; y2: number };
+  setViewportBounds: (b: { x1: number; y1: number; x2: number; y2: number }) => void;
+
   hint: boolean;
   selectNode: (id: string | null) => void;
   clearSelection: () => void;
@@ -81,7 +94,6 @@ export interface GraphStore {
   setOcrOpen: (open: boolean) => void;
   setAboutOpen: (open: boolean) => void;
   setReviewQueueOpen: (open: boolean) => void;
-  dismissWelcome: () => void;
   dismissHint: () => void;
   pushToast: (t: Toast) => void;
   clearToast: () => void;
@@ -300,7 +312,19 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
   zoomIntent: null,
   panIntent: null,
   canvasCenter: { x: 0, y: 0 },
-  welcome: true,
+
+  // physics
+  forceConfig: { ...DEFAULT_FORCE_CONFIG },
+  setForceConfig: (patch) =>
+    set((s) => ({ forceConfig: { ...s.forceConfig, ...patch } })),
+  resetForceConfig: () => set({ forceConfig: { ...DEFAULT_FORCE_CONFIG } }),
+  physicsOpen: false,
+  setPhysicsOpen: (open) => set({ physicsOpen: open }),
+
+  // viewport
+  viewportBounds: { x1: -500, y1: -500, x2: 500, y2: 500 },
+  setViewportBounds: (b) => set({ viewportBounds: b }),
+
   hint: true,
   selectNode: (id) =>
     set(() => ({
@@ -339,7 +363,6 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
   setOcrOpen: (open) => set({ ocrOpen: open }),
   setAboutOpen: (open) => set({ aboutOpen: open }),
   setReviewQueueOpen: (open) => set({ reviewQueueOpen: open }),
-  dismissWelcome: () => set({ welcome: false }),
   dismissHint: () => set({ hint: false }),
   pushToast: (t) => {
     if (toastTimer) clearTimeout(toastTimer);
