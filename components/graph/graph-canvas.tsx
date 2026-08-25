@@ -165,9 +165,6 @@ export function GraphCanvas() {
     const link = fg.d3Force("link");
     if (link) link.distance(forceConfig.linkDistance);
 
-    fg.d3VelocityDecay(forceConfig.velocityDecay);
-    fg.d3AlphaDecay(forceConfig.alphaDecay);
-
     fg.d3ReheatSimulation();
 
     const onStop = () => {
@@ -344,13 +341,12 @@ export function GraphCanvas() {
             setCanvasCenter({ x: node.x ?? 0, y: node.y ?? 0 });
           }}
           onBackgroundClick={clearSelection}
-          onNodeDragEnd={() => {
-            graphRef.current?.d3AlphaTarget(0);
-          }}
+          onNodeDragEnd={() => {}}
           nodeVal={15}
           nodeRelSize={4}
           cooldownTicks={forceConfig.cooldownTicks}
           d3AlphaDecay={forceConfig.alphaDecay}
+          d3VelocityDecay={forceConfig.velocityDecay}
         />
       )}
     </div>
