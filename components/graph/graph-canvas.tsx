@@ -167,21 +167,8 @@ export function GraphCanvas() {
 
     fg.d3ReheatSimulation();
 
-    const onStop = () => {
-      fg.d3AlphaTarget(0); // guarantee simulation stays frozen
-      const bbox = fg.getGraphBbox(3);
-      if (!bbox) return;
-      setCanvasCenter({
-        x: bbox.x + bbox.w / 2,
-        y: bbox.y + bbox.h / 2,
-      });
-    };
-    fg.on("engineStop", onStop);
     const t = setTimeout(() => fg.zoomToFit(400, 60), 150);
-    return () => {
-      fg.off("engineStop", onStop);
-      clearTimeout(t);
-    };
+    return () => clearTimeout(t);
   }, [setCanvasCenter, size.w, forceConfig, degreeMap]);
 
   // --- zoom % rAF poll ---
@@ -342,6 +329,14 @@ export function GraphCanvas() {
           }}
           onBackgroundClick={clearSelection}
           onNodeDragEnd={() => {}}
+          onEngineStop={() => {
+            const bbox = graphRef.current?.getGraphBbox(3);
+            if (!bbox) return;
+            setCanvasCenter({
+              x: bbox.x + bbox.w / 2,
+              y: bbox.y + bbox.h / 2,
+            });
+          }}
           nodeVal={15}
           nodeRelSize={4}
           cooldownTicks={forceConfig.cooldownTicks}
