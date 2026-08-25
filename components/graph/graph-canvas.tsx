@@ -24,6 +24,7 @@ export function GraphCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<any>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
+  const [graphReady, setGraphReady] = useState(false);
 
   const nodes = useGraphStore(useShallow(selectVisibleNodes));
   const edges = useGraphStore((s) => s.edges);
@@ -169,7 +170,7 @@ export function GraphCanvas() {
 
     const t = setTimeout(() => fg.zoomToFit(400, 60), 150);
     return () => clearTimeout(t);
-  }, [setCanvasCenter, size.w, forceConfig, degreeMap]);
+  }, [setCanvasCenter, size.w, forceConfig, degreeMap, graphReady]);
 
   // --- zoom % rAF poll ---
   useEffect(() => {
@@ -298,7 +299,10 @@ export function GraphCanvas() {
     <div ref={containerRef} className="absolute inset-0">
       {size.w > 0 && (
         <ForceGraph2D
-          ref={graphRef}
+          ref={((el: any) => {
+            graphRef.current = el;
+            if (el && !graphReady) setGraphReady(true);
+          }) as any}
           graphData={culledData}
           width={size.w}
           height={size.h}
