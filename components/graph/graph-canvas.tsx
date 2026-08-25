@@ -330,7 +330,7 @@ export function GraphCanvas() {
           onBackgroundClick={clearSelection}
           onNodeDragEnd={() => {}}
           onEngineStop={() => {
-            const bbox = graphRef.current?.getGraphBbox(3);
+            const bbox = graphRef.current?.getGraphBbox(() => true);
             if (!bbox) return;
             setCanvasCenter({
               x: bbox.x + bbox.w / 2,
