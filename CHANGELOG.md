@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/billsioros/villageroots/compare/v1.4.0...v1.5.0) (2026-08-25)
+
+
+### Features
+
+* PTDN-28 infinite canvas hardening — d3-force config, empty state, physics panel & viewport culling ([#22](https://github.com/billsioros/villageroots/issues/22)) ([11f35c1](https://github.com/billsioros/villageroots/commit/11f35c1a397156fde3520bb79a285e3b9dbc0016))
+
 # [1.4.0](https://github.com/billsioros/villageroots/compare/v1.3.0...v1.4.0) (2026-08-24)
 
 
