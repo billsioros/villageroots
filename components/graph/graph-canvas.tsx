@@ -14,7 +14,6 @@ import { tokenColor, TYPE_META } from "@/lib/graph/helpers";
 import type { GraphNode } from "@/lib/graph/types";
 import {
   buildAncestralTree,
-  parentChildPath,
   TREE_EDGE_VERBS,
 } from "@/lib/graph/tree";
 
@@ -463,16 +462,10 @@ export function GraphCanvas() {
     } else if (l.verb === "child_of" || l.verb === "parent_of") {
       const parent = src.y <= tgt.y ? src : tgt;
       const child = src.y <= tgt.y ? tgt : src;
-      const path = parentChildPath(
-        { x: parent.x, y: parent.y, w: 0, h: getPillH(parent) },
-        { x: child.x, y: child.y, w: 0, h: getPillH(child) },
-      );
       ctx.strokeStyle = tokenColor("primary", 0.9);
       ctx.lineWidth = 2 / globalScale;
-      ctx.moveTo(path.px, path.py);
-      ctx.lineTo(path.px, path.my);
-      ctx.lineTo(path.mx, path.my);
-      ctx.lineTo(path.cx, path.cy);
+      ctx.moveTo(parent.x, parent.y + getPillH(parent) / 2);
+      ctx.lineTo(child.x, child.y - getPillH(child) / 2);
     } else {
       ctx.closePath();
       ctx.restore();
@@ -504,6 +497,7 @@ export function GraphCanvas() {
             ctx.fill();
           }}
           linkColor={(l: any) => {
+            if (activeView === "TREE") return "rgba(0,0,0,0)";
             if (litEdgeIds.includes(l.id)) return tokenColor("primary");
             if (l.draft) return tokenColor("meta", 0.8);
             if (l.suggested) return tokenColor("primary", 0.8);
