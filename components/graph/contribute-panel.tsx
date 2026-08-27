@@ -26,6 +26,7 @@ const VERB_LABELS: Record<Verb, string> = {
   child_of: "is child of",
   married_to: "is married to",
   sibling_of: "is sibling of",
+  parent_of: "parent of",
   belongs_to_clan: "belongs to",
   owns_land_at: "owns land at",
   lived_at: "lived at",

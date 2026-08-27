@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { OCR_EXTRACTION_JSON_SCHEMA } from "@/lib/ocr/schema";
+import { VERBS } from "@/lib/graph/helpers";
 
 const schema = OCR_EXTRACTION_JSON_SCHEMA.schema;
 
@@ -23,9 +24,9 @@ describe("OCR_EXTRACTION_JSON_SCHEMA", () => {
     expect(items.required).toEqual(["name", "type", "subtitle", "description", "facts", "deceased"]);
   });
 
-  it("restricts relationship verbs to the 18 app verbs", () => {
+  it("restricts relationship verbs to the app verbs", () => {
     const verbEnum = schema.properties.relationships.items.properties.verb.enum;
-    expect(verbEnum).toHaveLength(18);
+    expect(verbEnum).toEqual(VERBS);
     expect(verbEnum).toContain("born_in");
     expect(verbEnum).not.toContain("invented_thing");
   });

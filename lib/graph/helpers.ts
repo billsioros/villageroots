@@ -18,6 +18,7 @@ export const VERB_KIND: Record<Verb, EdgeKind> = {
   child_of: "social",
   married_to: "social",
   sibling_of: "social",
+  parent_of: "social",
   belongs_to_clan: "social",
   owns_land_at: "geo",
   lived_at: "geo",

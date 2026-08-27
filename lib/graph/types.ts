@@ -18,6 +18,7 @@ export type Verb =
   | "child_of"
   | "married_to"
   | "sibling_of"
+  | "parent_of"
   | "belongs_to_clan"
   | "owns_land_at"
   | "lived_at"
