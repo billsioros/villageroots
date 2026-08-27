@@ -372,7 +372,7 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
   setReviewQueueOpen: (open) => set({ reviewQueueOpen: open }),
   setFocalPersonId: (id) => set({ focalPersonId: id }),
   setActiveView: (view) => {
-    const { activeView, focalPersonId, selectedId, nodesMap, pushToast, setFocalPersonId } = get();
+    const { activeView, focalPersonId, selectedId, nodesMap, setFocalPersonId } = get();
     if (view === activeView) return;
     if (view === "GRAPH") {
       set({ activeView: "GRAPH" });
@@ -384,10 +384,6 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
     const focal = focalPersonId ?? selected ?? pickFocalPerson(persons)?.id ?? null;
     if (!focal) return;
     setFocalPersonId(focal);
-    pushToast({
-      tone: "info",
-      message: `Showing ancestral tree of ${nodesMap[focal]?.label ?? "person"}`,
-    });
     set({ activeView: "TREE" });
   },
   dismissHint: () => set({ hint: false }),

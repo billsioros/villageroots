@@ -6,7 +6,6 @@ export const FAMILY_INSET = 60
 
 export const TREE_EDGE_VERBS: readonly Verb[] = [
   'child_of',
-  'parent_of',
   'married_to',
   'belongs_to_clan',
   'sibling_of',
