@@ -137,7 +137,7 @@ export interface GraphStore {
 
 const MILL_PATH = {
   nodeIds: ["l-mill", "p-nikolas", "p-yiannis"],
-  edgeIds: ["e-mill-nikolas", "e-nik-yiannis"],
+  edgeIds: ["e-mill-nikolas", "e-yiannis-nik"],
 };
 
 const CHURCH_PATH = {
