@@ -14,8 +14,8 @@ import { tokenColor, TYPE_META } from "@/lib/graph/helpers";
 import type { GraphNode } from "@/lib/graph/types";
 import {
   buildAncestralTree,
-  filterTreeData,
   parentChildPath,
+  TREE_EDGE_VERBS,
 } from "@/lib/graph/tree";
 
 const CULL_THRESHOLD = 200;
@@ -111,13 +111,28 @@ export function GraphCanvas() {
   }, [activeView, effectiveFocal, treeNodes, edges, draftEdges]);
 
   const displayData = useMemo(() => {
-    if (activeView !== "TREE" || !treeResult) return graphData;
-    return filterTreeData(
-      graphData.nodes,
-      graphData.links as any,
-      treeResult.slots,
+    if (activeView !== "TREE") return graphData;
+    // In TREE mode: show all person + family nodes, keep only family edges
+    const familyNodes = graphData.nodes.filter(
+      (n) => n.type === "person" || n.type === "family",
     );
-  }, [activeView, treeResult, graphData]);
+    const familyIds = new Set(familyNodes.map((n) => n.id));
+    const familyEdges = graphData.links.filter(
+      (l) =>
+        TREE_EDGE_VERBS.includes(l.verb as any) &&
+        familyIds.has(
+          typeof l.source === "object"
+            ? (l.source as GraphNode).id
+            : String(l.source ?? ""),
+        ) &&
+        familyIds.has(
+          typeof l.target === "object"
+            ? (l.target as GraphNode).id
+            : String(l.target ?? ""),
+        ),
+    );
+    return { nodes: familyNodes, links: familyEdges };
+  }, [activeView, graphData]);
 
   const culledData = useMemo(() => {
     const source = displayData;
@@ -186,7 +201,7 @@ export function GraphCanvas() {
   // --- pan intent (chat path highlight) ---
   useEffect(() => {
     const fg = graphRef.current;
-    if (!fg || !panIntent) return;
+    if (!fg || typeof fg.graphData !== "function" || !panIntent) return;
     const t = panIntent.nodeId;
     const n = fg.graphData().nodes.find((n: GraphNode) => n.id === t);
     if (n) {
@@ -261,7 +276,7 @@ export function GraphCanvas() {
   // --- Tree View: glide every node into its slot via fx/fy, then pin ---
   useEffect(() => {
     const fg = graphRef.current;
-    if (!fg) return;
+    if (!fg || typeof fg.graphData !== "function") return;
     if (activeView !== "TREE" || !treeResult) {
       // Release pins when leaving Tree View
       fg.graphData().nodes.forEach((n: { fx?: number; fy?: number }) => {
@@ -275,9 +290,15 @@ export function GraphCanvas() {
     const ease = (t: number) => 1 - Math.pow(1 - t, 3);
     const from = new Map<string, { x: number; y: number }>();
     const to = new Map<string, { x: number; y: number }>();
-    for (const n of fg.graphData().nodes as (GraphNode & { fx?: number; fy?: number })[]) {
+    const allNodes = fg.graphData().nodes as (GraphNode & { fx?: number; fy?: number })[];
+    for (const n of allNodes) {
       const s = treeResult.slots.get(n.id);
-      if (!s) continue;
+      if (!s) {
+        // Non-ancestor nodes: pin at current position so they don't drift
+        n.fx = n.x ?? 0;
+        n.fy = n.y ?? 0;
+        continue;
+      }
       from.set(n.id, { x: n.x ?? 0, y: n.y ?? 0 });
       to.set(n.id, { x: s.x, y: s.y });
     }
@@ -286,7 +307,7 @@ export function GraphCanvas() {
     const step = (now: number) => {
       const p = Math.min(1, (now - start) / duration);
       const k = ease(p);
-      for (const n of fg.graphData().nodes as (GraphNode & { fx?: number; fy?: number })[]) {
+      for (const n of allNodes) {
         const a = from.get(n.id);
         const b = to.get(n.id);
         if (!a || !b) continue;
@@ -296,12 +317,8 @@ export function GraphCanvas() {
       if (p < 1) {
         raf = requestAnimationFrame(step);
       } else {
-        // Pin at final position
-        for (const n of fg.graphData().nodes as {
-          id: string;
-          fx?: number;
-          fy?: number;
-        }[]) {
+        // Pin ancestor nodes at final position
+        for (const n of allNodes) {
           const b = to.get(n.id);
           if (!b) continue;
           n.fx = b.x;

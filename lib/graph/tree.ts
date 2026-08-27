@@ -9,6 +9,7 @@ export const TREE_EDGE_VERBS: readonly Verb[] = [
   'parent_of',
   'married_to',
   'belongs_to_clan',
+  'sibling_of',
 ]
 
 export interface TreeSlot {
