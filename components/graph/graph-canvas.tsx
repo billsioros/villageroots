@@ -12,6 +12,11 @@ import { useShallow } from "zustand/react/shallow";
 import { useGraphStore, selectVisibleNodes } from "@/store/graphStore";
 import { tokenColor, TYPE_META } from "@/lib/graph/helpers";
 import type { GraphNode } from "@/lib/graph/types";
+import {
+  buildAncestralTree,
+  filterTreeData,
+  parentChildPath,
+} from "@/lib/graph/tree";
 
 const CULL_THRESHOLD = 200;
 const CULL_BUFFER = 200;
@@ -43,6 +48,9 @@ export function GraphCanvas() {
   const setPanIntent = useGraphStore((s) => s.setPanIntent);
   const setCanvasCenter = useGraphStore((s) => s.setCanvasCenter);
   const forceConfig = useGraphStore((s) => s.forceConfig);
+  const activeView = useGraphStore((s) => s.activeView);
+  const focalPersonId = useGraphStore((s) => s.focalPersonId);
+  const setFocalPersonId = useGraphStore((s) => s.setFocalPersonId);
   const viewportRef = useRef({ x1: -500, y1: -500, x2: 500, y2: 500 });
   const lastViewportUpdate = useRef(0);
   const setViewportBounds = useGraphStore((s) => s.setViewportBounds);
@@ -76,11 +84,48 @@ export function GraphCanvas() {
     };
   }, [nodes, edges, draftEdges, suggestedEdges]);
 
+  const treeNodes = useMemo(
+    () => nodes.filter((n) => n.type === "person" || n.type === "family"),
+    [nodes],
+  );
+
+  const effectiveFocal = useMemo(() => {
+    if (activeView !== "TREE") return null;
+    if (focalPersonId && treeNodes.some((n) => n.id === focalPersonId))
+      return focalPersonId;
+    if (
+      selectedId &&
+      treeNodes.some((n) => n.id === selectedId && n.type === "person")
+    ) {
+      return selectedId;
+    }
+    const picked = treeNodes.find((n) => n.type === "person");
+    return picked ? picked.id : null;
+  }, [activeView, focalPersonId, selectedId, treeNodes]);
+
+  const treeResult = useMemo(() => {
+    if (activeView !== "TREE" || !effectiveFocal) return null;
+    return buildAncestralTree(treeNodes, [...edges, ...draftEdges], {
+      focalPersonId: effectiveFocal,
+    });
+  }, [activeView, effectiveFocal, treeNodes, edges, draftEdges]);
+
+  const displayData = useMemo(() => {
+    if (activeView !== "TREE" || !treeResult) return graphData;
+    return filterTreeData(
+      graphData.nodes,
+      graphData.links as any,
+      treeResult.slots,
+    );
+  }, [activeView, treeResult, graphData]);
+
   const culledData = useMemo(() => {
-    if (nodeCount < CULL_THRESHOLD) return graphData;
+    const source = displayData;
+    const count = activeView === "TREE" ? source.nodes.length : nodeCount;
+    if (count < CULL_THRESHOLD) return source as unknown as GraphData;
     const { x1, y1, x2, y2 } = viewportBounds;
     const visible = new Set(
-      graphData.nodes
+      source.nodes
         .filter(
           (n) =>
             (n.x ?? 0) >= x1 - CULL_BUFFER &&
@@ -91,14 +136,22 @@ export function GraphCanvas() {
         .map((n) => n.id),
     );
     return {
-      nodes: graphData.nodes.filter((n) => visible.has(n.id)),
-      links: graphData.links.filter(
+      nodes: source.nodes.filter((n) => visible.has(n.id)),
+      links: source.links.filter(
         (l) =>
-          visible.has(typeof l.source === "object" ? (l.source as GraphNode).id : String(l.source ?? "")) &&
-          visible.has(typeof l.target === "object" ? (l.target as GraphNode).id : String(l.target ?? "")),
+          visible.has(
+            typeof l.source === "object"
+              ? (l.source as GraphNode).id
+              : String(l.source ?? ""),
+          ) &&
+          visible.has(
+            typeof l.target === "object"
+              ? (l.target as GraphNode).id
+              : String(l.target ?? ""),
+          ),
       ),
     };
-  }, [graphData, viewportBounds, nodeCount]);
+  }, [activeView, displayData, graphData, viewportBounds, nodeCount]);
 
   const focusNode = useMemo(
     () => nodes.find((n) => n.id === selectedId),
@@ -205,6 +258,62 @@ export function GraphCanvas() {
     return () => cancelAnimationFrame(raf);
   }, [setZoomPct, size.w, setViewportBounds]);
 
+  // --- Tree View: glide every node into its slot via fx/fy, then pin ---
+  useEffect(() => {
+    const fg = graphRef.current;
+    if (!fg) return;
+    if (activeView !== "TREE" || !treeResult) {
+      // Release pins when leaving Tree View
+      fg.graphData().nodes.forEach((n: { fx?: number; fy?: number }) => {
+        delete n.fx;
+        delete n.fy;
+      });
+      fg.d3ReheatSimulation();
+      return;
+    }
+    const duration = 600;
+    const ease = (t: number) => 1 - Math.pow(1 - t, 3);
+    const from = new Map<string, { x: number; y: number }>();
+    const to = new Map<string, { x: number; y: number }>();
+    for (const n of fg.graphData().nodes as (GraphNode & { fx?: number; fy?: number })[]) {
+      const s = treeResult.slots.get(n.id);
+      if (!s) continue;
+      from.set(n.id, { x: n.x ?? 0, y: n.y ?? 0 });
+      to.set(n.id, { x: s.x, y: s.y });
+    }
+    const start = performance.now();
+    let raf = 0;
+    const step = (now: number) => {
+      const p = Math.min(1, (now - start) / duration);
+      const k = ease(p);
+      for (const n of fg.graphData().nodes as (GraphNode & { fx?: number; fy?: number })[]) {
+        const a = from.get(n.id);
+        const b = to.get(n.id);
+        if (!a || !b) continue;
+        n.fx = a.x + (b.x - a.x) * k;
+        n.fy = a.y + (b.y - a.y) * k;
+      }
+      if (p < 1) {
+        raf = requestAnimationFrame(step);
+      } else {
+        // Pin at final position
+        for (const n of fg.graphData().nodes as {
+          id: string;
+          fx?: number;
+          fy?: number;
+        }[]) {
+          const b = to.get(n.id);
+          if (!b) continue;
+          n.fx = b.x;
+          n.fy = b.y;
+        }
+        fg.zoomToFit(500, 80);
+      }
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [activeView, treeResult]);
+
   const paintNode = (node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const meta = TYPE_META[(node as GraphNode).type];
     const text = node.label;
@@ -295,6 +404,68 @@ export function GraphCanvas() {
     }
   };
 
+  const getPillH = (node?: { type?: string } | null) =>
+    !node || node.type === "family" ? 26 : 40;
+
+  function treeLinkPaint(
+    link: unknown,
+    ctx: CanvasRenderingContext2D,
+    globalScale: number,
+  ) {
+    const l = link as {
+      source: GraphNode | string;
+      target: GraphNode | string;
+      verb?: string;
+    };
+    const src =
+      typeof l.source === "object" && l.source !== null
+        ? (l.source as GraphNode)
+        : null;
+    const tgt =
+      typeof l.target === "object" && l.target !== null
+        ? (l.target as GraphNode)
+        : null;
+    if (!src || !tgt || !l.verb) return;
+
+    ctx.save();
+    ctx.beginPath();
+
+    if (l.verb === "married_to") {
+      const y = (src.y + tgt.y) / 2;
+      ctx.strokeStyle = tokenColor("fg", 0.35);
+      ctx.lineWidth = 1.2 / globalScale;
+      ctx.moveTo(src.x, y);
+      ctx.lineTo(tgt.x, y);
+    } else if (l.verb === "belongs_to_clan") {
+      const fam = src.y <= tgt.y ? src : tgt;
+      const mem = src.y <= tgt.y ? tgt : src;
+      ctx.strokeStyle = tokenColor("meta", 0.5);
+      ctx.lineWidth = 1 / globalScale;
+      ctx.moveTo(mem.x, mem.y - getPillH(mem) / 2);
+      ctx.lineTo(mem.x, fam.y + getPillH(fam) / 2);
+    } else if (l.verb === "child_of" || l.verb === "parent_of") {
+      const parent = src.y <= tgt.y ? src : tgt;
+      const child = src.y <= tgt.y ? tgt : src;
+      const path = parentChildPath(
+        { x: parent.x, y: parent.y, w: 0, h: getPillH(parent) },
+        { x: child.x, y: child.y, w: 0, h: getPillH(child) },
+      );
+      ctx.strokeStyle = tokenColor("primary", 0.9);
+      ctx.lineWidth = 2 / globalScale;
+      ctx.moveTo(path.px, path.py);
+      ctx.lineTo(path.px, path.my);
+      ctx.lineTo(path.mx, path.my);
+      ctx.lineTo(path.cx, path.cy);
+    } else {
+      ctx.closePath();
+      ctx.restore();
+      return;
+    }
+
+    ctx.stroke();
+    ctx.restore();
+  }
+
   return (
     <div ref={containerRef} className="absolute inset-0">
       {size.w > 0 && (
@@ -327,9 +498,12 @@ export function GraphCanvas() {
           linkLineDash={(l: any) => (l.suggested || l.draft ? ([5, 4] as any) : null)}
           linkDirectionalParticles={(l: any) => (litEdgeIds.includes(l.id) ? 2 : 0)}
           linkDirectionalParticleSpeed={0.008}
+          linkCanvasObject={activeView === "TREE" ? treeLinkPaint : undefined}
           onNodeClick={(node: any) => {
             selectNode(node.id);
             setCanvasCenter({ x: node.x ?? 0, y: node.y ?? 0 });
+            if (activeView === "TREE" && node.type === "person")
+              setFocalPersonId(node.id);
           }}
           onBackgroundClick={clearSelection}
           onNodeDragEnd={() => {}}
