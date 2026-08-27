@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, Plus, Upload, Layers, ShieldCheck, Sparkles, SlidersHorizontal } from "lucide-react";
+import { Search, Plus, Upload, Layers, ShieldCheck, Sparkles, SlidersHorizontal, GitBranch } from "lucide-react";
 import { useGraphStore } from "@/store/graphStore";
 
 export function Dock() {
@@ -14,6 +14,8 @@ export function Dock() {
   const setPhysicsOpen = useGraphStore((s) => s.setPhysicsOpen);
   const setReviewQueueOpen = useGraphStore((s) => s.setReviewQueueOpen);
   const toggleChat = useGraphStore((s) => s.toggleChat);
+  const activeView = useGraphStore((s) => s.activeView);
+  const setActiveView = useGraphStore((s) => s.setActiveView);
 
   const [isAdmin, setIsAdmin] = useState(false);
   useEffect(() => {
@@ -29,6 +31,19 @@ export function Dock() {
 
   return (
     <div className="absolute bottom-5 right-5 z-50 flex gap-3">
+      <button
+        type="button"
+        onClick={() => setActiveView(activeView === 'TREE' ? 'GRAPH' : 'TREE')}
+        className={
+          activeView === 'TREE'
+            ? 'grid h-12 w-12 place-items-center rounded-full border bg-primary text-primary-foreground shadow-elev-raised transition-colors'
+            : 'grid h-12 w-12 place-items-center rounded-full border bg-card/90 text-foreground shadow-elev-raised transition-colors backdrop-blur hover:bg-surface-warm'
+        }
+        title="Tree view"
+        aria-label="Toggle ancestral tree view"
+      >
+        <GitBranch size={20} />
+      </button>
       <button title="Search" onClick={() => setSearchOpen(true)} className="grid h-12 w-12 place-items-center rounded-full border shadow-elev-raised transition-colors bg-card/90 text-foreground backdrop-blur hover:bg-surface-warm" aria-label="Search">
         <Search size={18} />
       </button>
