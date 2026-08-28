@@ -508,4 +508,66 @@ describe('buildFamilyForest', () => {
     expect(r.slots.get('a')!.x).toBe(pivot - X_SPACING / 2)
     expect(r.slots.get('b')!.x).toBe(pivot + X_SPACING / 2)
   })
+
+  it('produces married and singleton couples with their family ids', () => {
+    const p = node('p')
+    const sp = node('sp')
+    const q = node('q')
+    const kid = node('kid')
+    const f = node('f', { type: 'family' })
+    const r = tree([p, sp, q, kid, f], [
+      edge('e1', 'p', 'sp', 'married_to'),
+      edge('e2', 'p', 'f', 'belongs_to_clan'),
+      edge('e3', 'sp', 'f', 'belongs_to_clan'),
+      edge('e4', 'kid', 'q', 'child_of'),
+    ])
+    const couple = r.couples.find((c) => c.members.includes('p'))
+    expect(couple).toBeDefined()
+    expect(couple?.familyIds).toContain('f')
+    const singleton = r.couples.find((c) => c.members.includes('q'))
+    expect(singleton?.members).toEqual(['q'])
+  })
+
+  it('places a family banner above its members', () => {
+    const p = node('p')
+    const sp = node('sp')
+    const f = node('f', { type: 'family' })
+    const r = tree([p, sp, f], [
+      edge('e1', 'p', 'sp', 'married_to'),
+      edge('e2', 'p', 'f', 'belongs_to_clan'),
+      edge('e3', 'sp', 'f', 'belongs_to_clan'),
+    ])
+    const fs = r.slots.get('f')
+    expect(fs).toBeDefined()
+    expect(fs?.y).toBe(Math.min(r.slots.get('p')!.y, r.slots.get('sp')!.y) - FAMILY_INSET)
+    expect(fs?.x).toBe((r.slots.get('p')!.x + r.slots.get('sp')!.x) / 2)
+  })
+
+  it('truncates at maxSlots and reports truncated', () => {
+    const r = buildFamilyForest(
+      [node('a'), node('b'), node('c')],
+      [],
+      { maxSlots: 2 },
+    )
+    expect(r.truncated).toBe(true)
+    expect(r.slots.size).toBe(2)
+    expect(r.slots.get('c')).toBeUndefined()
+  })
+
+  it('walks the depth of placed nodes', () => {
+    const root = node('root')
+    const g1 = node('g1')
+    const g2 = node('g2')
+    const r = tree([root, g1, g2], [
+      edge('e1', 'g1', 'root', 'child_of'),
+      edge('e2', 'g2', 'g1', 'child_of'),
+    ])
+    expect(r.depth).toBe(2)
+  })
+
+  it('returns an empty result when there are no persons', () => {
+    const f = node('f', { type: 'family' })
+    expect(buildFamilyForest([f], []).slots.size).toBe(0)
+    expect(buildFamilyForest([], []).slots.size).toBe(0)
+  })
 })

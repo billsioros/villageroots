@@ -451,9 +451,51 @@ export function buildFamilyForest(
     }
   }
 
+  // 4) Couples — married pairs on a shared tier, then singleton couples
+  //    (a person with placed children but no placed spouse).
+  const couples: TreeCouple[] = []
+  const coupled = new Set<string>()
+  for (const id of placed) {
+    const t = slots.get(id)!.tier
+    const spouse = (links.spousesById.get(id) ?? []).find(
+      (s) => placed.includes(s) && slots.get(s)?.tier === t,
+    )
+    if (spouse && !coupled.has(id) && !coupled.has(spouse)) {
+      const members = [id, spouse].sort(labelOrder)
+      const familyIds = [...new Set(members.flatMap((m) => links.familiesById.get(m) ?? []))]
+      couples.push({ members, familyIds, tier: t })
+      coupled.add(id)
+      coupled.add(spouse)
+    }
+  }
+  for (const id of placed) {
+    if (coupled.has(id)) continue
+    const hasChild = placed.some((pid) => (links.parentsById.get(pid) ?? []).includes(id))
+    if (hasChild) {
+      couples.push({
+        members: [id],
+        familyIds: [...new Set(links.familiesById.get(id) ?? [])],
+        tier: slots.get(id)!.tier,
+      })
+      coupled.add(id)
+    }
+  }
+
+  // 5) Family banners above their members.
+  for (const id of nodes.map((n) => n.id)) {
+    if (byId.get(id)?.type !== 'family') continue
+    const members = placed.filter((sid) => (links.familiesById.get(sid) ?? []).includes(id))
+    if (members.length === 0) continue
+    const memberSlots = members.map((m) => slots.get(m)!)
+    const minY = Math.min(...memberSlots.map((s) => s.y))
+    const midX = memberSlots.reduce((sum, s) => sum + s.x, 0) / memberSlots.length
+    const memberTier = Math.min(...memberSlots.map((s) => s.tier))
+    slots.set(id, { id, x: midX, y: minY - FAMILY_INSET, tier: memberTier })
+  }
+
   return {
     slots,
-    couples: [],
+    couples,
     depth: placed.reduce((mx, id) => Math.max(mx, slots.get(id)!.tier), 0),
     truncated,
   }
