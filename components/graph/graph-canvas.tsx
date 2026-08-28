@@ -349,12 +349,12 @@ export function GraphCanvas() {
 
   useEffect(() => {
     const fg: any = graphRef.current;
-    if (!fg || typeof fg.onBeforePaint !== "function") return;
+    if (!fg || typeof fg.onRenderFramePre !== "function") return;
     if (activeView !== "TREE") {
-      fg.onBeforePaint(null);
+      fg.onRenderFramePre(null);
       return;
     }
-    fg.onBeforePaint((ctx: CanvasRenderingContext2D, globalScale: number) => {
+    fg.onRenderFramePre((ctx: CanvasRenderingContext2D, globalScale: number) => {
       for (const b of clanBoxes) {
         ctx.beginPath();
         ctx.roundRect(b.x, b.y, b.w, b.h, 20 / globalScale);
@@ -512,16 +512,18 @@ export function GraphCanvas() {
     ctx.beginPath();
 
     if (l.verb === "married_to") {
-      // Genealogy "marriage H": vertical stubs from each spouse's bottom edge
-      // down to a shared bar, joined by a horizontal bar — always attached to
-      // both pills (never a floating line in mid-space).
-      const barY = Math.max(src.y, tgt.y) + getPillH(src) / 2;
+      // Smooth connector between the two spouses' bottom edges — a gentle
+      // arc below the pills, never a right-angled bar.
+      const x1 = src.x;
+      const y1 = src.y + getPillH(src) / 2;
+      const x2 = tgt.x;
+      const y2 = tgt.y + getPillH(tgt) / 2;
+      const midX = (x1 + x2) / 2;
+      const dip = Math.min(Math.abs(x2 - x1) * 0.18, 14);
       ctx.strokeStyle = tokenColor("fg", 0.35);
       ctx.lineWidth = 1.2 / globalScale;
-      ctx.moveTo(src.x, src.y + getPillH(src) / 2);
-      ctx.lineTo(src.x, barY);
-      ctx.lineTo(tgt.x, barY);
-      ctx.lineTo(tgt.x, tgt.y + getPillH(tgt) / 2);
+      ctx.moveTo(x1, y1);
+      ctx.quadraticCurveTo(midX, Math.max(y1, y2) + dip, x2, y2);
     } else if (l.verb === "child_of" || l.verb === "parent_of") {
       const parent = src.y <= tgt.y ? src : tgt;
       const child = src.y <= tgt.y ? tgt : src;
