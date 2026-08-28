@@ -325,15 +325,15 @@ describe('pickFocalPerson', () => {
 })
 
 describe("clan mapping helpers", () => {
-  it("maps a person to their clans (personClans)", () => {
+  it("maps a person to their clans sorted by label (personClans)", () => {
     const p = node("p")
-    const f1 = node("f1", { type: "family" })
-    const f2 = node("f2", { type: "family" })
+    const f1 = node("f1", { type: "family", label: "Zulu" })
+    const f2 = node("f2", { type: "family", label: "Alpha" })
     const pc = personClans([p, f1, f2], [
       edge("e1", "p", "f1", "belongs_to_clan"),
       edge("e2", "p", "f2", "belongs_to_clan"),
     ])
-    expect(pc.get("p")).toEqual(["f1", "f2"])
+    expect(pc.get("p")).toEqual(["f2", "f1"])
   })
 
   it("maps a clan to its member persons sorted by label (clanMembers)", () => {
