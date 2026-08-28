@@ -10,7 +10,7 @@ import type { GraphData } from "react-force-graph-2d";
 import { forceCollide, forceManyBody } from "d3-force-3d";
 import { useShallow } from "zustand/react/shallow";
 import { useGraphStore, selectVisibleNodes } from "@/store/graphStore";
-import { tokenColor, TYPE_META } from "@/lib/graph/helpers";
+import { clanColor, tokenColor, TYPE_META } from "@/lib/graph/helpers";
 import type { GraphNode } from "@/lib/graph/types";
 import {
   buildAncestralTree,
@@ -358,12 +358,18 @@ export function GraphCanvas() {
 
     const pending = node.draft === true || node.status === "pending";
     const draft = node.draft === true;
+    const isClan = meta.pill === "family";
+    const clan = isClan ? clanColor(node.id) : null;
 
     if (pending) {
       ctx.globalAlpha = 0.45;
       ctx.fillStyle = tokenColor("fg", 0.08);
       ctx.strokeStyle = tokenColor("meta");
       ctx.setLineDash([6 / globalScale, 4 / globalScale]);
+    } else if (isClan) {
+      ctx.fillStyle = clan as string;
+      ctx.strokeStyle = selected || lit ? tokenColor("primary") : (clan as string);
+      ctx.setLineDash([]);
     } else {
       ctx.fillStyle = tokenColor("surface-warm");
       ctx.strokeStyle = selected || lit ? tokenColor("primary") : tokenColor("border");
@@ -380,7 +386,11 @@ export function GraphCanvas() {
     const mark = meta.glyph;
     ctx.beginPath();
     ctx.arc(x - pillW / 2 + markR + 4, y, markR, 0, Math.PI * 2);
-    ctx.fillStyle = pending ? tokenColor("meta", 0.6) : meta.color;
+    ctx.fillStyle = pending
+      ? tokenColor("meta", 0.6)
+      : isClan
+        ? "rgba(255,255,255,0.28)"
+        : meta.color;
     ctx.fill();
     ctx.fillStyle = "#fff";
     ctx.font = "600 12px Inter, sans-serif";
@@ -390,7 +400,11 @@ export function GraphCanvas() {
 
     const labelX = x - pillW / 2 + markR * 2 + 19;
     ctx.textAlign = "left";
-    ctx.fillStyle = pending ? tokenColor("meta", 0.9) : tokenColor("fg");
+    ctx.fillStyle = pending
+      ? tokenColor("meta", 0.9)
+      : isClan
+        ? "rgba(255,255,255,0.95)"
+        : tokenColor("fg");
     ctx.font = `600 ${node.subtitle ? 12 : 13}px Inter, sans-serif`;
     ctx.fillText(text, labelX, y - (node.subtitle ? 4 : 0));
 
@@ -399,7 +413,11 @@ export function GraphCanvas() {
       : node.status === "pending"
         ? "pending review"
         : (node.subtitle ?? "");
-    ctx.fillStyle = pending ? tokenColor("meta", 0.8) : tokenColor("meta");
+    ctx.fillStyle = isClan
+      ? "rgba(255,255,255,0.8)"
+      : pending
+        ? tokenColor("meta", 0.8)
+        : tokenColor("meta");
     ctx.font = "10.5px Inter, sans-serif";
     if (node.subtitle || pending) ctx.fillText(statusLine, labelX, y + 11);
 
@@ -443,11 +461,16 @@ export function GraphCanvas() {
     ctx.beginPath();
 
     if (l.verb === "married_to") {
-      const y = (src.y + tgt.y) / 2;
-      ctx.strokeStyle = tokenColor("fg", 0.3);
-      ctx.lineWidth = 1 / globalScale;
-      ctx.moveTo(src.x, y);
-      ctx.lineTo(tgt.x, y);
+      // Genealogy "marriage H": vertical stubs from each spouse's bottom edge
+      // down to a shared bar, joined by a horizontal bar — always attached to
+      // both pills (never a floating line in mid-space).
+      const barY = Math.max(src.y, tgt.y) + getPillH(src) / 2;
+      ctx.strokeStyle = tokenColor("fg", 0.35);
+      ctx.lineWidth = 1.2 / globalScale;
+      ctx.moveTo(src.x, src.y + getPillH(src) / 2);
+      ctx.lineTo(src.x, barY);
+      ctx.lineTo(tgt.x, barY);
+      ctx.lineTo(tgt.x, tgt.y + getPillH(tgt) / 2);
     } else if (l.verb === "child_of" || l.verb === "parent_of") {
       const parent = src.y <= tgt.y ? src : tgt;
       const child = src.y <= tgt.y ? tgt : src;

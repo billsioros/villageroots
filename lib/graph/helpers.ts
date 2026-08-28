@@ -100,6 +100,24 @@ export function uid(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
+const CLAN_PALETTE = [
+  "#e15a72", // rose (Katsaris red)
+  "#d98e32", // amber
+  "#3b82c4", // blue
+  "#2f9e62", // green
+  "#7a6bc4", // violet
+  "#c4547f", // magenta
+  "#4f8f8f", // teal
+  "#b06ab3", // purple
+];
+
+/** Deterministic per-clan badge color derived from the family id. */
+export function clanColor(id: string): string {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+  return CLAN_PALETTE[Math.abs(h) % CLAN_PALETTE.length];
+}
+
 export type VerbDirection =
   | { symmetric: true }
   | { symmetric: false; reading: string }
