@@ -113,6 +113,57 @@ export function GraphCanvas() {
     return groups;
   }, [activeView, treeResult, treeNodes, edges, draftEdges]);
 
+  // Offscreen canvas used only to measure text width (the force-graph canvas
+  // ctx is not in scope during render). Created once on mount; safe in this
+  // "use client" component.
+  const [measureCtx] = useState<CanvasRenderingContext2D | null>(
+    () =>
+      typeof document === "undefined"
+        ? null
+        : document.createElement("canvas").getContext("2d"),
+  );
+
+  // Precompute the halo box for each clan from slot positions + paintNode's
+  // pill geometry. No ref access (the ref's `graphData` getter is not exposed
+  // by react-force-graph-2d's useImperativeHandle).
+  const haloShapes = useMemo(() => {
+    if (activeView !== "TREE" || !measureCtx || !treeResult) return [];
+    measureCtx.font = "13px Inter, sans-serif";
+    const padX = 14;
+    const markR = 13;
+    const pillH = 40;
+    const out: { color: string; label: string; cx: number; cy: number; r: number }[] = [];
+    for (const g of haloGroups) {
+      const pts: { x: number; y: number; pillW: number }[] = [];
+      for (const id of g.memberIds) {
+        const slot = treeResult.slots.get(id);
+        if (!slot) continue;
+        const label = treeNodes.find((n) => n.id === id)?.label ?? id;
+        const tw = measureCtx.measureText(label).width;
+        const pillW = tw + padX * 2 + markR * 2 + 15;
+        pts.push({ x: slot.x, y: slot.y, pillW });
+      }
+      if (pts.length < 2) continue;
+      const cx = pts.reduce((a, p) => a + p.x, 0) / pts.length;
+      const cy = pts.reduce((a, p) => a + p.y, 0) / pts.length;
+      let r = 0;
+      for (const p of pts) {
+        const corners: [number, number][] = [
+          [p.x - p.pillW / 2, p.y - pillH / 2],
+          [p.x + p.pillW / 2, p.y - pillH / 2],
+          [p.x - p.pillW / 2, p.y + pillH / 2],
+          [p.x + p.pillW / 2, p.y + pillH / 2],
+        ];
+        for (const [px, py] of corners) {
+          const d = Math.hypot(px - cx, py - cy);
+          if (d > r) r = d;
+        }
+      }
+      out.push({ color: g.color, label: g.label, cx, cy, r });
+    }
+    return out;
+  }, [activeView, haloGroups, treeResult, treeNodes, measureCtx]);
+
   const displayData = useMemo(() => {
     if (activeView !== "TREE") return graphData;
     // In TREE mode: show all person + family nodes, keep only family-type edges
@@ -332,65 +383,26 @@ export function GraphCanvas() {
 
   const paintClanHalos = useCallback(
     (ctx: CanvasRenderingContext2D, globalScale: number) => {
-      const fg = graphRef.current as
-        | { graphData?: () => { nodes: { id: string; x?: number; y?: number; label?: string }[] } }
-        | null;
-      if (!fg || typeof fg.graphData !== "function") return;
-      const pos = new Map<string, { x: number; y: number }>();
-      for (const n of fg.graphData().nodes) {
-        pos.set(n.id, { x: n.x ?? 0, y: n.y ?? 0 });
-      }
-      // Mirror paintNode pill geometry: same font, same padX/markR, so the halo
-      // box encloses the actual rendered pill (not just its center).
-      ctx.font = "13px Inter, sans-serif";
-      for (const g of haloGroups) {
-        const pts: { x: number; y: number; pillW: number }[] = [];
-        for (const id of g.memberIds) {
-          const p = pos.get(id);
-          if (!p) continue;
-          const label = treeNodes.find((n) => n.id === id)?.label ?? id;
-          const tw = ctx.measureText(label).width;
-          const padX = 14;
-          const markR = 13;
-          const pillW = tw + padX * 2 + markR * 2 + 15;
-          pts.push({ x: p.x, y: p.y, pillW });
-        }
-        if (pts.length < 2) continue;
-        const cx = pts.reduce((a, p) => a + p.x, 0) / pts.length;
-        const cy = pts.reduce((a, p) => a + p.y, 0) / pts.length;
-        const pillH = 40;
-        let r = 0;
-        for (const p of pts) {
-          const corners: [number, number][] = [
-            [p.x - p.pillW / 2, p.y - pillH / 2],
-            [p.x + p.pillW / 2, p.y - pillH / 2],
-            [p.x - p.pillW / 2, p.y + pillH / 2],
-            [p.x + p.pillW / 2, p.y + pillH / 2],
-          ];
-          for (const [px, py] of corners) {
-            const d = Math.hypot(px - cx, py - cy);
-            if (d > r) r = d;
-          }
-        }
-        const pad = 14 / globalScale;
-        const radius = r + pad;
+      const padScreen = 14 / globalScale;
+      for (const h of haloShapes) {
+        const radius = h.r + padScreen;
 
         ctx.beginPath();
-        ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
-        ctx.fillStyle = hexToRgba(g.color, 0.1);
+        ctx.arc(h.cx, h.cy, radius, 0, 2 * Math.PI);
+        ctx.fillStyle = hexToRgba(h.color, 0.1);
         ctx.fill();
-        ctx.strokeStyle = hexToRgba(g.color, 0.28);
+        ctx.strokeStyle = hexToRgba(h.color, 0.28);
         ctx.lineWidth = 1 / globalScale;
         ctx.stroke();
 
         ctx.font = `600 ${11 / globalScale}px Inter, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "bottom";
-        ctx.fillStyle = hexToRgba(g.color, 0.9);
-        ctx.fillText(g.label.toUpperCase(), cx, cy - radius);
+        ctx.fillStyle = hexToRgba(h.color, 0.9);
+        ctx.fillText(h.label.toUpperCase(), h.cx, h.cy - radius);
       }
     },
-    [haloGroups, treeNodes],
+    [haloShapes],
   );
 
   const paintNode = (node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
