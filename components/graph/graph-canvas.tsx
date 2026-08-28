@@ -143,7 +143,7 @@ export function GraphCanvas() {
         const pillW = tw + padX * 2 + markR * 2 + 15;
         pts.push({ x: slot.x, y: slot.y, pillW });
       }
-      if (pts.length < 2) continue;
+      if (pts.length < 1) continue;
       const cx = pts.reduce((a, p) => a + p.x, 0) / pts.length;
       const cy = pts.reduce((a, p) => a + p.y, 0) / pts.length;
       let r = 0;
@@ -251,15 +251,15 @@ export function GraphCanvas() {
   // --- pan intent (chat path highlight) ---
   useEffect(() => {
     const fg = graphRef.current;
-    if (!fg || typeof fg.graphData !== "function" || !panIntent) return;
+    if (!fg || !panIntent) return;
     const t = panIntent.nodeId;
-    const n = fg.graphData().nodes.find((n: GraphNode) => n.id === t);
+    const n = nodes.find((n) => n.id === t);
     if (n) {
-      fg.centerAt(n.x, n.y, 500);
+      fg.centerAt(n.x ?? 0, n.y ?? 0, 500);
       fg.zoom(1.4, 500);
     }
     setPanIntent(null);
-  }, [panIntent, setPanIntent]);
+  }, [panIntent, setPanIntent, nodes]);
 
   // --- custom forces, engine stop, initial fit ---
   useEffect(() => {
@@ -326,10 +326,10 @@ export function GraphCanvas() {
   // --- Tree View: glide every node into its slot via fx/fy, then pin ---
   useEffect(() => {
     const fg = graphRef.current;
-    if (!fg || typeof fg.graphData !== "function") return;
+    if (!fg) return;
     if (activeView !== "TREE" || !treeResult) {
       // Release pins when leaving Tree View
-      fg.graphData().nodes.forEach((n: { fx?: number; fy?: number }) => {
+      (nodes as (GraphNode & { fx?: number; fy?: number })[]).forEach((n) => {
         delete n.fx;
         delete n.fy;
       });
@@ -340,11 +340,11 @@ export function GraphCanvas() {
     const ease = (t: number) => 1 - Math.pow(1 - t, 3);
     const from = new Map<string, { x: number; y: number }>();
     const to = new Map<string, { x: number; y: number }>();
-    const allNodes = fg.graphData().nodes as (GraphNode & { fx?: number; fy?: number })[];
+    const allNodes = nodes as (GraphNode & { fx?: number; fy?: number })[];
     for (const n of allNodes) {
       const s = treeResult.slots.get(n.id);
       if (!s) {
-        // Non-ancestor nodes: pin at current position so they don't drift
+        // Non-slot nodes: pin at current position so they don't drift
         n.fx = n.x ?? 0;
         n.fy = n.y ?? 0;
         continue;
@@ -379,7 +379,7 @@ export function GraphCanvas() {
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [activeView, treeResult]);
+  }, [activeView, treeResult, nodes]);
 
   const paintClanHalos = useCallback(
     (ctx: CanvasRenderingContext2D, globalScale: number) => {
