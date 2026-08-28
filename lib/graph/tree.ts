@@ -311,3 +311,50 @@ export function parentChildPath(
   const my = (py + cy) / 2
   return { px, py, mx: cx, my, cx, cy }
 }
+
+/**
+ * personId -> family ids (sorted by family label) for every person that
+ * belongs to at least one clan.
+ */
+export function personClans(
+  nodes: readonly GraphNode[],
+  edges: readonly GraphEdge[],
+): Map<string, string[]> {
+  const links = resolveFamilyLinks(nodes, edges)
+  const byId = new Map(nodes.map((n) => [n.id, n]))
+  const out = new Map<string, string[]>()
+  for (const [personId, familyIds] of links.familiesById) {
+    out.set(
+      personId,
+      [...familyIds].sort((a, b) =>
+        (byId.get(a)?.label ?? '').localeCompare(byId.get(b)?.label ?? ''),
+      ),
+    )
+  }
+  return out
+}
+
+/**
+ * familyId -> member person ids (sorted by person label) for clans that have
+ * at least one member.
+ */
+export function clanMembers(
+  nodes: readonly GraphNode[],
+  edges: readonly GraphEdge[],
+): Map<string, string[]> {
+  const byId = new Map(nodes.map((n) => [n.id, n]))
+  const out = new Map<string, string[]>()
+  for (const [personId, familyIds] of personClans(nodes, edges)) {
+    for (const familyId of familyIds) {
+      const list = out.get(familyId) ?? []
+      list.push(personId)
+      out.set(familyId, list)
+    }
+  }
+  for (const members of out.values()) {
+    members.sort((a, b) =>
+      (byId.get(a)?.label ?? '').localeCompare(byId.get(b)?.label ?? ''),
+    )
+  }
+  return out
+}

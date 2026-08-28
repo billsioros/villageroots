@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 import type { GraphEdge, GraphNode } from '@/lib/graph/types'
 import {
   buildAncestralTree,
+  clanMembers,
   filterTreeData,
   FAMILY_INSET,
   parentChildPath,
+  personClans,
   pickFocalPerson,
   resolveFamilyLinks,
   TIER_HEIGHT,
@@ -319,5 +321,37 @@ describe('pickFocalPerson', () => {
 
   it('returns null when there are no persons', () => {
     expect(pickFocalPerson([])).toBeNull()
+  })
+})
+
+describe("clan mapping helpers", () => {
+  it("maps a person to their clans (personClans)", () => {
+    const p = node("p")
+    const f1 = node("f1", { type: "family" })
+    const f2 = node("f2", { type: "family" })
+    const pc = personClans([p, f1, f2], [
+      edge("e1", "p", "f1", "belongs_to_clan"),
+      edge("e2", "p", "f2", "belongs_to_clan"),
+    ])
+    expect(pc.get("p")).toEqual(["f1", "f2"])
+  })
+
+  it("maps a clan to its member persons sorted by label (clanMembers)", () => {
+    const p = node("zeta")
+    const q = node("alpha")
+    const f = node("f", { type: "family" })
+    const cm = clanMembers([p, q, f], [
+      edge("e1", "zeta", "f", "belongs_to_clan"),
+      edge("e2", "alpha", "f", "belongs_to_clan"),
+    ])
+    expect(cm.get("f")).toEqual(["alpha", "zeta"])
+  })
+
+  it("skips persons with no clan and clans with no members", () => {
+    const p = node("p")
+    const f = node("f", { type: "family" })
+    const pc = personClans([p, f], [])
+    expect(pc.size).toBe(0)
+    expect(clanMembers([p, f], []).get("f")).toBeUndefined()
   })
 })
