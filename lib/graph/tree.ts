@@ -384,6 +384,29 @@ export function buildFamilyForest(
       }
     }
 
+    // (a2) married couples where BOTH spouses anchored under their own
+    // parents get recentred as an adjacent pair under all their parents,
+    // so the couple stays together even when the parents are far apart.
+    const pairHandled = new Set<string>()
+    for (const id of row) {
+      if (pairHandled.has(id) || !x.has(id)) continue
+      const spouse = (links.spousesById.get(id) ?? []).find(
+        (s) => row.includes(s) && tier.get(s) === t,
+      )
+      if (!spouse || !x.has(spouse)) continue
+      pairHandled.add(id)
+      pairHandled.add(spouse)
+      const allParents = [
+        ...(links.parentsById.get(id) ?? []),
+        ...(links.parentsById.get(spouse) ?? []),
+      ].filter((p) => slots.has(p))
+      if (allParents.length === 0) continue
+      const pivot = allParents.reduce((sum, p) => sum + slots.get(p)!.x, 0) / allParents.length
+      const [u, w] = labelOrder(id, spouse) <= 0 ? [id, spouse] : [spouse, id]
+      x.set(u, pivot - X_SPACING / 2)
+      x.set(w, pivot + X_SPACING / 2)
+    }
+
     // (b) a lone anchored spouse's partner sits beside it
     for (const id of row) {
       if (x.has(id)) continue

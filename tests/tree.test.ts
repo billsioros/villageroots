@@ -487,4 +487,25 @@ describe('buildFamilyForest', () => {
     const gaps = xs.slice(1).map((x, i) => x - xs[i])
     expect(gaps.every((g) => g >= X_SPACING)).toBe(true)
   })
+
+  it('keeps a married couple adjacent when both spouses anchor under far-apart parents', () => {
+    // Lexicographic label order r0, r1, r10, r2, ..., r9 places the eleven
+    // single roots on tier 0 at x = 0, 220, 440, 660, ..., 2200.
+    const roots = Array.from({ length: 11 }, (_, i) => node(`r${i}`))
+    const a = node('a')
+    const b = node('b')
+    const r = tree([...roots, a, b], [
+      edge('e1', 'a', roots[0].id, 'child_of'), // a anchors under r0 (x = 0)
+      edge('e2', 'b', roots[1].id, 'child_of'), // b's low parent r1 (x = 220)
+      edge('e3', 'b', roots[9].id, 'child_of'), // b's high parent r9 (x = 2200)
+      edge('e4', 'a', 'b', 'married_to'),
+    ])
+    const r0x = r.slots.get('r0')!.x
+    const r1x = r.slots.get('r1')!.x
+    const r9x = r.slots.get('r9')!.x
+    const pivot = (r0x + r1x + r9x) / 3
+    expect(Math.abs(r.slots.get('b')!.x - r.slots.get('a')!.x)).toBe(X_SPACING)
+    expect(r.slots.get('a')!.x).toBe(pivot - X_SPACING / 2)
+    expect(r.slots.get('b')!.x).toBe(pivot + X_SPACING / 2)
+  })
 })
