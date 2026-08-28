@@ -4,7 +4,7 @@
    react-force-graph-2d does not export its NodeObject/LinkObject types, so
    callbacks and the imperative graph handle must be loosely typed. */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { GraphData } from "react-force-graph-2d";
 import { forceCollide, forceManyBody } from "d3-force-3d";
@@ -15,7 +15,6 @@ import type { GraphNode } from "@/lib/graph/types";
 import {
   buildFamilyForest,
   clanMembers,
-  personClans,
   TREE_EDGE_VERBS,
 } from "@/lib/graph/tree";
 
@@ -94,40 +93,34 @@ export function GraphCanvas() {
     return buildFamilyForest(treeNodes, [...edges, ...draftEdges]);
   }, [activeView, treeNodes, edges, draftEdges]);
 
-  const personClansMap = useMemo(() => {
-    if (activeView !== "TREE") return new Map<string, string[]>();
-    return personClans(treeNodes, [...edges, ...draftEdges]);
-  }, [activeView, treeNodes, edges, draftEdges]);
-
-  const clanBoxes = useMemo(() => {
+  const clanHalos = useMemo(() => {
     if (activeView !== "TREE" || !treeResult) return [];
     const members = clanMembers(treeNodes, [...edges, ...draftEdges]);
-    const boxes: {
+    const halos: {
       color: string;
-      x: number;
-      y: number;
-      w: number;
-      h: number;
+      cx: number;
+      cy: number;
+      r: number;
+      label: string;
     }[] = [];
     for (const [familyId, memberIds] of members) {
       const slotsArr = memberIds
         .map((id) => treeResult.slots.get(id))
         .filter((s): s is NonNullable<typeof s> => Boolean(s));
       if (slotsArr.length < 2) continue;
-      const xs = slotsArr.map((s) => s.x);
-      const ys = slotsArr.map((s) => s.y);
-      const padX = 34;
-      const padTop = 50;
-      const padBottom = 30;
-      boxes.push({
+      const cx = slotsArr.reduce((a, s) => a + s.x, 0) / slotsArr.length;
+      const cy = slotsArr.reduce((a, s) => a + s.y, 0) / slotsArr.length;
+      const r =
+        Math.max(...slotsArr.map((s) => Math.hypot(s.x - cx, s.y - cy))) + 46;
+      halos.push({
         color: clanColor(familyId),
-        x: Math.min(...xs) - padX,
-        y: Math.min(...ys) - padTop,
-        w: Math.max(...xs) - Math.min(...xs) + padX * 2,
-        h: Math.max(...ys) - Math.min(...ys) + padTop + padBottom,
+        cx,
+        cy,
+        r,
+        label: treeNodes.find((n) => n.id === familyId)?.label ?? familyId,
       });
     }
-    return boxes;
+    return halos;
   }, [activeView, treeResult, treeNodes, edges, draftEdges]);
 
   const displayData = useMemo(() => {
@@ -347,25 +340,25 @@ export function GraphCanvas() {
     return () => cancelAnimationFrame(raf);
   }, [activeView, treeResult]);
 
-  useEffect(() => {
-    const fg: any = graphRef.current;
-    if (!fg || typeof fg.onRenderFramePre !== "function") return;
-    if (activeView !== "TREE") {
-      fg.onRenderFramePre(null);
-      return;
-    }
-    fg.onRenderFramePre((ctx: CanvasRenderingContext2D, globalScale: number) => {
-      for (const b of clanBoxes) {
+  const paintClanHalos = useCallback(
+    (ctx: CanvasRenderingContext2D, globalScale: number) => {
+      for (const h of clanHalos) {
         ctx.beginPath();
-        ctx.roundRect(b.x, b.y, b.w, b.h, 20 / globalScale);
-        ctx.fillStyle = hexToRgba(b.color, 0.1);
+        ctx.arc(h.cx, h.cy, h.r, 0, 2 * Math.PI);
+        ctx.fillStyle = hexToRgba(h.color, 0.1);
         ctx.fill();
-        ctx.strokeStyle = hexToRgba(b.color, 0.22);
+        ctx.strokeStyle = hexToRgba(h.color, 0.28);
         ctx.lineWidth = 1 / globalScale;
         ctx.stroke();
+        ctx.font = `600 ${11 / globalScale}px Inter, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        ctx.fillStyle = hexToRgba(h.color, 0.9);
+        ctx.fillText(h.label.toUpperCase(), h.cx, h.cy - h.r);
       }
-    });
-  }, [activeView, clanBoxes]);
+    },
+    [clanHalos],
+  );
 
   const paintNode = (node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const meta = TYPE_META[(node as GraphNode).type];
@@ -473,16 +466,6 @@ export function GraphCanvas() {
       ctx.fillStyle = tokenColor("warn");
       ctx.fill();
     }
-
-    if (activeView === "TREE" && node.type === "person") {
-      const clans = personClansMap.get(node.id);
-      if (clans && clans.length > 0) {
-        ctx.beginPath();
-        ctx.arc(x + pillW / 2 - 9, y - pillH / 2 + 9, 4, 0, 2 * Math.PI);
-        ctx.fillStyle = clanColor(clans[0]);
-        ctx.fill();
-      }
-    }
   };
 
   const getPillH = (node?: { type?: string } | null) =>
@@ -554,6 +537,7 @@ export function GraphCanvas() {
           height={size.h}
           backgroundColor="transparent"
           autoPauseRedraw={false}
+          onRenderFramePre={activeView === "TREE" ? paintClanHalos : undefined}
           nodeCanvasObject={(node: any, ctx, globalScale) => paintNode(node, ctx, globalScale)}
           nodePointerAreaPaint={(node: any, color: string, ctx: CanvasRenderingContext2D) => {
             ctx.fillStyle = color;
