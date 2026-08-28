@@ -10,10 +10,12 @@ import type { GraphData } from "react-force-graph-2d";
 import { forceCollide, forceManyBody } from "d3-force-3d";
 import { useShallow } from "zustand/react/shallow";
 import { useGraphStore, selectVisibleNodes } from "@/store/graphStore";
-import { clanColor, tokenColor, TYPE_META } from "@/lib/graph/helpers";
+import { clanColor, hexToRgba, tokenColor, TYPE_META } from "@/lib/graph/helpers";
 import type { GraphNode } from "@/lib/graph/types";
 import {
-  buildAncestralTree,
+  buildFamilyForest,
+  clanMembers,
+  personClans,
   TREE_EDGE_VERBS,
 } from "@/lib/graph/tree";
 
@@ -48,7 +50,6 @@ export function GraphCanvas() {
   const setCanvasCenter = useGraphStore((s) => s.setCanvasCenter);
   const forceConfig = useGraphStore((s) => s.forceConfig);
   const activeView = useGraphStore((s) => s.activeView);
-  const focalPersonId = useGraphStore((s) => s.focalPersonId);
   const setFocalPersonId = useGraphStore((s) => s.setFocalPersonId);
   const viewportRef = useRef({ x1: -500, y1: -500, x2: 500, y2: 500 });
   const lastViewportUpdate = useRef(0);
@@ -88,26 +89,46 @@ export function GraphCanvas() {
     [nodes],
   );
 
-  const effectiveFocal = useMemo(() => {
-    if (activeView !== "TREE") return null;
-    if (focalPersonId && treeNodes.some((n) => n.id === focalPersonId))
-      return focalPersonId;
-    if (
-      selectedId &&
-      treeNodes.some((n) => n.id === selectedId && n.type === "person")
-    ) {
-      return selectedId;
-    }
-    const picked = treeNodes.find((n) => n.type === "person");
-    return picked ? picked.id : null;
-  }, [activeView, focalPersonId, selectedId, treeNodes]);
-
   const treeResult = useMemo(() => {
-    if (activeView !== "TREE" || !effectiveFocal) return null;
-    return buildAncestralTree(treeNodes, [...edges, ...draftEdges], {
-      focalPersonId: effectiveFocal,
-    });
-  }, [activeView, effectiveFocal, treeNodes, edges, draftEdges]);
+    if (activeView !== "TREE") return null;
+    return buildFamilyForest(treeNodes, [...edges, ...draftEdges]);
+  }, [activeView, treeNodes, edges, draftEdges]);
+
+  const personClansMap = useMemo(() => {
+    if (activeView !== "TREE") return new Map<string, string[]>();
+    return personClans(treeNodes, [...edges, ...draftEdges]);
+  }, [activeView, treeNodes, edges, draftEdges]);
+
+  const clanBoxes = useMemo(() => {
+    if (activeView !== "TREE" || !treeResult) return [];
+    const members = clanMembers(treeNodes, [...edges, ...draftEdges]);
+    const boxes: {
+      color: string;
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+    }[] = [];
+    for (const [familyId, memberIds] of members) {
+      const slotsArr = memberIds
+        .map((id) => treeResult.slots.get(id))
+        .filter((s): s is NonNullable<typeof s> => Boolean(s));
+      if (slotsArr.length < 2) continue;
+      const xs = slotsArr.map((s) => s.x);
+      const ys = slotsArr.map((s) => s.y);
+      const padX = 34;
+      const padTop = 50;
+      const padBottom = 30;
+      boxes.push({
+        color: clanColor(familyId),
+        x: Math.min(...xs) - padX,
+        y: Math.min(...ys) - padTop,
+        w: Math.max(...xs) - Math.min(...xs) + padX * 2,
+        h: Math.max(...ys) - Math.min(...ys) + padTop + padBottom,
+      });
+    }
+    return boxes;
+  }, [activeView, treeResult, treeNodes, edges, draftEdges]);
 
   const displayData = useMemo(() => {
     if (activeView !== "TREE") return graphData;
@@ -326,6 +347,26 @@ export function GraphCanvas() {
     return () => cancelAnimationFrame(raf);
   }, [activeView, treeResult]);
 
+  useEffect(() => {
+    const fg: any = graphRef.current;
+    if (!fg || typeof fg.onBeforePaint !== "function") return;
+    if (activeView !== "TREE") {
+      fg.onBeforePaint(null);
+      return;
+    }
+    fg.onBeforePaint((ctx: CanvasRenderingContext2D, globalScale: number) => {
+      for (const b of clanBoxes) {
+        ctx.beginPath();
+        ctx.roundRect(b.x, b.y, b.w, b.h, 20 / globalScale);
+        ctx.fillStyle = hexToRgba(b.color, 0.1);
+        ctx.fill();
+        ctx.strokeStyle = hexToRgba(b.color, 0.22);
+        ctx.lineWidth = 1 / globalScale;
+        ctx.stroke();
+      }
+    });
+  }, [activeView, clanBoxes]);
+
   const paintNode = (node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const meta = TYPE_META[(node as GraphNode).type];
     const text = node.label;
@@ -432,6 +473,16 @@ export function GraphCanvas() {
       ctx.fillStyle = tokenColor("warn");
       ctx.fill();
     }
+
+    if (activeView === "TREE" && node.type === "person") {
+      const clans = personClansMap.get(node.id);
+      if (clans && clans.length > 0) {
+        ctx.beginPath();
+        ctx.arc(x + pillW / 2 - 9, y - pillH / 2 + 9, 4, 0, 2 * Math.PI);
+        ctx.fillStyle = clanColor(clans[0]);
+        ctx.fill();
+      }
+    }
   };
 
   const getPillH = (node?: { type?: string } | null) =>
@@ -525,6 +576,11 @@ export function GraphCanvas() {
           onNodeClick={(node: any) => {
             selectNode(node.id);
             setCanvasCenter({ x: node.x ?? 0, y: node.y ?? 0 });
+            const fg: any = graphRef.current;
+            if (fg && typeof fg.centerAt === "function" && typeof fg.zoom === "function") {
+              fg.centerAt(node.x, node.y, 500);
+              fg.zoom(Math.max(fg.zoom(), 1.4), 500);
+            }
             if (activeView === "TREE" && node.type === "person")
               setFocalPersonId(node.id);
           }}
