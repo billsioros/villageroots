@@ -118,6 +118,15 @@ export function clanColor(id: string): string {
   return CLAN_PALETTE[Math.abs(h) % CLAN_PALETTE.length];
 }
 
+/** Converts a `#rrggbb` hex color to an `rgba()` string with the given alpha. */
+export function hexToRgba(hex: string, alpha: number): string {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 export type VerbDirection =
   | { symmetric: true }
   | { symmetric: false; reading: string }
