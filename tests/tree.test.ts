@@ -170,6 +170,29 @@ describe("clan mapping helpers", () => {
     expect(pc.size).toBe(0)
     expect(clanMembers([p, f], []).get("f")).toBeUndefined()
   })
+
+  it("includes married-in spouses in a clan's members", () => {
+    const alpha = node("alpha")
+    const zeta = node("zeta")
+    const f = node("f", { type: "family" })
+    const cm = clanMembers([alpha, zeta, f], [
+      edge("e1", "alpha", "f", "belongs_to_clan"),
+      edge("e2", "zeta", "alpha", "married_to"),
+    ])
+    // Zeta is the spouse of a direct member, so she's part of the clan.
+    expect(cm.get("f")!.slice().sort()).toEqual(["alpha", "zeta"].sort())
+  })
+
+  it("includes children of a clan's members", () => {
+    const root = node("root")
+    const kid = node("kid")
+    const f = node("f", { type: "family" })
+    const cm = clanMembers([root, kid, f], [
+      edge("e1", "root", "f", "belongs_to_clan"),
+      edge("e2", "kid", "root", "child_of"),
+    ])
+    expect(cm.get("f")!.slice().sort()).toEqual(["kid", "root"].sort())
+  })
 })
 
 describe('buildFamilyForest', () => {

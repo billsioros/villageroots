@@ -508,21 +508,68 @@ export function personClans(
 
 /**
  * familyId -> member person ids (sorted by person label) for clans that have
- * at least one member.
+ * at least one direct belongs_to_clan edge, expanded to the person-closure:
+ * anyone reachable from a direct member through child_of / parent_of /
+ * married_to edges. This matches the natural reading that a spouse of a
+ * clan member is a clan member too (e.g. Maria Katsari, married to Nikolas
+ * Katsaris, is in the Katsaris family even though she has no belongs_to_clan
+ * edge of her own).
  */
 export function clanMembers(
   nodes: readonly GraphNode[],
   edges: readonly GraphEdge[],
 ): Map<string, string[]> {
   const byId = new Map(nodes.map((n) => [n.id, n]))
+  const links = resolveFamilyLinks(nodes, edges)
+
+  // Undirected person-to-person adjacency: parents (so children can reach
+  // their parents and vice versa) + spouses.
+  const adj = new Map<string, Set<string>>()
+  const link = (a: string, b: string) => {
+    if (!byId.has(a) || !byId.has(b)) return
+    if (!adj.has(a)) adj.set(a, new Set())
+    if (!adj.has(b)) adj.set(b, new Set())
+    adj.get(a)!.add(b)
+    adj.get(b)!.add(a)
+  }
+  for (const [child, parents] of links.parentsById) {
+    for (const p of parents) link(child, p)
+  }
+  for (const [person, spouses] of links.spousesById) {
+    for (const s of spouses) link(person, s)
+  }
+
+  // Compute the closure from each direct belongs_to_clan member once.
+  const closures = new Map<string, Set<string>>()
+  for (const directMember of links.familiesById.keys()) {
+    if (closures.has(directMember)) continue
+    const reached = new Set<string>([directMember])
+    const queue: string[] = [directMember]
+    while (queue.length > 0) {
+      const cur = queue.shift()!
+      for (const next of adj.get(cur) ?? []) {
+        if (!reached.has(next)) {
+          reached.add(next)
+          queue.push(next)
+        }
+      }
+    }
+    closures.set(directMember, reached)
+  }
+
+  // Union closures across all direct members of each family.
   const out = new Map<string, string[]>()
-  for (const [personId, familyIds] of personClans(nodes, edges)) {
+  for (const [directMember, familyIds] of links.familiesById) {
+    const reached = closures.get(directMember)!
     for (const familyId of familyIds) {
-      const list = out.get(familyId) ?? []
-      list.push(personId)
-      out.set(familyId, list)
+      const existing = out.get(familyId) ?? []
+      for (const id of reached) {
+        if (!existing.includes(id)) existing.push(id)
+      }
+      out.set(familyId, existing)
     }
   }
+
   for (const members of out.values()) {
     members.sort((a, b) =>
       (byId.get(a)?.label ?? '').localeCompare(byId.get(b)?.label ?? ''),
