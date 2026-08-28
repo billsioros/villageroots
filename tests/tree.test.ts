@@ -193,6 +193,23 @@ describe("clan mapping helpers", () => {
     ])
     expect(cm.get("f")!.slice().sort()).toEqual(["kid", "root"].sort())
   })
+
+  it("keeps spouses with their own clan out of their partner's clan", () => {
+    // Eleni belongs to f-katsaris, Alexandros belongs to f-vasiliou, and
+    // they are married. Each family halo should contain only its own
+    // members — they do not overlap just because the spouses are linked.
+    const eleni = node("eleni")
+    const alex = node("alex")
+    const f1 = node("f-katsaris", { type: "family" })
+    const f2 = node("f-vasiliou", { type: "family" })
+    const cm = clanMembers([eleni, alex, f1, f2], [
+      edge("e1", "eleni", "f-katsaris", "belongs_to_clan"),
+      edge("e2", "alex", "f-vasiliou", "belongs_to_clan"),
+      edge("e3", "eleni", "alex", "married_to"),
+    ])
+    expect(cm.get("f-katsaris")!.slice().sort()).toEqual(["eleni"])
+    expect(cm.get("f-vasiliou")!.slice().sort()).toEqual(["alex"])
+  })
 })
 
 describe('buildFamilyForest', () => {

@@ -510,10 +510,13 @@ export function personClans(
  * familyId -> member person ids (sorted by person label) for clans that have
  * at least one direct belongs_to_clan edge, expanded to the person-closure:
  * anyone reachable from a direct member through child_of / parent_of /
- * married_to edges. This matches the natural reading that a spouse of a
- * clan member is a clan member too (e.g. Maria Katsari, married to Nikolas
+ * married_to edges — but only if they don't have a belongs_to_clan edge of
+ * their own. This matches the natural reading that a spouse of a clan
+ * member is a clan member too (e.g. Maria Katsari, married to Nikolas
  * Katsaris, is in the Katsaris family even though she has no belongs_to_clan
- * edge of her own).
+ * edge of her own), while a person who belongs to their own family is not
+ * pulled into a spouse's family (Eleni Katsaris, married to Alexandros
+ * Vasiliou, stays in Katsaris and is not in Vasiliou's halo).
  */
 export function clanMembers(
   nodes: readonly GraphNode[],
@@ -540,6 +543,9 @@ export function clanMembers(
   }
 
   // Compute the closure from each direct belongs_to_clan member once.
+  // The BFS crosses into a person only if they do not have a belongs_to_clan
+  // edge of their own — a person who belongs to another family stays in
+  // their own family and is not pulled into a spouse's family by marriage.
   const closures = new Map<string, Set<string>>()
   for (const directMember of links.familiesById.keys()) {
     if (closures.has(directMember)) continue
@@ -548,10 +554,10 @@ export function clanMembers(
     while (queue.length > 0) {
       const cur = queue.shift()!
       for (const next of adj.get(cur) ?? []) {
-        if (!reached.has(next)) {
-          reached.add(next)
-          queue.push(next)
-        }
+        if (reached.has(next)) continue
+        if (links.familiesById.has(next)) continue
+        reached.add(next)
+        queue.push(next)
       }
     }
     closures.set(directMember, reached)
