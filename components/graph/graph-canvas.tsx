@@ -103,7 +103,7 @@ export function GraphCanvas() {
     }[] = [];
     for (const [familyId, memberIds] of members) {
       const placed = memberIds.filter((id) => treeResult.slots.has(id));
-      if (placed.length < 2) continue;
+      if (placed.length < 1) continue;
       groups.push({
         color: clanColor(familyId),
         label: treeNodes.find((n) => n.id === familyId)?.label ?? familyId,
@@ -383,7 +383,7 @@ export function GraphCanvas() {
 
   const paintClanHalos = useCallback(
     (ctx: CanvasRenderingContext2D, globalScale: number) => {
-      const padScreen = 14 / globalScale;
+      const padScreen = 18 / globalScale;
       for (const h of haloShapes) {
         const radius = h.r + padScreen;
 
