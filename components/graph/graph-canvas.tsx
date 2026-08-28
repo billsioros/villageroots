@@ -112,7 +112,8 @@ export function GraphCanvas() {
   const displayData = useMemo(() => {
     if (activeView !== "TREE") return graphData;
     // In TREE mode: show all person + family nodes, keep only family-type edges
-    // between them. Work from raw store data (not graphData) to avoid mutation issues.
+    // between them. Work from raw store data (not graphData) and copy each edge
+    // so the force graph's source/target resolution does not mutate store state.
     const familyNodes = nodes.filter(
       (n) => n.type === "person" || n.type === "family",
     );
@@ -121,9 +122,9 @@ export function GraphCanvas() {
       TREE_EDGE_VERBS.includes(e.verb as any) &&
       familyIds.has(e.source) &&
       familyIds.has(e.target);
-    const familyEdges = [
-      ...edges.filter(isFamilyEdge),
-      ...draftEdges.filter(isFamilyEdge),
+    const familyEdges: GraphData["links"] = [
+      ...edges.filter(isFamilyEdge).map((e) => ({ ...e })),
+      ...draftEdges.filter(isFamilyEdge).map((e) => ({ ...e, draft: true })),
     ];
     return { nodes: familyNodes, links: familyEdges };
   }, [activeView, nodes, edges, draftEdges]);
@@ -447,14 +448,6 @@ export function GraphCanvas() {
       ctx.lineWidth = 1 / globalScale;
       ctx.moveTo(src.x, y);
       ctx.lineTo(tgt.x, y);
-    } else if (l.verb === "belongs_to_clan") {
-      const fam = src.y <= tgt.y ? src : tgt;
-      const mem = src.y <= tgt.y ? tgt : src;
-      ctx.strokeStyle = tokenColor("fg", 0.2);
-      ctx.lineWidth = 1 / globalScale;
-      ctx.setLineDash([3 / globalScale, 3 / globalScale]);
-      ctx.moveTo(mem.x, mem.y - getPillH(mem) / 2);
-      ctx.lineTo(mem.x, fam.y + getPillH(fam) / 2);
     } else if (l.verb === "child_of" || l.verb === "parent_of") {
       const parent = src.y <= tgt.y ? src : tgt;
       const child = src.y <= tgt.y ? tgt : src;

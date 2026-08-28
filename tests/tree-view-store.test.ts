@@ -49,7 +49,7 @@ describe('activeView / focalPersonId', () => {
     const s = useGraphStore.getState()
     expect(s.activeView).toBe('TREE')
     expect(s.focalPersonId).toBe('old')
-    expect(s.toast?.message).toBe('Showing ancestral tree of Old')
+    expect(s.toast).toBeNull()
   })
 
   it('uses the selected person as the focal when present', () => {

@@ -275,11 +275,12 @@ describe('filterTreeData', () => {
     expect(out.links.map((l) => l.id)).toEqual(['e1'])
   })
 
-  it('does not allow child_of or parent_of out of the tree verb set', () => {
+  it('keeps family links in the tree verb set and excludes the redundant parent_of', () => {
     expect(TREE_EDGE_VERBS).toContain('child_of')
-    expect(TREE_EDGE_VERBS).toContain('parent_of')
     expect(TREE_EDGE_VERBS).toContain('married_to')
     expect(TREE_EDGE_VERBS).toContain('belongs_to_clan')
+    expect(TREE_EDGE_VERBS).toContain('sibling_of')
+    expect(TREE_EDGE_VERBS).not.toContain('parent_of')
   })
 })
 
