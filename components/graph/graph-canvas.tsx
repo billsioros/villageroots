@@ -93,34 +93,24 @@ export function GraphCanvas() {
     return buildFamilyForest(treeNodes, [...edges, ...draftEdges]);
   }, [activeView, treeNodes, edges, draftEdges]);
 
-  const clanHalos = useMemo(() => {
+  const haloGroups = useMemo(() => {
     if (activeView !== "TREE" || !treeResult) return [];
     const members = clanMembers(treeNodes, [...edges, ...draftEdges]);
-    const halos: {
+    const groups: {
       color: string;
-      cx: number;
-      cy: number;
-      r: number;
       label: string;
+      memberIds: string[];
     }[] = [];
     for (const [familyId, memberIds] of members) {
-      const slotsArr = memberIds
-        .map((id) => treeResult.slots.get(id))
-        .filter((s): s is NonNullable<typeof s> => Boolean(s));
-      if (slotsArr.length < 2) continue;
-      const cx = slotsArr.reduce((a, s) => a + s.x, 0) / slotsArr.length;
-      const cy = slotsArr.reduce((a, s) => a + s.y, 0) / slotsArr.length;
-      const r =
-        Math.max(...slotsArr.map((s) => Math.hypot(s.x - cx, s.y - cy))) + 46;
-      halos.push({
+      const placed = memberIds.filter((id) => treeResult.slots.has(id));
+      if (placed.length < 2) continue;
+      groups.push({
         color: clanColor(familyId),
-        cx,
-        cy,
-        r,
         label: treeNodes.find((n) => n.id === familyId)?.label ?? familyId,
+        memberIds: placed,
       });
     }
-    return halos;
+    return groups;
   }, [activeView, treeResult, treeNodes, edges, draftEdges]);
 
   const displayData = useMemo(() => {
@@ -342,22 +332,65 @@ export function GraphCanvas() {
 
   const paintClanHalos = useCallback(
     (ctx: CanvasRenderingContext2D, globalScale: number) => {
-      for (const h of clanHalos) {
+      const fg = graphRef.current as
+        | { graphData?: () => { nodes: { id: string; x?: number; y?: number; label?: string }[] } }
+        | null;
+      if (!fg || typeof fg.graphData !== "function") return;
+      const pos = new Map<string, { x: number; y: number }>();
+      for (const n of fg.graphData().nodes) {
+        pos.set(n.id, { x: n.x ?? 0, y: n.y ?? 0 });
+      }
+      // Mirror paintNode pill geometry: same font, same padX/markR, so the halo
+      // box encloses the actual rendered pill (not just its center).
+      ctx.font = "13px Inter, sans-serif";
+      for (const g of haloGroups) {
+        const pts: { x: number; y: number; pillW: number }[] = [];
+        for (const id of g.memberIds) {
+          const p = pos.get(id);
+          if (!p) continue;
+          const label = treeNodes.find((n) => n.id === id)?.label ?? id;
+          const tw = ctx.measureText(label).width;
+          const padX = 14;
+          const markR = 13;
+          const pillW = tw + padX * 2 + markR * 2 + 15;
+          pts.push({ x: p.x, y: p.y, pillW });
+        }
+        if (pts.length < 2) continue;
+        const cx = pts.reduce((a, p) => a + p.x, 0) / pts.length;
+        const cy = pts.reduce((a, p) => a + p.y, 0) / pts.length;
+        const pillH = 40;
+        let r = 0;
+        for (const p of pts) {
+          const corners: [number, number][] = [
+            [p.x - p.pillW / 2, p.y - pillH / 2],
+            [p.x + p.pillW / 2, p.y - pillH / 2],
+            [p.x - p.pillW / 2, p.y + pillH / 2],
+            [p.x + p.pillW / 2, p.y + pillH / 2],
+          ];
+          for (const [px, py] of corners) {
+            const d = Math.hypot(px - cx, py - cy);
+            if (d > r) r = d;
+          }
+        }
+        const pad = 14 / globalScale;
+        const radius = r + pad;
+
         ctx.beginPath();
-        ctx.arc(h.cx, h.cy, h.r, 0, 2 * Math.PI);
-        ctx.fillStyle = hexToRgba(h.color, 0.1);
+        ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+        ctx.fillStyle = hexToRgba(g.color, 0.1);
         ctx.fill();
-        ctx.strokeStyle = hexToRgba(h.color, 0.28);
+        ctx.strokeStyle = hexToRgba(g.color, 0.28);
         ctx.lineWidth = 1 / globalScale;
         ctx.stroke();
+
         ctx.font = `600 ${11 / globalScale}px Inter, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "bottom";
-        ctx.fillStyle = hexToRgba(h.color, 0.9);
-        ctx.fillText(h.label.toUpperCase(), h.cx, h.cy - h.r);
+        ctx.fillStyle = hexToRgba(g.color, 0.9);
+        ctx.fillText(g.label.toUpperCase(), cx, cy - radius);
       }
     },
-    [clanHalos],
+    [haloGroups, treeNodes],
   );
 
   const paintNode = (node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
