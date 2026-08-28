@@ -102,9 +102,7 @@ export function GraphCanvas() {
       memberIds: string[];
     }[] = [];
     for (const [familyId, memberIds] of members) {
-      const placed = memberIds.filter(
-        (id) => treeResult.slots.has(id) && !treeResult.outcastIds.has(id),
-      );
+      const placed = memberIds.filter((id) => treeResult.slots.has(id));
       if (placed.length < 1) continue;
       groups.push({
         color: clanColor(familyId),

@@ -143,9 +143,30 @@ export function buildFamilyForest(
       }
     }
   }
+  // Non-connected persons split into:
+  //   - affiliates: have a belongs_to_clan link but no blood/marriage/sibling
+  //     link. They get placed on a new tier below the family's blood tree.
+  //   - outcasts (outcastIds): no family edges at all. They are NOT placed
+  //     in slots at all — the pin effect leaves them at their current
+  //     force-simulation position so they don't get arranged into a row.
+  const affiliatesByFamily = new Map<string, string[]>()
   const outcastIds = new Set<string>()
   for (const p of allPersons) {
-    if (!connected.has(p.id)) outcastIds.add(p.id)
+    if (connected.has(p.id)) continue
+    const fams = links.familiesById.get(p.id) ?? []
+    if (fams.length === 0) {
+      outcastIds.add(p.id)
+      continue
+    }
+    // If a person belongs to multiple families, place them in the first
+    // by family label (stable, predictable).
+    const famsByLabel = [...fams].sort((a, b) =>
+      (byId.get(a)?.label ?? '').localeCompare(byId.get(b)?.label ?? ''),
+    )
+    const primaryFamily = famsByLabel[0]
+    const list = affiliatesByFamily.get(primaryFamily) ?? []
+    list.push(p.id)
+    affiliatesByFamily.set(primaryFamily, list)
   }
   // `persons` is re-scoped to the connected subset for the tree layout below.
   const persons = allPersons.filter((p) => connected.has(p.id))
@@ -352,27 +373,61 @@ export function buildFamilyForest(
   // 6) Outcasts region: persons with no blood/marriage/sibling link are
   //    placed far to the right of the families, on a single tier-0 row, so
   //    they don't extend the family halos or crowd the tree layout.
-  if (outcastIds.size > 0) {
-    const familyMaxX =
-      slots.size > 0
-        ? Math.max(...[...slots.values()].map((s) => s.x))
-        : -X_SPACING
-    const outcastStartX = familyMaxX + X_SPACING + 60
-    let outcastIdx = 0
-    for (const p of allPersons) {
-      if (!outcastIds.has(p.id)) continue
+  // 6) Affiliates (belongs_to_clan only, no blood link) get placed on a
+  //    new tier directly below the family's blood tree, so they show up
+  //    in the family halo but are visually distinguished by being on a
+  //    new row.
+  //    Outcasts (no family edges at all) are NOT placed in slots — the
+  //    pin effect leaves them at their current force-simulation position.
+  // Build childrenByParent (child → parents) so we can compute the
+  // family's blood subtree depth (the family members + all their blood
+  // descendants, even those who haven't been recorded as belonging to
+  // the clan). The affiliate tier sits strictly below that depth.
+  const childrenByParent = new Map<string, string[]>()
+  for (const p of persons) {
+    for (const par of links.parentsById.get(p.id) ?? []) {
+      push(childrenByParent, par, p.id)
+    }
+  }
+  for (const [familyId, affiliates] of affiliatesByFamily) {
+    const familyMemberIds = new Set(
+      placed.filter((pid) => (links.familiesById.get(pid) ?? []).includes(familyId)),
+    )
+    if (familyMemberIds.size === 0) continue
+    // BFS through blood descendants to find the deepest tier in the
+    // family's blood subtree.
+    const subtreeIds = new Set<string>(familyMemberIds)
+    const stack = [...familyMemberIds]
+    let familyMaxTier = 0
+    for (const id of familyMemberIds) {
+      familyMaxTier = Math.max(familyMaxTier, slots.get(id)?.tier ?? 0)
+    }
+    while (stack.length > 0) {
+      const cur = stack.pop()!
+      for (const child of childrenByParent.get(cur) ?? []) {
+        if (subtreeIds.has(child)) continue
+        if (!slots.has(child)) continue
+        subtreeIds.add(child)
+        familyMaxTier = Math.max(familyMaxTier, slots.get(child)!.tier)
+        stack.push(child)
+      }
+    }
+    const familyMinX = Math.min(
+      ...[...subtreeIds].map((id) => slots.get(id)!.x),
+    )
+    const affiliateTier = familyMaxTier + 1
+    const ordered = affiliates
+      .map((aid) => ({ id: aid, label: byId.get(aid)?.label ?? '' }))
+      .sort((a, b) => a.label.localeCompare(b.label))
+    let cursor = familyMinX
+    for (const { id } of ordered) {
       if (placed.length >= maxSlots) {
         truncated = true
         break
       }
-      slots.set(p.id, {
-        id: p.id,
-        x: outcastStartX + outcastIdx * X_SPACING,
-        y: topY,
-        tier: 0,
-      })
-      placed.push(p.id)
-      outcastIdx++
+      slots.set(id, { id, x: cursor, y: topY + affiliateTier * TIER_HEIGHT, tier: affiliateTier })
+      placed.push(id)
+      cursor += X_SPACING
     }
   }
 

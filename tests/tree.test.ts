@@ -243,8 +243,12 @@ describe('buildFamilyForest', () => {
     const a = node('a')
     const l = node('l', { type: 'landmark' })
     const r = tree([a, l], [edge('e1', 'a', 'l', 'born_in')])
-    expect(r.slots.size).toBe(1)
+    // a has no family edges, so it's an outcast and not placed in any
+    // slot. l (a landmark, not a person or family) is also excluded.
+    expect(r.slots.size).toBe(0)
     expect(r.slots.get('l')).toBeUndefined()
+    expect(r.slots.get('a')).toBeUndefined()
+    expect(r.outcastIds.has('a')).toBe(true)
   })
 
   it('keeps children below parents when a marriage raises a parent tier', () => {
@@ -361,7 +365,10 @@ describe('buildFamilyForest', () => {
   it('truncates at maxSlots and reports truncated', () => {
     const r = buildFamilyForest(
       [node('a'), node('b'), node('c')],
-      [],
+      [
+        edge('e1', 'b', 'a', 'child_of'),
+        edge('e2', 'c', 'b', 'child_of'),
+      ],
       { maxSlots: 2 },
     )
     expect(r.truncated).toBe(true)
@@ -386,7 +393,7 @@ describe('buildFamilyForest', () => {
     expect(buildFamilyForest([], []).slots.size).toBe(0)
   })
 
-  it('pushes persons with no blood/marriage/sibling link into an outcasts region', () => {
+  it('marks persons with no family edges as outcasts and leaves them unplaced', () => {
     const root = node('root')
     const kid = node('kid')
     const orphan = node('orphan')
@@ -397,13 +404,15 @@ describe('buildFamilyForest', () => {
     expect(r.outcastIds.has('orphan')).toBe(true)
     expect(r.outcastIds.has('root')).toBe(false)
     expect(r.outcastIds.has('kid')).toBe(false)
-    // Outcast sits far to the right of the family tree.
-    const rootX = r.slots.get('root')!.x
-    const orphanX = r.slots.get('orphan')!.x
-    expect(orphanX).toBeGreaterThan(rootX + X_SPACING)
+    // Outcast is not placed in any slot — the pin effect leaves them at
+    // their current force-simulation position so they aren't arranged
+    // into a horizontal row.
+    expect(r.slots.has('orphan')).toBe(false)
+    expect(r.slots.has('root')).toBe(true)
+    expect(r.slots.has('kid')).toBe(true)
   })
 
-  it('treats belongs_to_clan as affiliation, not blood, and pushes affiliates out', () => {
+  it('places belongs_to_clan-only affiliates on a new tier below their family', () => {
     const root = node('root')
     const kid = node('kid')
     const affiliate = node('affiliate')
@@ -412,11 +421,20 @@ describe('buildFamilyForest', () => {
       [root, kid, affiliate, f],
       [
         edge('e1', 'kid', 'root', 'child_of'),
-        edge('e2', 'affiliate', 'f', 'belongs_to_clan'),
+        edge('e2', 'root', 'f', 'belongs_to_clan'),
+        edge('e3', 'affiliate', 'f', 'belongs_to_clan'),
       ],
     )
-    expect(r.outcastIds.has('affiliate')).toBe(true)
+    // Affiliate is in the family tree, not an outcast.
+    expect(r.outcastIds.has('affiliate')).toBe(false)
     expect(r.outcastIds.has('root')).toBe(false)
     expect(r.outcastIds.has('kid')).toBe(false)
+    expect(r.slots.has('affiliate')).toBe(true)
+    // Affiliate is on a tier strictly below the family's blood tree.
+    const rootTier = r.slots.get('root')!.tier
+    const kidTier = r.slots.get('kid')!.tier
+    const affTier = r.slots.get('affiliate')!.tier
+    expect(affTier).toBeGreaterThan(rootTier)
+    expect(affTier).toBeGreaterThan(kidTier)
   })
 })
