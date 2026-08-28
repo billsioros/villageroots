@@ -275,9 +275,9 @@ export interface FamilyForestOptions {
 /**
  * Lays out the ENTIRE person+family graph as a forest of top-down trees.
  * Generations come from longest-path layering over parent/child links, with
- * married spouses unified onto a shared tier. Every person and family banner
- * node receives a slot (subject to maxSlots), so the whole family graph lives
- * in one coordinate system and family edges stay short.
+ * married spouses unified onto a shared tier. Every person node receives a
+ * slot (subject to maxSlots), so the whole family graph lives in one
+ * coordinate system and family edges stay short.
  */
 export function buildFamilyForest(
   nodes: readonly GraphNode[],
@@ -336,6 +336,29 @@ export function buildFamilyForest(
     for (const g of group) tier.set(g, max)
   }
 
+  // 2b) Re-propagate so no child ends up on a tier above its parents
+  //     after spouse unification raised one of the parents.
+  // Bound iterations by the node count so cycles cannot loop forever.
+  let changed = true
+  for (let iter = 0; changed && iter <= persons.length; iter++) {
+    changed = false
+    for (const p of persons) {
+      const parents = (links.parentsById.get(p.id) ?? []).filter(isPerson)
+      if (parents.length === 0) continue
+      const parentMax = Math.max(
+        ...parents.map((pid) => {
+          const pt = tier.get(pid)
+          return pt !== undefined && pt !== -1 ? pt + 1 : 0
+        }),
+      )
+      const cur = tier.get(p.id) ?? 0
+      if (cur < parentMax) {
+        tier.set(p.id, parentMax)
+        changed = true
+      }
+    }
+  }
+
   // 3) Group persons by tier.
   const byTier = new Map<number, string[]>()
   for (const p of persons) {
@@ -353,14 +376,49 @@ export function buildFamilyForest(
     const row = (byTier.get(t) ?? []).sort(labelOrder)
     const x = new Map<string, number>()
 
-    // (x-placement will be completed in Task 4; currently a per-tier cursor.)
-    let cursor = 0
+    // (a) children center under the mean x of their placed parents
     for (const id of row) {
-      x.set(id, cursor)
-      cursor += X_SPACING
+      const parents = (links.parentsById.get(id) ?? []).filter((p) => slots.has(p))
+      if (parents.length > 0) {
+        x.set(id, parents.reduce((sum, p) => sum + slots.get(p)!.x, 0) / parents.length)
+      }
     }
 
+    // (b) a lone anchored spouse's partner sits beside it
     for (const id of row) {
+      if (x.has(id)) continue
+      const spouse = (links.spousesById.get(id) ?? []).find(
+        (s) => isPerson(s) && x.has(s) && tier.get(s) === t,
+      )
+      if (spouse) x.set(id, (x.get(spouse) ?? 0) + X_SPACING)
+    }
+
+    // (c) running cursor for the rest; married pairs share a slot pair
+    let cursor = 0
+    for (const id of row) {
+      if (x.has(id)) continue
+      const spouse = (links.spousesById.get(id) ?? []).find(
+        (s) => isPerson(s) && !x.has(s) && tier.get(s) === t,
+      )
+      if (spouse) {
+        x.set(id, cursor)
+        x.set(spouse, cursor + X_SPACING)
+        cursor += 2 * X_SPACING
+      } else {
+        x.set(id, cursor)
+        cursor += X_SPACING
+      }
+    }
+
+    // (d) per-tier collision pass enforces X_SPACING within the row
+    const ordered = [...x.keys()].sort((a, b) => (x.get(a) ?? 0) - (x.get(b) ?? 0))
+    for (let i = 1; i < ordered.length; i++) {
+      const prevX = x.get(ordered[i - 1]) ?? 0
+      const curX = x.get(ordered[i]) ?? 0
+      if (curX - prevX < X_SPACING) x.set(ordered[i], prevX + X_SPACING)
+    }
+
+    for (const id of ordered) {
       if (placed.length >= maxSlots) {
         truncated = true
         break

@@ -431,4 +431,60 @@ describe('buildFamilyForest', () => {
     expect(r.slots.size).toBe(1)
     expect(r.slots.get('l')).toBeUndefined()
   })
+
+  it('keeps children below parents when a marriage raises a parent tier', () => {
+    const g1 = node('g1')
+    const g2 = node('g2')
+    const g3 = node('g3')
+    const g4 = node('g4')
+    const q = node('q')
+    const p0 = node('p0')
+    const p = node('p')
+    const c = node('c')
+    const r = tree([g1, g2, g3, g4, q, p0, p, c], [
+      edge('e1', 'g2', 'g1', 'child_of'),
+      edge('e2', 'g3', 'g2', 'child_of'),
+      edge('e3', 'g4', 'g3', 'child_of'),
+      edge('e4', 'q', 'g4', 'child_of'),
+      edge('e5', 'p', 'p0', 'child_of'),
+      edge('e6', 'c', 'p', 'child_of'),
+      edge('e7', 'p', 'q', 'married_to'),
+    ])
+    expect(r.slots.get('p')?.tier).toBe(4)
+    expect(r.slots.get('q')?.tier).toBe(4)
+    expect(r.slots.get('c')?.tier).toBe(5) // strictly below its parent p
+  })
+
+  it('centers a child under its parents and enforces spouse gaps on tier 0', () => {
+    const m1 = node('m1')
+    const m2 = node('m2')
+    const c = node('c')
+    const r = tree([m1, m2, c], [
+      edge('e1', 'c', 'm1', 'child_of'),
+      edge('e2', 'c', 'm2', 'child_of'),
+      edge('e3', 'm1', 'm2', 'married_to'),
+    ])
+    const x1 = r.slots.get('m1')!.x
+    const x2 = r.slots.get('m2')!.x
+    expect(Math.abs(x2 - x1)).toBe(X_SPACING)
+    expect(r.slots.get('c')!.x).toBe((x1 + x2) / 2)
+  })
+
+  it('separates disconnected married pairs into non-overlapping x ranges', () => {
+    const a1 = node('a1')
+    const a2 = node('a2')
+    const b1 = node('b1')
+    const b2 = node('b2')
+    const r = tree([a1, a2, b1, b2], [
+      edge('e1', 'a1', 'a2', 'married_to'),
+      edge('e2', 'b1', 'b2', 'married_to'),
+    ])
+    const xs = [...r.slots.values()]
+      .filter((s) => s.tier === 0)
+      .map((s) => s.x)
+      .sort((a, b) => a - b)
+    expect(xs.length).toBe(4)
+    const gaps = xs.slice(1).map((x, i) => x - xs[i])
+    expect(gaps.every((g) => g >= X_SPACING)).toBe(true)
+  })
 })
