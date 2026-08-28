@@ -102,7 +102,9 @@ export function GraphCanvas() {
       memberIds: string[];
     }[] = [];
     for (const [familyId, memberIds] of members) {
-      const placed = memberIds.filter((id) => treeResult.slots.has(id));
+      const placed = memberIds.filter(
+        (id) => treeResult.slots.has(id) && !treeResult.outcastIds.has(id),
+      );
       if (placed.length < 1) continue;
       groups.push({
         color: clanColor(familyId),
@@ -166,22 +168,24 @@ export function GraphCanvas() {
 
   const displayData = useMemo(() => {
     if (activeView !== "TREE") return graphData;
-    // In TREE mode: show all person + family nodes, keep only family-type edges
-    // between them. Work from raw store data (not graphData) and copy each edge
-    // so the force graph's source/target resolution does not mutate store state.
-    const familyNodes = nodes.filter(
-      (n) => n.type === "person" || n.type === "family",
+    // TREE mode: only render person nodes — the halo title carries the
+    // family name, so the family pill is redundant. Edges are restricted
+    // to family verbs between two rendered persons.
+    const personIds = new Set(
+      nodes.filter((n) => n.type === "person").map((n) => n.id),
     );
-    const familyIds = new Set(familyNodes.map((n) => n.id));
-    const isFamilyEdge = (e: { source: string; target: string; verb: string }) =>
+    const isPersonEdge = (e: { source: string; target: string; verb: string }) =>
       TREE_EDGE_VERBS.includes(e.verb as any) &&
-      familyIds.has(e.source) &&
-      familyIds.has(e.target);
-    const familyEdges: GraphData["links"] = [
-      ...edges.filter(isFamilyEdge).map((e) => ({ ...e })),
-      ...draftEdges.filter(isFamilyEdge).map((e) => ({ ...e, draft: true })),
+      personIds.has(e.source) &&
+      personIds.has(e.target);
+    const personEdges: GraphData["links"] = [
+      ...edges.filter(isPersonEdge).map((e) => ({ ...e })),
+      ...draftEdges.filter(isPersonEdge).map((e) => ({ ...e, draft: true })),
     ];
-    return { nodes: familyNodes, links: familyEdges };
+    return {
+      nodes: nodes.filter((n) => n.type === "person"),
+      links: personEdges,
+    };
   }, [activeView, nodes, edges, draftEdges]);
 
   const culledData = useMemo(() => {
@@ -340,7 +344,11 @@ export function GraphCanvas() {
     const ease = (t: number) => 1 - Math.pow(1 - t, 3);
     const from = new Map<string, { x: number; y: number }>();
     const to = new Map<string, { x: number; y: number }>();
-    const allNodes = nodes as (GraphNode & { fx?: number; fy?: number })[];
+    // Pin only the nodes we render in TREE (displayData = persons only).
+    const allNodes = (displayData?.nodes ?? nodes) as (GraphNode & {
+      fx?: number;
+      fy?: number;
+    })[];
     for (const n of allNodes) {
       const s = treeResult.slots.get(n.id);
       if (!s) {
@@ -379,7 +387,7 @@ export function GraphCanvas() {
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [activeView, treeResult, nodes]);
+  }, [activeView, treeResult, displayData, nodes]);
 
   const paintClanHalos = useCallback(
     (ctx: CanvasRenderingContext2D, globalScale: number) => {

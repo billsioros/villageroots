@@ -385,4 +385,38 @@ describe('buildFamilyForest', () => {
     expect(buildFamilyForest([f], []).slots.size).toBe(0)
     expect(buildFamilyForest([], []).slots.size).toBe(0)
   })
+
+  it('pushes persons with no blood/marriage/sibling link into an outcasts region', () => {
+    const root = node('root')
+    const kid = node('kid')
+    const orphan = node('orphan')
+    const r = tree(
+      [root, kid, orphan],
+      [edge('e', 'kid', 'root', 'child_of')],
+    )
+    expect(r.outcastIds.has('orphan')).toBe(true)
+    expect(r.outcastIds.has('root')).toBe(false)
+    expect(r.outcastIds.has('kid')).toBe(false)
+    // Outcast sits far to the right of the family tree.
+    const rootX = r.slots.get('root')!.x
+    const orphanX = r.slots.get('orphan')!.x
+    expect(orphanX).toBeGreaterThan(rootX + X_SPACING)
+  })
+
+  it('treats belongs_to_clan as affiliation, not blood, and pushes affiliates out', () => {
+    const root = node('root')
+    const kid = node('kid')
+    const affiliate = node('affiliate')
+    const f = node('f', { type: 'family' })
+    const r = tree(
+      [root, kid, affiliate, f],
+      [
+        edge('e1', 'kid', 'root', 'child_of'),
+        edge('e2', 'affiliate', 'f', 'belongs_to_clan'),
+      ],
+    )
+    expect(r.outcastIds.has('affiliate')).toBe(true)
+    expect(r.outcastIds.has('root')).toBe(false)
+    expect(r.outcastIds.has('kid')).toBe(false)
+  })
 })

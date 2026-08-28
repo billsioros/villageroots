@@ -29,6 +29,7 @@ export interface AncestorTreeResult {
   couples: TreeCouple[]
   depth: number
   truncated: boolean
+  outcastIds: Set<string>
 }
 
 export interface FamilyLinks {
@@ -114,13 +115,40 @@ export function buildFamilyForest(
 ): AncestorTreeResult {
   const maxSlots = opts.maxSlots ?? 500
   const slots = new Map<string, TreeSlot>()
-  const empty: AncestorTreeResult = { slots, couples: [], depth: 0, truncated: false }
+  const empty: AncestorTreeResult = { slots, couples: [], depth: 0, truncated: false, outcastIds: new Set() }
   const byId = new Map(nodes.map((n) => [n.id, n]))
   const isPerson = (id: string) => byId.get(id)?.type === 'person'
-  const persons = nodes.filter((n) => n.type === 'person')
-  if (persons.length === 0) return empty
+  const allPersons = nodes.filter((n) => n.type === 'person')
+  if (allPersons.length === 0) return empty
 
   const links = resolveFamilyLinks(nodes, edges)
+
+  // 0) Split persons into "connected" (blood/marriage/sibling link) and
+  //    "isolated". Isolated persons — only belongs_to_clan or no family
+  //    edges at all — are pushed into a separate outcasts region in step 6
+  //    so they don't pile up alongside the families in a horizontal line
+  //    and don't bloat the family halos.
+  const connected = new Set<string>()
+  for (const e of edges) {
+    if (!byId.has(e.source) || !byId.has(e.target)) continue
+    if (
+      e.verb === 'child_of' ||
+      e.verb === 'parent_of' ||
+      e.verb === 'married_to' ||
+      e.verb === 'sibling_of'
+    ) {
+      if (isPerson(e.source) && isPerson(e.target)) {
+        connected.add(e.source)
+        connected.add(e.target)
+      }
+    }
+  }
+  const outcastIds = new Set<string>()
+  for (const p of allPersons) {
+    if (!connected.has(p.id)) outcastIds.add(p.id)
+  }
+  // `persons` is re-scoped to the connected subset for the tree layout below.
+  const persons = allPersons.filter((p) => connected.has(p.id))
   const placed: string[] = []
   let truncated = false
 
@@ -321,11 +349,39 @@ export function buildFamilyForest(
     slots.set(id, { id, x: midX, y: minY - FAMILY_INSET, tier: memberTier })
   }
 
+  // 6) Outcasts region: persons with no blood/marriage/sibling link are
+  //    placed far to the right of the families, on a single tier-0 row, so
+  //    they don't extend the family halos or crowd the tree layout.
+  if (outcastIds.size > 0) {
+    const familyMaxX =
+      slots.size > 0
+        ? Math.max(...[...slots.values()].map((s) => s.x))
+        : -X_SPACING
+    const outcastStartX = familyMaxX + X_SPACING + 60
+    let outcastIdx = 0
+    for (const p of allPersons) {
+      if (!outcastIds.has(p.id)) continue
+      if (placed.length >= maxSlots) {
+        truncated = true
+        break
+      }
+      slots.set(p.id, {
+        id: p.id,
+        x: outcastStartX + outcastIdx * X_SPACING,
+        y: topY,
+        tier: 0,
+      })
+      placed.push(p.id)
+      outcastIdx++
+    }
+  }
+
   return {
     slots,
     couples,
     depth: placed.reduce((mx, id) => Math.max(mx, slots.get(id)!.tier), 0),
     truncated,
+    outcastIds,
   }
 }
 
