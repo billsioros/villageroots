@@ -268,6 +268,116 @@ export function buildAncestralTree(
   }
 }
 
+export interface FamilyForestOptions {
+  maxSlots?: number
+}
+
+/**
+ * Lays out the ENTIRE person+family graph as a forest of top-down trees.
+ * Generations come from longest-path layering over parent/child links, with
+ * married spouses unified onto a shared tier. Every person and family banner
+ * node receives a slot (subject to maxSlots), so the whole family graph lives
+ * in one coordinate system and family edges stay short.
+ */
+export function buildFamilyForest(
+  nodes: readonly GraphNode[],
+  edges: readonly GraphEdge[],
+  opts: FamilyForestOptions = {},
+): AncestorTreeResult {
+  const maxSlots = opts.maxSlots ?? 500
+  const slots = new Map<string, TreeSlot>()
+  const empty: AncestorTreeResult = { slots, couples: [], depth: 0, truncated: false }
+  const byId = new Map(nodes.map((n) => [n.id, n]))
+  const isPerson = (id: string) => byId.get(id)?.type === 'person'
+  const persons = nodes.filter((n) => n.type === 'person')
+  if (persons.length === 0) return empty
+
+  const links = resolveFamilyLinks(nodes, edges)
+  const placed: string[] = []
+  let truncated = false
+
+  // 1) Individual generations by longest-path layering over parent links.
+  const tier = new Map<string, number>()
+  const tierOf = (id: string): number => {
+    const cached = tier.get(id)
+    if (cached !== undefined) return cached
+    const parents = (links.parentsById.get(id) ?? []).filter(isPerson)
+    if (parents.length === 0) return 0
+    tier.set(id, -1) // cycle guard marker
+    const t = Math.max(
+      ...parents.map((p) => {
+        const pt = tierOf(p)
+        return pt === -1 ? 0 : pt + 1
+      }),
+    )
+    tier.set(id, t)
+    return t
+  }
+  for (const p of persons) tierOf(p.id)
+
+  // 2) Married spouses merge onto one tier per marriage component.
+  const seen = new Set<string>()
+  for (const p of persons) {
+    if (seen.has(p.id)) continue
+    const group: string[] = []
+    const stack = [p.id]
+    seen.add(p.id)
+    while (stack.length > 0) {
+      const cur = stack.pop()!
+      group.push(cur)
+      for (const s of links.spousesById.get(cur) ?? []) {
+        if (isPerson(s) && !seen.has(s)) {
+          seen.add(s)
+          stack.push(s)
+        }
+      }
+    }
+    const max = Math.max(...group.map((g) => tier.get(g) ?? 0))
+    for (const g of group) tier.set(g, max)
+  }
+
+  // 3) Group persons by tier.
+  const byTier = new Map<number, string[]>()
+  for (const p of persons) {
+    const t = tier.get(p.id) ?? 0
+    const list = byTier.get(t) ?? []
+    list.push(p.id)
+    byTier.set(t, list)
+  }
+  const maxTier = Math.max(0, ...byTier.keys())
+  const topY = FAMILY_INSET
+  const labelOrder = (a: string, b: string) =>
+    (byId.get(a)?.label ?? '').localeCompare(byId.get(b)?.label ?? '')
+
+  for (let t = 0; t <= maxTier; t++) {
+    const row = (byTier.get(t) ?? []).sort(labelOrder)
+    const x = new Map<string, number>()
+
+    // (x-placement will be completed in Task 4; currently a per-tier cursor.)
+    let cursor = 0
+    for (const id of row) {
+      x.set(id, cursor)
+      cursor += X_SPACING
+    }
+
+    for (const id of row) {
+      if (placed.length >= maxSlots) {
+        truncated = true
+        break
+      }
+      slots.set(id, { id, x: x.get(id) ?? 0, y: topY + t * TIER_HEIGHT, tier: t })
+      placed.push(id)
+    }
+  }
+
+  return {
+    slots,
+    couples: [],
+    depth: placed.reduce((mx, id) => Math.max(mx, slots.get(id)!.tier), 0),
+    truncated,
+  }
+}
+
 /** Picks the earliest-born person node (birth year from subtitle, ties by label). */
 export function pickFocalPerson(nodes: readonly GraphNode[]): GraphNode | null {
   const persons = nodes.filter((n) => n.type === 'person')

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { GraphEdge, GraphNode } from '@/lib/graph/types'
 import {
   buildAncestralTree,
+  buildFamilyForest,
   clanMembers,
   filterTreeData,
   FAMILY_INSET,
@@ -353,5 +354,81 @@ describe("clan mapping helpers", () => {
     const pc = personClans([p, f], [])
     expect(pc.size).toBe(0)
     expect(clanMembers([p, f], []).get("f")).toBeUndefined()
+  })
+})
+
+describe('buildFamilyForest', () => {
+  function tree(nodes: GraphNode[], edges: GraphEdge[]) {
+    return buildFamilyForest(nodes, edges)
+  }
+
+  it('places roots on tier 0 and children one tier below', () => {
+    const root = node('root')
+    const kid = node('kid')
+    const r = tree([root, kid], [edge('e1', 'kid', 'root', 'child_of')])
+    expect(r.slots.get('root')?.tier).toBe(0)
+    expect(r.slots.get('kid')?.tier).toBe(1)
+    expect((r.slots.get('kid')!.y) - (r.slots.get('root')!.y)).toBe(TIER_HEIGHT)
+  })
+
+  it('uses longest-path layering when parents sit on different tiers', () => {
+    const g1 = node('g1')
+    const g2 = node('g2')
+    const m2 = node('m2')
+    const m1 = node('m1')
+    const c = node('c')
+    const r = tree([g1, g2, m2, m1, c], [
+      edge('e1', 'g2', 'g1', 'child_of'),
+      edge('e2', 'm2', 'g2', 'child_of'),
+      edge('e3', 'c', 'm1', 'child_of'),
+      edge('e4', 'c', 'm2', 'child_of'),
+    ])
+    expect(r.slots.get('c')?.tier).toBe(3) // max(0 + 1, 2 + 1)
+  })
+
+  it('merges married spouses onto one shared tier', () => {
+    const nik = node('nik')
+    const eleni = node('eleni')
+    const alex = node('alex')
+    const r = tree([nik, eleni, alex], [
+      edge('e1', 'eleni', 'nik', 'child_of'),
+      edge('e2', 'eleni', 'alex', 'married_to'),
+    ])
+    expect(r.slots.get('eleni')?.tier).toBe(r.slots.get('alex')?.tier)
+    expect(r.slots.get('alex')?.tier).toBe(1)
+    expect(r.slots.get('nik')?.tier).toBe(0)
+  })
+
+  it('keeps disjoint married pairs on distinct tiers', () => {
+    const a1 = node('a1')
+    const a2 = node('a2')
+    const b1 = node('b1')
+    const b2 = node('b2')
+    const r = tree([a1, a2, b1, b2], [
+      edge('e1', 'a1', 'a2', 'married_to'),
+      edge('e2', 'b1', 'b2', 'married_to'),
+    ])
+    expect(r.slots.get('a1')?.tier).toBe(0)
+    expect(r.slots.get('a2')?.tier).toBe(0)
+    expect(r.slots.get('b1')?.tier).toBe(0)
+    expect(r.slots.get('b2')?.tier).toBe(0)
+  })
+
+  it('breaks parent cycles without hanging', () => {
+    const a = node('a')
+    const b = node('b')
+    const r = tree([a, b], [
+      edge('e1', 'a', 'b', 'child_of'),
+      edge('e2', 'b', 'a', 'child_of'),
+    ])
+    expect(r.slots.size).toBe(2)
+  })
+
+  it('excludes non-person, non-family nodes entirely', () => {
+    const a = node('a')
+    const l = node('l', { type: 'landmark' })
+    const r = tree([a, l], [edge('e1', 'a', 'l', 'born_in')])
+    expect(r.slots.size).toBe(1)
+    expect(r.slots.get('l')).toBeUndefined()
   })
 })
