@@ -26,7 +26,7 @@ export function validatePassword(password: string): string | null {
 
 export function scorePassword(password: string): number {
   if (!password) return 0;
-  let score = password.length >= PASSWORD_MIN_LENGTH ? 1 : 0;
+  const score = password.length >= PASSWORD_MIN_LENGTH ? 1 : 0;
   const met = PASSWORD_CLASSES.reduce((n, c) => n + (c.re.test(password) ? 1 : 0), 0);
   return Math.min(4, score + Math.min(4, met));
 }
