@@ -4,6 +4,14 @@ export const TIER_HEIGHT = 150
 export const X_SPACING = 220
 export const FAMILY_INSET = 60
 
+/**
+ * Minimum guaranteed clearance (graph units) between two neighbouring
+ * families' enclosing-circle halos. The per-column gap is
+ * reach_i + reach_{i+1} + FAMILY_CLUSTER_MARGIN, which absorbs the pill-width
+ * estimation error and the halo's screen-space padding.
+ */
+export const FAMILY_CLUSTER_MARGIN = 200
+
 export const TREE_EDGE_VERBS: readonly Verb[] = [
   'child_of',
   'married_to',
@@ -102,11 +110,25 @@ export interface FamilyForestOptions {
 }
 
 /**
- * Lays out the ENTIRE person+family graph as a forest of top-down trees.
- * Generations come from longest-path layering over parent/child links, with
- * married spouses unified onto a shared tier. Every person node receives a
- * slot (subject to maxSlots), so the whole family graph lives in one
- * coordinate system and family edges stay short.
+ * Lays out the entire person+family graph as a forest of top-down trees,
+ * clustered into per-family columns.
+ *
+ * Every person in a blood/marriage/sibling link is assigned to a column:
+ * - a person who belongs to a family (belongs_to_clan) is placed in that
+ *   family's column (first family by label if several);
+ * - a clan-less person goes to the column of the family their relatives
+ *   (spouse, parents, children) belong to;
+ * - a connected chain with no family at all becomes a single "unaffiliated"
+ *   column placed last;
+ * - affiliates (belongs_to_clan only, no blood link) are placed on a new
+ *   tier below their family's column;
+ * - truly isolated persons (no family edges) receive no slot at all.
+ *
+ * Columns are laid out independently and separated by a gap
+ * reach_i + reach_{i+1} + FAMILY_CLUSTER_MARGIN, chosen so that each family's
+ * enclosing circle contains exactly its column's members and no two circles
+ * touch. Cross-column edges (e.g. an intermarriage) are drawn as edges
+ * between the separated columns but never influence the layout itself.
  */
 export function buildFamilyForest(
   nodes: readonly GraphNode[],
@@ -118,16 +140,14 @@ export function buildFamilyForest(
   const empty: AncestorTreeResult = { slots, couples: [], depth: 0, truncated: false, outcastIds: new Set() }
   const byId = new Map(nodes.map((n) => [n.id, n]))
   const isPerson = (id: string) => byId.get(id)?.type === 'person'
+  const labelOf = (id: string) => byId.get(id)?.label ?? ''
   const allPersons = nodes.filter((n) => n.type === 'person')
   if (allPersons.length === 0) return empty
 
   const links = resolveFamilyLinks(nodes, edges)
 
   // 0) Split persons into "connected" (blood/marriage/sibling link) and
-  //    "isolated". Isolated persons — only belongs_to_clan or no family
-  //    edges at all — are pushed into a separate outcasts region in step 6
-  //    so they don't pile up alongside the families in a horizontal line
-  //    and don't bloat the family halos.
+  //    "isolated".
   const connected = new Set<string>()
   for (const e of edges) {
     if (!byId.has(e.source) || !byId.has(e.target)) continue
@@ -145,10 +165,10 @@ export function buildFamilyForest(
   }
   // Non-connected persons split into:
   //   - affiliates: have a belongs_to_clan link but no blood/marriage/sibling
-  //     link. They get placed on a new tier below the family's blood tree.
-  //   - outcasts (outcastIds): no family edges at all. They are NOT placed
-  //     in slots at all — the pin effect leaves them at their current
-  //     force-simulation position so they don't get arranged into a row.
+  //     link. They are placed on a new tier below their family's column.
+  //   - outcasts (outcastIds): no family edges at all. They are never given a
+  //     slot — the pin effect leaves them at their current force-simulation
+  //     position.
   const affiliatesByFamily = new Map<string, string[]>()
   const outcastIds = new Set<string>()
   for (const p of allPersons) {
@@ -158,178 +178,324 @@ export function buildFamilyForest(
       outcastIds.add(p.id)
       continue
     }
-    // If a person belongs to multiple families, place them in the first
-    // by family label (stable, predictable).
-    const famsByLabel = [...fams].sort((a, b) =>
-      (byId.get(a)?.label ?? '').localeCompare(byId.get(b)?.label ?? ''),
-    )
-    const primaryFamily = famsByLabel[0]
+    // If a person belongs to multiple families, place them in the first by
+    // family label (stable, predictable).
+    const primaryFamily = [...fams].sort((a, b) => labelOf(a).localeCompare(labelOf(b)))[0]
     const list = affiliatesByFamily.get(primaryFamily) ?? []
     list.push(p.id)
     affiliatesByFamily.set(primaryFamily, list)
   }
-  // `persons` is re-scoped to the connected subset for the tree layout below.
   const persons = allPersons.filter((p) => connected.has(p.id))
-  const placed: string[] = []
-  let truncated = false
 
-  // 1) Individual generations by longest-path layering over parent links.
-  const tier = new Map<string, number>()
-  const tierOf = (id: string): number => {
-    const cached = tier.get(id)
-    if (cached !== undefined) return cached
-    const parents = (links.parentsById.get(id) ?? []).filter(isPerson)
-    if (parents.length === 0) return 0
-    tier.set(id, -1) // cycle guard marker
-    const t = Math.max(
-      ...parents.map((p) => {
-        const pt = tierOf(p)
-        return pt === -1 ? 0 : pt + 1
-      }),
-    )
-    tier.set(id, t)
-    return t
-  }
-  for (const p of persons) tierOf(p.id)
-
-  // 2) Married spouses merge onto one tier per marriage component.
-  const seen = new Set<string>()
+  // child -> parents, needed for the effective-family assignment below and for
+  // computing each family column's affiliate tier.
+  const childrenByParent = new Map<string, string[]>()
   for (const p of persons) {
-    if (seen.has(p.id)) continue
-    const group: string[] = []
-    const stack = [p.id]
-    seen.add(p.id)
-    while (stack.length > 0) {
-      const cur = stack.pop()!
-      group.push(cur)
-      for (const s of links.spousesById.get(cur) ?? []) {
-        if (isPerson(s) && !seen.has(s)) {
-          seen.add(s)
-          stack.push(s)
+    for (const par of links.parentsById.get(p.id) ?? []) {
+      push(childrenByParent, par, p.id)
+    }
+  }
+
+  // 0.5) Effective family for every connected person: their own primary
+  //      family, or — for a clan-less person — the family their relatives
+  //      (spouse, parents, children) belong to. A clan-less spouse therefore
+  //      lands inside the partner's family column and halo.
+  const effective = new Map<string, string>()
+  for (const p of persons) {
+    const own = links.familiesById.get(p.id) ?? []
+    if (own.length > 0) {
+      effective.set(p.id, [...own].sort((a, b) => labelOf(a).localeCompare(labelOf(b)))[0])
+      continue
+    }
+    const counts = new Map<string, number>()
+    const neighbors = new Set([
+      ...(links.spousesById.get(p.id) ?? []),
+      ...(links.parentsById.get(p.id) ?? []),
+      ...(childrenByParent.get(p.id) ?? []),
+    ])
+    for (const nid of neighbors) {
+      for (const f of links.familiesById.get(nid) ?? []) {
+        counts.set(f, (counts.get(f) ?? 0) + 1)
+      }
+    }
+    if (counts.size > 0) {
+      const best = [...counts.entries()].sort(
+        (a, b) => b[1] - a[1] || labelOf(a[0]).localeCompare(labelOf(b[0])),
+      )[0][0]
+      effective.set(p.id, best)
+    }
+  }
+
+  // 0.6) Column groups: one per family (sorted by family label), then one
+  //      unaffiliated column for the remaining connected persons, placed last.
+  const familyColumns = new Map<string, string[]>()
+  for (const p of persons) {
+    const f = effective.get(p.id)
+    if (!f) continue
+    const list = familyColumns.get(f) ?? []
+    list.push(p.id)
+    familyColumns.set(f, list)
+  }
+  const familyIds = [...familyColumns.keys()].sort((a, b) => labelOf(a).localeCompare(labelOf(b)))
+  const unaffiliated = persons.filter((p) => !effective.has(p.id)).map((p) => p.id)
+
+  // Per-column layout: longest-path tiers, spouse unification, per-tier x
+  // placement, then affiliates below the family's blood subtree. All in
+  // column-local coordinates.
+  const topY = FAMILY_INSET
+  const layoutColumn = (
+    memberIds: string[],
+    familyId: string | null,
+  ): { pos: Map<string, { x: number; y: number; tier: number }>; minX: number; width: number; reach: number } => {
+    const pos = new Map<string, { x: number; y: number; tier: number }>()
+    if (memberIds.length > 0) {
+      const memberSet = new Set(memberIds)
+      // Intra-column links only — cross-column edges never influence layout.
+      const subParents = new Map<string, string[]>()
+      const subSpouses = new Map<string, string[]>()
+      for (const m of memberIds) {
+        const pars = (links.parentsById.get(m) ?? []).filter((x) => memberSet.has(x))
+        if (pars.length > 0) subParents.set(m, pars)
+        const sps = (links.spousesById.get(m) ?? []).filter((x) => memberSet.has(x))
+        if (sps.length > 0) subSpouses.set(m, sps)
+      }
+
+      // 1) Individual generations by longest-path layering over parent links.
+      const tier = new Map<string, number>()
+      const tierOf = (id: string): number => {
+        const cached = tier.get(id)
+        if (cached !== undefined) return cached
+        const parents = subParents.get(id) ?? []
+        if (parents.length === 0) return 0
+        tier.set(id, -1) // cycle guard marker
+        const t = Math.max(
+          ...parents.map((p) => {
+            const pt = tierOf(p)
+            return pt === -1 ? 0 : pt + 1
+          }),
+        )
+        tier.set(id, t)
+        return t
+      }
+      const labelOrder = (a: string, b: string) => labelOf(a).localeCompare(labelOf(b))
+      for (const m of memberIds) tierOf(m)
+
+      // 2) Married spouses merge onto one tier per marriage component.
+      const seen = new Set<string>()
+      for (const m of memberIds) {
+        if (seen.has(m)) continue
+        const group: string[] = []
+        const stack = [m]
+        seen.add(m)
+        while (stack.length > 0) {
+          const cur = stack.pop()!
+          group.push(cur)
+          for (const s of subSpouses.get(cur) ?? []) {
+            if (!seen.has(s)) {
+              seen.add(s)
+              stack.push(s)
+            }
+          }
+        }
+        const max = Math.max(...group.map((g) => tier.get(g) ?? 0))
+        for (const g of group) tier.set(g, max)
+      }
+
+      // 2b) Re-propagate so no child ends up on a tier above its parents after
+      //     spouse unification raised one of the parents.
+      let changed = true
+      for (let iter = 0; changed && iter <= memberIds.length; iter++) {
+        changed = false
+        for (const m of memberIds) {
+          const parents = subParents.get(m) ?? []
+          if (parents.length === 0) continue
+          const parentMax = Math.max(
+            ...parents.map((pid) => {
+              const pt = tier.get(pid)
+              return pt !== undefined && pt !== -1 ? pt + 1 : 0
+            }),
+          )
+          const cur = tier.get(m) ?? 0
+          if (cur < parentMax) {
+            tier.set(m, parentMax)
+            changed = true
+          }
+        }
+      }
+
+      // 3) Group members by tier.
+      const byTier = new Map<number, string[]>()
+      for (const m of memberIds) {
+        const t = tier.get(m) ?? 0
+        const list = byTier.get(t) ?? []
+        list.push(m)
+        byTier.set(t, list)
+      }
+      const maxTier = Math.max(0, ...byTier.keys())
+
+      for (let t = 0; t <= maxTier; t++) {
+        const row = (byTier.get(t) ?? []).sort(labelOrder)
+        const x = new Map<string, number>()
+
+        // (a) children center under the mean x of their placed parents
+        for (const id of row) {
+          const parents = (subParents.get(id) ?? []).filter((p) => pos.has(p))
+          if (parents.length > 0) {
+            x.set(id, parents.reduce((sum, p) => sum + pos.get(p)!.x, 0) / parents.length)
+          }
+        }
+
+        // (a2) married couples where BOTH spouses anchored under their own
+        // parents get recentred as an adjacent pair under all their parents.
+        const pairHandled = new Set<string>()
+        for (const id of row) {
+          if (pairHandled.has(id) || !x.has(id)) continue
+          const spouse = (subSpouses.get(id) ?? []).find(
+            (s) => row.includes(s) && tier.get(s) === t,
+          )
+          if (!spouse || !x.has(spouse)) continue
+          pairHandled.add(id)
+          pairHandled.add(spouse)
+          const allParents = [
+            ...(subParents.get(id) ?? []),
+            ...(subParents.get(spouse) ?? []),
+          ].filter((p) => pos.has(p))
+          if (allParents.length === 0) continue
+          const pivot = allParents.reduce((sum, p) => sum + pos.get(p)!.x, 0) / allParents.length
+          const [u, w] = labelOrder(id, spouse) <= 0 ? [id, spouse] : [spouse, id]
+          x.set(u, pivot - X_SPACING / 2)
+          x.set(w, pivot + X_SPACING / 2)
+        }
+
+        // (b) a lone anchored spouse's partner sits beside it
+        for (const id of row) {
+          if (x.has(id)) continue
+          const spouse = (subSpouses.get(id) ?? []).find(
+            (s) => x.has(s) && tier.get(s) === t,
+          )
+          if (spouse) x.set(id, (x.get(spouse) ?? 0) + X_SPACING)
+        }
+
+        // (c) running cursor for the rest; married pairs share a slot pair
+        let cursor = 0
+        for (const id of row) {
+          if (x.has(id)) continue
+          const spouse = (subSpouses.get(id) ?? []).find(
+            (s) => !x.has(s) && tier.get(s) === t,
+          )
+          if (spouse) {
+            x.set(id, cursor)
+            x.set(spouse, cursor + X_SPACING)
+            cursor += 2 * X_SPACING
+          } else {
+            x.set(id, cursor)
+            cursor += X_SPACING
+          }
+        }
+
+        // (d) per-tier collision pass enforces X_SPACING within the row
+        const ordered = [...x.keys()].sort((a, b) => (x.get(a) ?? 0) - (x.get(b) ?? 0))
+        for (let i = 1; i < ordered.length; i++) {
+          const prevX = x.get(ordered[i - 1]) ?? 0
+          const curX = x.get(ordered[i]) ?? 0
+          if (curX - prevX < X_SPACING) x.set(ordered[i], prevX + X_SPACING)
+        }
+
+        for (const id of ordered) {
+          pos.set(id, { x: x.get(id) ?? 0, y: topY + t * TIER_HEIGHT, tier: t })
         }
       }
     }
-    const max = Math.max(...group.map((g) => tier.get(g) ?? 0))
-    for (const g of group) tier.set(g, max)
-  }
 
-  // 2b) Re-propagate so no child ends up on a tier above its parents
-  //     after spouse unification raised one of the parents.
-  // Bound iterations by the node count so cycles cannot loop forever.
-  let changed = true
-  for (let iter = 0; changed && iter <= persons.length; iter++) {
-    changed = false
-    for (const p of persons) {
-      const parents = (links.parentsById.get(p.id) ?? []).filter(isPerson)
-      if (parents.length === 0) continue
-      const parentMax = Math.max(
-        ...parents.map((pid) => {
-          const pt = tier.get(pid)
-          return pt !== undefined && pt !== -1 ? pt + 1 : 0
-        }),
-      )
-      const cur = tier.get(p.id) ?? 0
-      if (cur < parentMax) {
-        tier.set(p.id, parentMax)
-        changed = true
-      }
-    }
-  }
-
-  // 3) Group persons by tier.
-  const byTier = new Map<number, string[]>()
-  for (const p of persons) {
-    const t = tier.get(p.id) ?? 0
-    const list = byTier.get(t) ?? []
-    list.push(p.id)
-    byTier.set(t, list)
-  }
-  const maxTier = Math.max(0, ...byTier.keys())
-  const topY = FAMILY_INSET
-  const labelOrder = (a: string, b: string) =>
-    (byId.get(a)?.label ?? '').localeCompare(byId.get(b)?.label ?? '')
-
-  for (let t = 0; t <= maxTier; t++) {
-    const row = (byTier.get(t) ?? []).sort(labelOrder)
-    const x = new Map<string, number>()
-
-    // (a) children center under the mean x of their placed parents
-    for (const id of row) {
-      const parents = (links.parentsById.get(id) ?? []).filter((p) => slots.has(p))
-      if (parents.length > 0) {
-        x.set(id, parents.reduce((sum, p) => sum + slots.get(p)!.x, 0) / parents.length)
+    // Affiliates (belongs_to_clan only, no blood link) are placed on a new
+    // tier directly below the family's blood subtree, so they show up in the
+    // family halo but are visually distinguished by being on a new row.
+    if (familyId) {
+      const affiliates = affiliatesByFamily.get(familyId) ?? []
+      const declared = memberIds.filter((m) => (links.familiesById.get(m) ?? []).includes(familyId))
+      if (affiliates.length > 0 && declared.length > 0) {
+        // BFS through the family's blood descendants to find the deepest tier
+        // in the family's subtree; the affiliate tier sits strictly below it.
+        const subtreeIds = new Set(declared)
+        const stack = [...declared]
+        let familyMaxTier = Math.max(...declared.map((d) => pos.get(d)?.tier ?? 0))
+        while (stack.length > 0) {
+          const cur = stack.pop()!
+          for (const child of childrenByParent.get(cur) ?? []) {
+            if (subtreeIds.has(child) || !pos.has(child)) continue
+            subtreeIds.add(child)
+            familyMaxTier = Math.max(familyMaxTier, pos.get(child)!.tier)
+            stack.push(child)
+          }
+        }
+        const familyMinX = Math.min(...[...subtreeIds].map((id) => pos.get(id)!.x))
+        const affiliateTier = familyMaxTier + 1
+        const ordered = affiliates.map((aid) => ({ id: aid, label: labelOf(aid) })).sort((a, b) => a.label.localeCompare(b.label))
+        let cursor = familyMinX
+        for (const { id } of ordered) {
+          pos.set(id, { x: cursor, y: topY + affiliateTier * TIER_HEIGHT, tier: affiliateTier })
+          cursor += X_SPACING
+        }
       }
     }
 
-    // (a2) married couples where BOTH spouses anchored under their own
-    // parents get recentred as an adjacent pair under all their parents,
-    // so the couple stays together even when the parents are far apart.
-    const pairHandled = new Set<string>()
-    for (const id of row) {
-      if (pairHandled.has(id) || !x.has(id)) continue
-      const spouse = (links.spousesById.get(id) ?? []).find(
-        (s) => row.includes(s) && tier.get(s) === t,
-      )
-      if (!spouse || !x.has(spouse)) continue
-      pairHandled.add(id)
-      pairHandled.add(spouse)
-      const allParents = [
-        ...(links.parentsById.get(id) ?? []),
-        ...(links.parentsById.get(spouse) ?? []),
-      ].filter((p) => slots.has(p))
-      if (allParents.length === 0) continue
-      const pivot = allParents.reduce((sum, p) => sum + slots.get(p)!.x, 0) / allParents.length
-      const [u, w] = labelOrder(id, spouse) <= 0 ? [id, spouse] : [spouse, id]
-      x.set(u, pivot - X_SPACING / 2)
-      x.set(w, pivot + X_SPACING / 2)
+    // Enclosing-circle estimate (mirrors the canvas: pillW = label*7.6 + 69,
+    // pillH = 40, corner-to-centroid radius + 60 padding).
+    if (pos.size === 0) return { pos, minX: 0, width: 0, reach: 0 }
+    let minX = Infinity
+    let maxX = -Infinity
+    let sx = 0
+    let sy = 0
+    for (const [id, p] of pos) {
+      const w = labelOf(id).length * 7.6 + 69
+      minX = Math.min(minX, p.x - w / 2)
+      maxX = Math.max(maxX, p.x + w / 2)
+      sx += p.x
+      sy += p.y
     }
-
-    // (b) a lone anchored spouse's partner sits beside it
-    for (const id of row) {
-      if (x.has(id)) continue
-      const spouse = (links.spousesById.get(id) ?? []).find(
-        (s) => isPerson(s) && x.has(s) && tier.get(s) === t,
-      )
-      if (spouse) x.set(id, (x.get(spouse) ?? 0) + X_SPACING)
+    const cx = sx / pos.size
+    const cy = sy / pos.size
+    let r = 0
+    for (const [id, p] of pos) {
+      const w = labelOf(id).length * 7.6 + 69
+      r = Math.max(r, Math.hypot(Math.abs(p.x - cx) + w / 2, Math.abs(p.y - cy) + 20))
     }
+    r += 60
+    const width = maxX - minX
+    return { pos, minX, width, reach: Math.max(0, r - width / 2) }
+  }
 
-    // (c) running cursor for the rest; married pairs share a slot pair
-    let cursor = 0
-    for (const id of row) {
-      if (x.has(id)) continue
-      const spouse = (links.spousesById.get(id) ?? []).find(
-        (s) => isPerson(s) && !x.has(s) && tier.get(s) === t,
-      )
-      if (spouse) {
-        x.set(id, cursor)
-        x.set(spouse, cursor + X_SPACING)
-        cursor += 2 * X_SPACING
-      } else {
-        x.set(id, cursor)
-        cursor += X_SPACING
-      }
-    }
+  // 4) Lay every column out independently, then place columns left-to-right
+  //    with a gap (reach_i + reach_{i+1} + margin) so the enclosing circles
+  //    of neighbouring families can never overlap.
+  const columns: ReturnType<typeof layoutColumn>[] = []
+  for (const fid of familyIds) columns.push(layoutColumn(familyColumns.get(fid) ?? [], fid))
+  if (unaffiliated.length > 0) columns.push(layoutColumn(unaffiliated, null))
 
-    // (d) per-tier collision pass enforces X_SPACING within the row
-    const ordered = [...x.keys()].sort((a, b) => (x.get(a) ?? 0) - (x.get(b) ?? 0))
-    for (let i = 1; i < ordered.length; i++) {
-      const prevX = x.get(ordered[i - 1]) ?? 0
-      const curX = x.get(ordered[i]) ?? 0
-      if (curX - prevX < X_SPACING) x.set(ordered[i], prevX + X_SPACING)
-    }
-
-    for (const id of ordered) {
+  const placed: string[] = []
+  let truncated = false
+  let startX = 0
+  for (let i = 0; i < columns.length; i++) {
+    const col = columns[i]
+    // Integer shift keeps slot coordinates on the exact X_SPACING grid that
+    // couples and children are computed on; the sub-pixel leftover (≤ 0.5
+    // graph units) is negligible next to the halo padding and cluster margin.
+    const shift = Math.round(startX - col.minX)
+    for (const [id, p] of col.pos) {
       if (placed.length >= maxSlots) {
         truncated = true
         break
       }
-      slots.set(id, { id, x: x.get(id) ?? 0, y: topY + t * TIER_HEIGHT, tier: t })
+      slots.set(id, { id, x: p.x + shift, y: p.y, tier: p.tier })
       placed.push(id)
+    }
+    if (i < columns.length - 1) {
+      startX += col.width + col.reach + columns[i + 1].reach + FAMILY_CLUSTER_MARGIN
     }
   }
 
-  // 4) Couples — married pairs on a shared tier, then singleton couples
-  //    (a person with placed children but no placed spouse).
+  // 5) Couples — married pairs on a shared tier, then singleton couples (a
+  //    person with placed children but no placed spouse).
   const couples: TreeCouple[] = []
   const coupled = new Set<string>()
   for (const id of placed) {
@@ -338,7 +504,7 @@ export function buildFamilyForest(
       (s) => placed.includes(s) && slots.get(s)?.tier === t,
     )
     if (spouse && !coupled.has(id) && !coupled.has(spouse)) {
-      const members = [id, spouse].sort(labelOrder)
+      const members = [id, spouse].sort((a, b) => labelOf(a).localeCompare(labelOf(b)))
       const familyIds = [...new Set(members.flatMap((m) => links.familiesById.get(m) ?? []))]
       couples.push({ members, familyIds, tier: t })
       coupled.add(id)
@@ -358,7 +524,7 @@ export function buildFamilyForest(
     }
   }
 
-  // 5) Family banners above their members.
+  // 6) Family banners above their declared members.
   for (const id of nodes.map((n) => n.id)) {
     if (byId.get(id)?.type !== 'family') continue
     const members = placed.filter((sid) => (links.familiesById.get(sid) ?? []).includes(id))
@@ -368,67 +534,6 @@ export function buildFamilyForest(
     const midX = memberSlots.reduce((sum, s) => sum + s.x, 0) / memberSlots.length
     const memberTier = Math.min(...memberSlots.map((s) => s.tier))
     slots.set(id, { id, x: midX, y: minY - FAMILY_INSET, tier: memberTier })
-  }
-
-  // 6) Outcasts region: persons with no blood/marriage/sibling link are
-  //    placed far to the right of the families, on a single tier-0 row, so
-  //    they don't extend the family halos or crowd the tree layout.
-  // 6) Affiliates (belongs_to_clan only, no blood link) get placed on a
-  //    new tier directly below the family's blood tree, so they show up
-  //    in the family halo but are visually distinguished by being on a
-  //    new row.
-  //    Outcasts (no family edges at all) are NOT placed in slots — the
-  //    pin effect leaves them at their current force-simulation position.
-  // Build childrenByParent (child → parents) so we can compute the
-  // family's blood subtree depth (the family members + all their blood
-  // descendants, even those who haven't been recorded as belonging to
-  // the clan). The affiliate tier sits strictly below that depth.
-  const childrenByParent = new Map<string, string[]>()
-  for (const p of persons) {
-    for (const par of links.parentsById.get(p.id) ?? []) {
-      push(childrenByParent, par, p.id)
-    }
-  }
-  for (const [familyId, affiliates] of affiliatesByFamily) {
-    const familyMemberIds = new Set(
-      placed.filter((pid) => (links.familiesById.get(pid) ?? []).includes(familyId)),
-    )
-    if (familyMemberIds.size === 0) continue
-    // BFS through blood descendants to find the deepest tier in the
-    // family's blood subtree.
-    const subtreeIds = new Set<string>(familyMemberIds)
-    const stack = [...familyMemberIds]
-    let familyMaxTier = 0
-    for (const id of familyMemberIds) {
-      familyMaxTier = Math.max(familyMaxTier, slots.get(id)?.tier ?? 0)
-    }
-    while (stack.length > 0) {
-      const cur = stack.pop()!
-      for (const child of childrenByParent.get(cur) ?? []) {
-        if (subtreeIds.has(child)) continue
-        if (!slots.has(child)) continue
-        subtreeIds.add(child)
-        familyMaxTier = Math.max(familyMaxTier, slots.get(child)!.tier)
-        stack.push(child)
-      }
-    }
-    const familyMinX = Math.min(
-      ...[...subtreeIds].map((id) => slots.get(id)!.x),
-    )
-    const affiliateTier = familyMaxTier + 1
-    const ordered = affiliates
-      .map((aid) => ({ id: aid, label: byId.get(aid)?.label ?? '' }))
-      .sort((a, b) => a.label.localeCompare(b.label))
-    let cursor = familyMinX
-    for (const { id } of ordered) {
-      if (placed.length >= maxSlots) {
-        truncated = true
-        break
-      }
-      slots.set(id, { id, x: cursor, y: topY + affiliateTier * TIER_HEIGHT, tier: affiliateTier })
-      placed.push(id)
-      cursor += X_SPACING
-    }
   }
 
   return {

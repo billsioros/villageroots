@@ -4,6 +4,7 @@ import {
   buildFamilyForest,
   clanMembers,
   filterTreeData,
+  FAMILY_CLUSTER_MARGIN,
   FAMILY_INSET,
   parentChildPath,
   personClans,
@@ -476,5 +477,89 @@ describe('buildFamilyForest', () => {
     const affTier = r.slots.get('affiliate')!.tier
     expect(affTier).toBeGreaterThan(rootTier)
     expect(affTier).toBeGreaterThan(kidTier)
+  })
+
+  it('separates two families without shared members into non-overlapping columns', () => {
+    const k1 = node('f1-root')
+    const k2 = node('f1-spouse')
+    const v1 = node('f2-root')
+    const v2 = node('f2-spouse')
+    const f1 = node('f1', { type: 'family' })
+    const f2 = node('f2', { type: 'family' })
+    const r = tree(
+      [k1, k2, v1, v2, f1, f2],
+      [
+        edge('c1', 'f1-root', 'f1', 'belongs_to_clan'),
+        edge('m1', 'f1-root', 'f1-spouse', 'married_to'),
+        edge('c2', 'f2-root', 'f2', 'belongs_to_clan'),
+        edge('m2', 'f2-root', 'f2-spouse', 'married_to'),
+      ],
+    )
+    // f1 (label "f1") sorts before f2, so its column is placed first.
+    const f1Xs = ['f1-root', 'f1-spouse'].map((id) => r.slots.get(id)!.x)
+    const f2Xs = ['f2-root', 'f2-spouse'].map((id) => r.slots.get(id)!.x)
+    for (const a of f1Xs) {
+      for (const b of f2Xs) {
+        expect(a + FAMILY_CLUSTER_MARGIN).toBeLessThanOrEqual(b)
+      }
+    }
+    // The spouses within each family still sit beside each other.
+    expect(r.slots.get('f1-spouse')!.x - r.slots.get('f1-root')!.x).toBe(X_SPACING)
+    expect(r.slots.get('f2-spouse')!.x - r.slots.get('f2-root')!.x).toBe(X_SPACING)
+  })
+
+  it('keeps a clan-less spouse inside the partner\'s family column', () => {
+    const root = node('root')
+    const spouse = node('spouse')
+    const f = node('f', { type: 'family' })
+    const r = tree(
+      [root, spouse, f],
+      [
+        edge('c', 'root', 'f', 'belongs_to_clan'),
+        edge('m', 'root', 'spouse', 'married_to'),
+      ],
+    )
+    // Spouse has no belongs_to_clan edge but is married to a member of f;
+    // they are placed in the family column, not cast out.
+    expect(r.outcastIds.has('spouse')).toBe(false)
+    expect(r.slots.has('spouse')).toBe(true)
+    // The spouses share a tier and sit within one halo separation.
+    expect(r.slots.get('spouse')!.tier).toBe(r.slots.get('root')!.tier)
+    expect(Math.abs(r.slots.get('spouse')!.x - r.slots.get('root')!.x)).toBeLessThanOrEqual(
+      X_SPACING,
+    )
+  })
+
+  it('places each family in its own column and the unaffiliated chain last', () => {
+    const root = node('root')
+    const spouse = node('spouse')
+    const root2 = node('root2')
+    const spouse2 = node('spouse2')
+    const loneA = node('lone-a')
+    const loneB = node('lone-b')
+    const f1 = node('f1', { type: 'family' })
+    const f2 = node('f2', { type: 'family' })
+    const r = tree(
+      [root, spouse, root2, spouse2, loneA, loneB, f1, f2],
+      [
+        edge('m1', 'root', 'spouse', 'married_to'),
+        edge('c1', 'root', 'f1', 'belongs_to_clan'),
+        edge('m2', 'root2', 'spouse2', 'married_to'),
+        edge('c2', 'root2', 'f2', 'belongs_to_clan'),
+        edge('m3', 'lone-a', 'lone-b', 'married_to'),
+      ],
+    )
+    // Everyone is placed; the clan-less spouses land with their partners.
+    for (const id of ['root', 'spouse', 'root2', 'spouse2', 'lone-a', 'lone-b']) {
+      expect(r.slots.has(id)).toBe(true)
+      expect(r.outcastIds.has(id)).toBe(false)
+    }
+    // The connected couple with no family at all forms the last column:
+    // every family member sits at least FAMILY_CLUSTER_MARGIN clear of it.
+    const familyXs = ['root', 'spouse', 'root2', 'spouse2'].map((id) => r.slots.get(id)!.x)
+    const unaffXs = ['lone-a', 'lone-b'].map((id) => r.slots.get(id)!.x)
+    expect(Math.min(...unaffXs)).toBeGreaterThanOrEqual(
+      Math.max(...familyXs) + FAMILY_CLUSTER_MARGIN,
+    )
   })
 })
