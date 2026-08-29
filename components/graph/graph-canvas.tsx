@@ -25,9 +25,23 @@ const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   ssr: false,
 });
 
+// Shared pill geometry so the click target always matches the painted node.
+function nodePill(node: any, ctx: CanvasRenderingContext2D): { w: number; h: number } {
+  const meta = TYPE_META[(node as GraphNode).type];
+  ctx.font = `${node.subtitle ? 11 : 13}px Inter, sans-serif`;
+  const tw = ctx.measureText(node.label).width;
+  const padX = 14;
+  const markR = 13;
+  return {
+    w: tw + padX * 2 + markR * 2 + 15,
+    h: meta.pill === "family" ? 26 : 40,
+  };
+}
+
 export function GraphCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<any>(null);
+  const flyAnimRef = useRef<number | null>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [graphReady, setGraphReady] = useState(false);
 
@@ -325,6 +339,43 @@ export function GraphCanvas() {
     return () => cancelAnimationFrame(raf);
   }, [setZoomPct, size.w, setViewportBounds]);
 
+  // --- smooth camera glide to a node ---
+  const flyToNode = (node: any) => {
+    const fg = graphRef.current;
+    if (!fg) return;
+    const c0 = fg.centerAt();
+    const k0 = fg.zoom();
+    const k1 = Math.max(k0, 1.4);
+    const c1 = { x: node.x ?? 0, y: node.y ?? 0 };
+    if (k0 === k1 && c0.x === c1.x && c0.y === c1.y) return;
+    if (flyAnimRef.current !== null) cancelAnimationFrame(flyAnimRef.current);
+    const duration = 850;
+    const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+    const start = performance.now();
+    const step = (now: number) => {
+      const p = Math.min(1, (now - start) / duration);
+      const t = ease(p);
+      const k = k0 + (k1 - k0) * t;
+      const cx = c0.x + (c1.x - c0.x) * t;
+      const cy = c0.y + (c1.y - c0.y) * t;
+      fg.centerAt(cx, cy, 0);
+      fg.zoom(k, 0);
+      if (p < 1) {
+        flyAnimRef.current = requestAnimationFrame(step);
+      } else {
+        flyAnimRef.current = null;
+      }
+    };
+    flyAnimRef.current = requestAnimationFrame(step);
+  };
+
+  useEffect(
+    () => () => {
+      if (flyAnimRef.current !== null) cancelAnimationFrame(flyAnimRef.current);
+    },
+    [],
+  );
+
   // --- Tree View: glide every node into its slot via fx/fy, then pin ---
   useEffect(() => {
     const fg = graphRef.current;
@@ -414,12 +465,8 @@ export function GraphCanvas() {
   const paintNode = (node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const meta = TYPE_META[(node as GraphNode).type];
     const text = node.label;
-    ctx.font = `${node.subtitle ? 11 : 13}px Inter, sans-serif`;
-    const tw = ctx.measureText(text).width;
-    const padX = 14;
     const markR = 13;
-    const pillH = meta.pill === "family" ? 26 : 40;
-    const pillW = tw + padX * 2 + markR * 2 + 15;
+    const { w: pillW, h: pillH } = nodePill(node, ctx);
     const x = node.x ?? 0;
     const y = node.y ?? 0;
     const lit = litIds.includes(node.id);
@@ -436,7 +483,7 @@ export function GraphCanvas() {
     if (lit || selected) {
       ctx.beginPath();
       ctx.arc(x, y, pillW / 2 + (lit ? 6 : 3), 0, 2 * Math.PI);
-      ctx.strokeStyle = tokenColor("primary");
+      ctx.strokeStyle = selected ? tokenColor("ring") : tokenColor("primary");
       ctx.lineWidth = (lit ? 2.5 : 2) / globalScale;
       ctx.stroke();
     }
@@ -453,11 +500,11 @@ export function GraphCanvas() {
       ctx.setLineDash([6 / globalScale, 4 / globalScale]);
     } else if (isClan) {
       ctx.fillStyle = clan as string;
-      ctx.strokeStyle = selected || lit ? tokenColor("primary") : (clan as string);
+      ctx.strokeStyle = selected ? tokenColor("ring") : lit ? tokenColor("primary") : (clan as string);
       ctx.setLineDash([]);
     } else {
       ctx.fillStyle = tokenColor("surface-warm");
-      ctx.strokeStyle = selected || lit ? tokenColor("primary") : tokenColor("border");
+      ctx.strokeStyle = selected ? tokenColor("ring") : lit ? tokenColor("primary") : tokenColor("border");
       ctx.setLineDash([]);
     }
     ctx.lineWidth = (selected || lit ? 1.5 : 1) / globalScale;
@@ -590,10 +637,13 @@ export function GraphCanvas() {
           autoPauseRedraw={false}
           onRenderFramePre={activeView === "TREE" ? paintClanHalos : undefined}
           nodeCanvasObject={(node: any, ctx, globalScale) => paintNode(node, ctx, globalScale)}
-          nodePointerAreaPaint={(node: any, color: string, ctx: CanvasRenderingContext2D) => {
+          nodePointerAreaPaint={(node: any, color: string, ctx: CanvasRenderingContext2D, globalScale: number) => {
+            const { w, h } = nodePill(node, ctx);
+            const x = node.x ?? 0;
+            const y = node.y ?? 0;
             ctx.fillStyle = color;
             ctx.beginPath();
-            ctx.arc(node.x ?? 0, node.y ?? 0, 30, 0, 2 * Math.PI);
+            ctx.roundRect(x - w / 2, y - h / 2, w, h, 16 / globalScale);
             ctx.fill();
           }}
           linkColor={(l: any) => {
@@ -613,11 +663,7 @@ export function GraphCanvas() {
           onNodeClick={(node: any) => {
             selectNode(node.id);
             setCanvasCenter({ x: node.x ?? 0, y: node.y ?? 0 });
-            const fg: any = graphRef.current;
-            if (fg && typeof fg.centerAt === "function" && typeof fg.zoom === "function") {
-              fg.centerAt(node.x, node.y, 500);
-              fg.zoom(Math.max(fg.zoom(), 1.4), 500);
-            }
+            flyToNode(node);
             if (activeView === "TREE" && node.type === "person")
               setFocalPersonId(node.id);
           }}
