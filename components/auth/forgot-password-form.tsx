@@ -24,7 +24,8 @@ export function ForgotPasswordForm() {
     }
     setIsLoading(true);
     const supabase = createClient();
-    const { error: sendError } = await supabase.auth.resetPasswordForEmail(email, {
+    const trimmed = email.trim();
+    const { error: sendError } = await supabase.auth.resetPasswordForEmail(trimmed, {
       redirectTo: `${window.location.origin}/auth/update-password`,
     });
     setIsLoading(false);
@@ -63,9 +64,9 @@ export function ForgotPasswordForm() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1.5">
         <h1 className="text-2xl font-semibold tracking-tight">Forgot your password?</h1>
-        <p className="text-sm text-muted-foreground">
-          Enter your email and we'll send you a link to reset it.
-        </p>
+<p className="text-sm text-muted-foreground">
+            Enter your email and we&apos;ll send you a link to reset it.
+          </p>
       </div>
 
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
