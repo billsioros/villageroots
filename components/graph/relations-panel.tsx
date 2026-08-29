@@ -114,6 +114,7 @@ export function RelationsPanel({ node }: { node: GraphNode }) {
                 <option value="born_in">born in</option>
                 <option value="married_to">married to</option>
                 <option value="child_of">child of</option>
+                <option value="parent_of">parent of</option>
                 <option value="lived_at">lived at</option>
                 <option value="built_by">built by</option>
                 <option value="owns_land_at">owns land at</option>

@@ -18,6 +18,7 @@ export const VERB_KIND: Record<Verb, EdgeKind> = {
   child_of: "social",
   married_to: "social",
   sibling_of: "social",
+  parent_of: "social",
   belongs_to_clan: "social",
   owns_land_at: "geo",
   lived_at: "geo",
@@ -97,4 +98,62 @@ export function countByType(nodes: GraphNode[]): Record<NodeType, number> {
 
 export function uid(): string {
   return Math.random().toString(36).slice(2, 10);
+}
+
+const CLAN_PALETTE = [
+  "#e15a72", // rose (Katsaris red)
+  "#d98e32", // amber
+  "#3b82c4", // blue
+  "#2f9e62", // green
+  "#7a6bc4", // violet
+  "#c4547f", // magenta
+  "#4f8f8f", // teal
+  "#b06ab3", // purple
+];
+
+/** Deterministic per-clan badge color derived from the family id. */
+export function clanColor(id: string): string {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+  return CLAN_PALETTE[Math.abs(h) % CLAN_PALETTE.length];
+}
+
+/** Converts a `#rrggbb` hex color to an `rgba()` string with the given alpha. */
+export function hexToRgba(hex: string, alpha: number): string {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+export type VerbDirection =
+  | { symmetric: true }
+  | { symmetric: false; reading: string }
+
+/**
+ * Canonical source→target reading of every edge verb. `symmetric` verbs have
+ * no meaningful direction; directional verbs document their reading so data
+ * (seed + OCR) can be conformed to it.
+ */
+export const VERB_DIRECTION: Record<Verb, VerbDirection> = {
+  related_to: { symmetric: true },
+  born_in: { symmetric: false, reading: 'a person was born at/to a place' },
+  child_of: { symmetric: false, reading: 'the source person is the child of the target' },
+  parent_of: { symmetric: false, reading: 'the source person is a parent of the target' },
+  married_to: { symmetric: true },
+  sibling_of: { symmetric: true },
+  belongs_to_clan: { symmetric: false, reading: 'a person belongs to a family/clan' },
+  owns_land_at: { symmetric: false, reading: 'a person owns land at a place' },
+  lived_at: { symmetric: false, reading: 'a person lived at a place' },
+  farmed_at: { symmetric: false, reading: 'a person farmed at a place' },
+  baptized_at: { symmetric: false, reading: 'a person was baptized at a place' },
+  buried_at: { symmetric: false, reading: 'a person was buried at a place' },
+  ran_by: { symmetric: false, reading: 'an institution is run by a person' },
+  built_by: { symmetric: false, reading: 'an institution was built by a person' },
+  participated_in: { symmetric: false, reading: 'a person participated in an event' },
+  gathered_at: { symmetric: false, reading: 'a person gathered at a place or event' },
+  attended: { symmetric: false, reading: 'a person attended an event' },
+  fought_in: { symmetric: false, reading: 'a person fought in an event' },
+  migrated_from: { symmetric: false, reading: 'a person migrated from a place' },
 }

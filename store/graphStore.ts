@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { uid, countByType as countByTypeHelper, TYPE_META } from "@/lib/graph/helpers";
+import { pickFocalPerson } from "@/lib/graph/tree";
 import { toNodeRow, toEdgeRow } from "@/lib/graph/mappers";
 import { queryClient } from "@/lib/graph/query-client";
 import { invalidationKeys } from "@/lib/graph/queries";
@@ -58,6 +59,8 @@ export interface GraphStore {
   ocrOpen: boolean;
   aboutOpen: boolean;
   reviewQueueOpen: boolean;
+  activeView: "GRAPH" | "TREE";
+  focalPersonId: string | null;
   toast: Toast | null;
   zoomPct: number;
   zoomIntent: ZoomIntent;
@@ -94,6 +97,8 @@ export interface GraphStore {
   setOcrOpen: (open: boolean) => void;
   setAboutOpen: (open: boolean) => void;
   setReviewQueueOpen: (open: boolean) => void;
+  setActiveView: (view: "GRAPH" | "TREE") => void;
+  setFocalPersonId: (id: string | null) => void;
   dismissHint: () => void;
   pushToast: (t: Toast) => void;
   clearToast: () => void;
@@ -132,7 +137,7 @@ export interface GraphStore {
 
 const MILL_PATH = {
   nodeIds: ["l-mill", "p-nikolas", "p-yiannis"],
-  edgeIds: ["e-mill-nikolas", "e-nik-yiannis"],
+  edgeIds: ["e-mill-nikolas", "e-yiannis-nik"],
 };
 
 const CHURCH_PATH = {
@@ -307,6 +312,8 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
   ocrOpen: false,
   aboutOpen: false,
   reviewQueueOpen: false,
+  activeView: "GRAPH",
+  focalPersonId: null,
   toast: null,
   zoomPct: 100,
   zoomIntent: null,
@@ -363,6 +370,22 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
   setOcrOpen: (open) => set({ ocrOpen: open }),
   setAboutOpen: (open) => set({ aboutOpen: open }),
   setReviewQueueOpen: (open) => set({ reviewQueueOpen: open }),
+  setFocalPersonId: (id) => set({ focalPersonId: id }),
+  setActiveView: (view) => {
+    const { activeView, focalPersonId, selectedId, nodesMap, setFocalPersonId } = get();
+    if (view === activeView) return;
+    if (view === "GRAPH") {
+      set({ activeView: "GRAPH" });
+      return;
+    }
+    const persons = Object.values(nodesMap).filter((n) => n.type === "person");
+    if (persons.length === 0) return;
+    const selected = selectedId && persons.some((p) => p.id === selectedId) ? selectedId : null;
+    const focal = focalPersonId ?? selected ?? pickFocalPerson(persons)?.id ?? null;
+    if (!focal) return;
+    setFocalPersonId(focal);
+    set({ activeView: "TREE" });
+  },
   dismissHint: () => set({ hint: false }),
   pushToast: (t) => {
     if (toastTimer) clearTimeout(toastTimer);

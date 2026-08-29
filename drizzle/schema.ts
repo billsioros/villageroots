@@ -41,6 +41,7 @@ export const edgeVerbEnum = pgEnum("edge_verb", [
   "attended",
   "fought_in",
   "migrated_from",
+  "parent_of",
 ]);
 
 export const statusEnum = pgEnum("status", ["pending", "approved", "rejected"]);

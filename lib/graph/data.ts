@@ -53,8 +53,9 @@ export const NODES: GraphNode[] = [
 
 export const EDGES: GraphEdge[] = [
   E("e-nik-maria", "p-nikolas", "p-maria", "married_to"),
-  E("e-nik-yiannis", "p-nikolas", "p-yiannis", "child_of"),
-  E("e-nik-eleni", "p-nikolas", "p-eleni", "child_of"),
+  E("e-yiannis-nik", "p-yiannis", "p-nikolas", "child_of"),
+  E("e-eleni-nik", "p-eleni", "p-nikolas", "child_of"),
+  E("e-nik-pa-yiannis", "p-nikolas", "p-yiannis", "parent_of"),
   E("e-nik-kats", "p-nikolas", "f-katsaris", "belongs_to_clan"),
   E("e-yiannis-kats", "p-yiannis", "f-katsaris", "belongs_to_clan"),
   E("e-eleni-kats", "p-eleni", "f-katsaris", "belongs_to_clan"),
