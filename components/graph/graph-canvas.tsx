@@ -340,24 +340,39 @@ export function GraphCanvas() {
   }, [setZoomPct, size.w, setViewportBounds]);
 
   // --- smooth camera glide to a node ---
+  // Pan and zoom are locked to one shared motion: the clicked node rides a
+  // straight screen-space line to the viewport centre while the scale eases in.
+  // Deriving the translation from the scaled node position each frame means the
+  // camera always ends exactly on the node, even if the simulation nudges it.
   const flyToNode = (node: any) => {
     const fg = graphRef.current;
     if (!fg) return;
-    const c0 = fg.centerAt();
     const k0 = fg.zoom();
+    const c0 = fg.centerAt();
     const k1 = Math.max(k0, 1.4);
-    const c1 = { x: node.x ?? 0, y: node.y ?? 0 };
-    if (k0 === k1 && c0.x === c1.x && c0.y === c1.y) return;
+    const nx = node.x ?? 0;
+    const ny = node.y ?? 0;
+    if (k0 === k1 && Math.abs(c0.x - nx) < 0.5 && Math.abs(c0.y - ny) < 0.5) return;
+    const w = size.w;
+    const h = size.h;
+    const tx0 = w / 2 - c0.x * k0;
+    const ty0 = h / 2 - c0.y * k0;
+    const nx0 = nx * k0 + tx0; // node's current screen position
+    const ny0 = ny * k0 + ty0;
     if (flyAnimRef.current !== null) cancelAnimationFrame(flyAnimRef.current);
     const duration = 850;
     const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
     const start = performance.now();
     const step = (now: number) => {
       const p = Math.min(1, (now - start) / duration);
-      const t = ease(p);
-      const k = k0 + (k1 - k0) * t;
-      const cx = c0.x + (c1.x - c0.x) * t;
-      const cy = c0.y + (c1.y - c0.y) * t;
+      const u = ease(p);
+      const k = k0 + (k1 - k0) * u;
+      const sx = nx0 + (w / 2 - nx0) * u; // node screen x rides straight to center
+      const sy = ny0 + (h / 2 - ny0) * u;
+      const tx = sx - (node.x ?? 0) * k;
+      const ty = sy - (node.y ?? 0) * k;
+      const cx = (w / 2 - tx) / k;
+      const cy = (h / 2 - ty) / k;
       fg.centerAt(cx, cy, 0);
       fg.zoom(k, 0);
       if (p < 1) {
@@ -483,7 +498,7 @@ export function GraphCanvas() {
     if (lit || selected) {
       ctx.beginPath();
       ctx.arc(x, y, pillW / 2 + (lit ? 6 : 3), 0, 2 * Math.PI);
-      ctx.strokeStyle = selected ? tokenColor("ring") : tokenColor("primary");
+      ctx.strokeStyle = selected ? tokenColor("meta") : tokenColor("primary");
       ctx.lineWidth = (lit ? 2.5 : 2) / globalScale;
       ctx.stroke();
     }
@@ -500,11 +515,11 @@ export function GraphCanvas() {
       ctx.setLineDash([6 / globalScale, 4 / globalScale]);
     } else if (isClan) {
       ctx.fillStyle = clan as string;
-      ctx.strokeStyle = selected ? tokenColor("ring") : lit ? tokenColor("primary") : (clan as string);
+      ctx.strokeStyle = selected ? tokenColor("meta") : lit ? tokenColor("primary") : (clan as string);
       ctx.setLineDash([]);
     } else {
       ctx.fillStyle = tokenColor("surface-warm");
-      ctx.strokeStyle = selected ? tokenColor("ring") : lit ? tokenColor("primary") : tokenColor("border");
+      ctx.strokeStyle = selected ? tokenColor("meta") : lit ? tokenColor("primary") : tokenColor("border");
       ctx.setLineDash([]);
     }
     ctx.lineWidth = (selected || lit ? 1.5 : 1) / globalScale;
