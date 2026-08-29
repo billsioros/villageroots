@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/billsioros/villageroots/compare/v1.5.0...v1.6.0) (2026-08-29)
+
+
+### Features
+
+* PTDN-37 Ancestral Tree View & Focal Node Navigation ([#23](https://github.com/billsioros/villageroots/issues/23)) ([8778c1c](https://github.com/billsioros/villageroots/commit/8778c1c0225472f270e3df9dcef588ddd4580a4d))
+
 # [1.5.0](https://github.com/billsioros/villageroots/compare/v1.4.0...v1.5.0) (2026-08-25)
 
 
