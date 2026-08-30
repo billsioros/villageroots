@@ -35,9 +35,14 @@ export function UpdatePasswordForm() {
       setFormError("We couldn't update your password — please try again.");
       return;
     }
-    await supabase.auth.signOut();
-    setIsLoading(false);
-    setDone(true);
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // best-effort: the password was already updated
+    } finally {
+      setIsLoading(false);
+      setDone(true);
+    }
   };
 
   if (done) {
