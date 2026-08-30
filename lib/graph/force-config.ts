@@ -20,12 +20,12 @@ export interface ForceConfig {
 }
 
 export const DEFAULT_FORCE_CONFIG: ForceConfig = {
-  collisionBaseRadius: 100,
+  collisionBaseRadius: 50,
   collisionDegreeScale: 12,
   chargeStrength: -800,
   chargeDistanceMin: 30,
   chargeDistanceMax: 600,
-  linkDistance: 220,
+  linkDistance: 80,
   velocityDecay: 0.4,
   alphaDecay: 0.02,
   cooldownTicks: 200,
