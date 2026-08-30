@@ -1,21 +1,23 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { animate } from "animejs";
 
-const NODE_COLOR = "0 0% 100%";
+const NODE_COLOR = "0 0% 14%";
 const ACCENT_COLOR = "351 100% 61%";
-const EDGE_COLOR = "0 0% 100%";
-const LINK_DIST = 190;
-const DRIFT = 16;
+const EDGE_COLOR = "0 0% 14%";
+const LINK_DIST = 250;
 
 interface Node {
   x0: number;
   y0: number;
   x: number;
   y: number;
+  ox: number;
+  oy: number;
   r: number;
   phase: number;
+  amp: number;
+  frq: number;
   accent: boolean;
 }
 
@@ -46,6 +48,24 @@ export function AuthBackground() {
     let height = 0;
     let nodes: Node[] = [];
 
+    const buildNode = (atLeft: boolean): Node => {
+      const y0 = height * (0.5 + (rand() - 0.5) * 0.66);
+      const r = 1.5 + rand() * 2.4;
+      return {
+        x0: atLeft ? rand() * 3 : width - rand() * 3,
+        y0,
+        x: atLeft ? 0 : width,
+        y: y0,
+        ox: 0,
+        oy: 0,
+        r,
+        phase: rand() * Math.PI * 2,
+        amp: 2 + rand() * 4,
+        frq: 0.8 + rand() * 1.6,
+        accent: false,
+      };
+    };
+
     const place = () => {
       const dpr = window.devicePixelRatio || 1;
       width = canvas.clientWidth;
@@ -54,23 +74,55 @@ export function AuthBackground() {
       canvas.height = Math.max(1, Math.round(height * dpr));
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      const count = Math.min(36, Math.max(20, Math.round((width * height) / 26000)));
-      nodes = Array.from({ length: count }, (_, i) => ({
-        x0: rand() * width,
-        y0: rand() * height,
-        x: rand() * width,
-        y: rand() * height,
-        r: 1.4 + rand() * 2.2,
-        phase: rand() * Math.PI * 2,
-        accent: i % 7 === 3,
-      }));
+      const centerBand = (spread = 0.66) =>
+        height * (0.5 + (rand() - 0.5) * spread);
+      const count = Math.min(64, Math.max(34, Math.round((width * height) / 15000)));
+      nodes = Array.from({ length: count }, (_, i) => {
+        const r = 1.5 + rand() * 2.4;
+        const accent = i % 7 === 3;
+        return {
+          x0: rand() * width,
+          y0: centerBand(),
+          x: rand() * width,
+          y: centerBand(),
+          ox: 0,
+          oy: 0,
+          r: accent ? r * 2.2 : r,
+          phase: rand() * Math.PI * 2,
+          amp: 4 + rand() * 6,
+          frq: 0.8 + rand() * 1.6,
+          accent,
+        };
+      });
+      for (let k = 0; k < 12; k++) {
+        nodes.push(buildNode(k % 2 === 0));
+      }
     };
 
-    const draw = (dx: number, dy: number, pulse: number) => {
+    const draw = (t: number, pulse: number) => {
       ctx.clearRect(0, 0, width, height);
+
+      const glow = ctx.createRadialGradient(
+        width / 2,
+        height / 2,
+        0,
+        width / 2,
+        height / 2,
+        Math.min(width, height) * 0.5,
+      );
+      glow.addColorStop(0, `hsla(${ACCENT_COLOR} / 0.09)`);
+      glow.addColorStop(1, "hsla(0 0% 0% / 0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, width, height);
+
+      const T = t * 0.001;
       for (const n of nodes) {
-        n.x = n.x0 + Math.sin(dx * 0.5 + n.phase) * DRIFT;
-        n.y = n.y0 + Math.cos(dy * 0.5 + n.phase) * DRIFT;
+        const tx = Math.sin(T * n.frq * 0.12 + n.phase) * n.amp * 1.6;
+        const ty = Math.cos(T * n.frq * 0.08 + n.phase * 1.7) * n.amp * 1.3;
+        n.ox += (tx - n.ox) * 0.02;
+        n.oy += (ty - n.oy) * 0.02;
+        n.x = n.x0 + n.ox;
+        n.y = n.y0 + n.oy;
       }
       for (let i = 0; i < nodes.length; i++) {
         for (let j = i + 1; j < nodes.length; j++) {
@@ -78,7 +130,7 @@ export function AuthBackground() {
           const b = nodes[j];
           const d = Math.hypot(a.x - b.x, a.y - b.y);
           if (d > LINK_DIST) continue;
-          const alpha = (1 - d / LINK_DIST) * 0.22;
+          const alpha = (1 - d / LINK_DIST) * 0.34;
           ctx.strokeStyle = `hsla(${EDGE_COLOR} / ${alpha.toFixed(3)})`;
           ctx.lineWidth = 1;
           ctx.beginPath();
@@ -88,8 +140,16 @@ export function AuthBackground() {
         }
       }
       for (const n of nodes) {
+        if (n.accent) {
+          ctx.fillStyle = `hsla(${ACCENT_COLOR} / 0.13)`;
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, (n.r + 2) * 2.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
         ctx.fillStyle = `hsl(${n.accent ? ACCENT_COLOR : NODE_COLOR})`;
-        ctx.globalAlpha = n.accent ? 0.5 : 0.18 + pulse * 0.14;
+        ctx.globalAlpha = n.accent
+          ? 0.62 + pulse * 0.12
+          : 0.3 + pulse * 0.16;
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r + pulse * (n.accent ? 1.4 : 0.9), 0, Math.PI * 2);
         ctx.fill();
@@ -98,35 +158,31 @@ export function AuthBackground() {
     };
 
     place();
-    draw(0, 0, 0);
+    draw(0, 0.5);
 
     if (reduced) {
       const onResize = () => {
         place();
-        draw(0, 0, 0.5);
+        draw(0, 0.5);
       };
       window.addEventListener("resize", onResize);
       return () => window.removeEventListener("resize", onResize);
     }
 
-    const state = { dx: 1, dy: 1, pulse: 0 };
-    const anim = animate(state, {
-      dx: { to: 3.2, duration: 9000 },
-      dy: { to: 2.6, duration: 9000 },
-      pulse: { to: 1, duration: 5200 },
-      ease: "inOutSine",
-      loop: true,
-      alternate: true,
-      onUpdate: () => draw(state.dx, state.dy, state.pulse),
-    });
+    let raf = 0;
+    const loop = (now: number) => {
+      draw(now, (Math.sin(now * 0.0011) + 1) / 2);
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
 
     const onResize = () => {
       place();
-      draw(state.dx, state.dy, state.pulse);
+      draw(performance.now(), (Math.sin(performance.now() * 0.0011) + 1) / 2);
     };
     window.addEventListener("resize", onResize);
     return () => {
-      anim.cancel();
+      cancelAnimationFrame(raf);
       window.removeEventListener("resize", onResize);
     };
   }, []);
@@ -135,7 +191,7 @@ export function AuthBackground() {
     <canvas
       ref={canvasRef}
       aria-hidden
-      className="pointer-events-none absolute inset-0 h-full w-full"
+      className="pointer-events-none absolute inset-0 h-full w-full blur-[1.5px]"
     />
   );
 }
