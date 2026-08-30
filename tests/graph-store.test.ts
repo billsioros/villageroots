@@ -1,34 +1,21 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { useGraphStore } from "@/store/graphStore";
 
-describe("newNodeStartStep", () => {
+describe("contribution modal store state", () => {
   beforeEach(() => {
-    useGraphStore.setState({ newNodeStartStep: "roster" });
+    useGraphStore.setState({ newNodeOpen: false });
   });
 
-  it("defaults to the roster step", () => {
-    expect(useGraphStore.getState().newNodeStartStep).toBe("roster");
-  });
-
-  it("can be pointed at the weave step and back", () => {
-    useGraphStore.getState().setNewNodeStartStep("weave");
-    expect(useGraphStore.getState().newNodeStartStep).toBe("weave");
-    useGraphStore.getState().setNewNodeStartStep("roster");
-    expect(useGraphStore.getState().newNodeStartStep).toBe("roster");
-  });
-
-  it("resets the start step when the panel closes via setNewNodeOpen(false)", () => {
-    useGraphStore.getState().setNewNodeStartStep("weave");
+  it("opens and closes the contribution modal", () => {
     useGraphStore.getState().setNewNodeOpen(true);
+    expect(useGraphStore.getState().newNodeOpen).toBe(true);
     useGraphStore.getState().setNewNodeOpen(false);
-    expect(useGraphStore.getState().newNodeStartStep).toBe("roster");
     expect(useGraphStore.getState().newNodeOpen).toBe(false);
   });
 
-  it("leaves the start step untouched when opening", () => {
-    useGraphStore.getState().setNewNodeStartStep("weave");
-    useGraphStore.getState().setNewNodeOpen(true);
-    expect(useGraphStore.getState().newNodeStartStep).toBe("weave");
-    expect(useGraphStore.getState().newNodeOpen).toBe(true);
+  it("no longer exposes the removed weave start step", () => {
+    const s = useGraphStore.getState() as unknown as Record<string, unknown>;
+    expect(s.newNodeStartStep).toBeUndefined();
+    expect(s.setNewNodeStartStep).toBeUndefined();
   });
 });
