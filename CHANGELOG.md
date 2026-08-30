@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/billsioros/villageroots/compare/v1.6.0...v1.7.0) (2026-08-30)
+
+
+### Features
+
+* PTDN-38 invite-only auth flow ([#24](https://github.com/billsioros/villageroots/issues/24)) ([48fbd34](https://github.com/billsioros/villageroots/commit/48fbd34c7097aa1b8310b45b5c7533ffda07d505))
+
 # [1.6.0](https://github.com/billsioros/villageroots/compare/v1.5.0...v1.6.0) (2026-08-29)
 
 
