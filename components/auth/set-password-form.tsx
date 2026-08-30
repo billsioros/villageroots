@@ -64,11 +64,14 @@ export function SetPasswordForm() {
 
     setIsLoading(true);
     const supabase = createClient();
-    const { error } = await supabase.auth.updateUser({ password });
-    setIsLoading(false);
-    if (error) {
-      setFormError("We couldn't set your password — please try again.");
-      return;
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) {
+        setFormError("We couldn't set your password — please try again.");
+        return;
+      }
+    } finally {
+      setIsLoading(false);
     }
     router.push("/protected");
   };
