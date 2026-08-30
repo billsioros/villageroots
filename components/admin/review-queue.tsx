@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { InviteForm } from "@/components/auth/invite-form";
 import { ModerationHistory } from "@/components/admin/moderation-history";
 import { invalidationKeys } from "@/lib/graph/queries";
 import { useGraphStore } from "@/store/graphStore";
@@ -168,6 +169,7 @@ export function AdminReviewQueue() {
   return (
     <ModalShell title="Review Queue" onClose={() => setOpen(false)} className="w-[820px] max-w-[95vw]">
       <div className="flex flex-col gap-5 max-h-[70vh] overflow-hidden">
+      <InviteForm />
       <div className="flex gap-3">
         {TABS.map((t) => (
           <Button
