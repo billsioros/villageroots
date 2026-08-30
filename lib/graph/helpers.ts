@@ -157,3 +157,9 @@ export const VERB_DIRECTION: Record<Verb, VerbDirection> = {
   fought_in: { symmetric: false, reading: 'a person fought in an event' },
   migrated_from: { symmetric: false, reading: 'a person migrated from a place' },
 }
+
+/** Trims an edited node label; blank edits fall back to the original label. */
+export function normalizeEditedLabel(original: string, edited: string): string {
+  const trimmed = edited.trim();
+  return trimmed.length > 0 ? trimmed : original;
+}
