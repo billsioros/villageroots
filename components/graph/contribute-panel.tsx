@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link2, Plus, Send, Trash2 } from "lucide-react";
 import { useGraphStore } from "@/store/graphStore";
-import { TYPE_META, VERB_KIND, VERBS, uid } from "@/lib/graph/helpers";
+import { TYPE_META, VERB_KIND, VERBS, normalizeEditedLabel, uid } from "@/lib/graph/helpers";
 import { type NodeType, type Verb } from "@/lib/graph/types";
 import { submissionPayloadFromDrafts } from "@/lib/graph/submissions";
 import { queryClient } from "@/lib/graph/query-client";
@@ -50,6 +50,7 @@ export default function ContributePanel() {
   const removeDraftEdge = useGraphStore((s) => s.removeDraftEdge);
   const addDraftNode = useGraphStore((s) => s.addDraftNode);
   const removeDraftNode = useGraphStore((s) => s.removeDraftNode);
+  const updateDraftNode = useGraphStore((s) => s.updateDraftNode);
   const addDraftEdge = useGraphStore((s) => s.addDraftEdge);
   const clearDrafts = useGraphStore((s) => s.clearDrafts);
   const canvasCenter = useGraphStore((s) => s.canvasCenter);
@@ -64,6 +65,9 @@ export default function ContributePanel() {
     Record<string, { verb: Verb; target: string }[]>
   >({});
   const [mappingNodeId, setMappingNodeId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const editRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     let active = true;
@@ -92,6 +96,8 @@ export default function ContributePanel() {
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen);
     if (!nextOpen) {
+      setEditingId(null);
+      setEditValue("");
       setConnections({});
       setMappingNodeId(null);
     }
@@ -100,6 +106,34 @@ export default function ContributePanel() {
   useEffect(() => {
     if (mappingNodeId && !draftNodes.some((d) => d.id === mappingNodeId)) setMappingNodeId(null);
   }, [draftNodes, mappingNodeId]);
+
+  useEffect(() => {
+    if (editingId) {
+      editRef.current?.focus();
+      editRef.current?.select();
+    }
+  }, [editingId]);
+
+  const startEditing = (id: string, label: string) => {
+    setEditingId(id);
+    setEditValue(label);
+  };
+
+  const commitEdit = () => {
+    if (!editingId) return;
+    const prev = draftNodes.find((d) => d.id === editingId);
+    if (prev) {
+      const next = normalizeEditedLabel(prev.label, editValue);
+      if (next !== prev.label) updateDraftNode(editingId, { label: next });
+    }
+    setEditingId(null);
+    setEditValue("");
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditValue("");
+  };
 
   const addNode = () => {
     const trimmed = name.trim();
@@ -249,7 +283,29 @@ export default function ContributePanel() {
                       >
                         {TYPE_META[d.type].glyph}
                       </span>
-                      <span className="flex-1 truncate">{d.label}</span>
+                      {editingId === d.id ? (
+                          <Input
+                            ref={editRef}
+                            value={editValue}
+                            className="h-7 min-w-0 flex-1 px-2 text-sm"
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") commitEdit();
+                              else if (e.key === "Escape") cancelEdit();
+                            }}
+                            onBlur={commitEdit}
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => startEditing(d.id, d.label)}
+                            className="min-w-0 flex-1 truncate text-left"
+                            title="Click to rename"
+                            aria-label={`Rename ${d.label}`}
+                          >
+                            {d.label}
+                          </button>
+                        )}
                       <button
                         onClick={() => setMappingNodeId(d.id)}
                         className="text-muted-foreground hover:text-foreground"
