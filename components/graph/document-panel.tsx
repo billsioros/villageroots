@@ -13,30 +13,6 @@ export function DocumentPanel({ node }: { node: GraphNode }) {
     editRef.current?.focus();
   };
 
-  const facts =
-    node.type === "person"
-      ? [
-          ["Born", "1924"],
-          ["Baptized", "Agios Ioannis, Potidaneia"],
-          ["Occupation", "Weaver"],
-        ]
-      : node.type === "family"
-      ? [
-          ["Root", "Nikolas Katsaris"],
-          ["Home", "Kalyvia, Potidaneia"],
-        ]
-      : node.type === "event"
-      ? [
-          ["Year", "1944"],
-          ["Where", "Village square"],
-        ]
-      : node.type === "path"
-      ? [
-          ["From", "Kalyvia"],
-          ["To", "Lakka"],
-        ]
-      : [["Type", "Landmark / Toponym"]];
-
   return (
     <div className="flex flex-col">
       <div className="h-44 shrink-0 border-b bg-gradient-to-br from-[#f3e9dd] to-[#e3d3bf] relative">
@@ -59,15 +35,6 @@ export function DocumentPanel({ node }: { node: GraphNode }) {
             {TYPE_META[node.type].label}
           </Badge>
         </div>
-
-        <dl className="mt-4 divide-y rounded-xl border">
-          {facts.map(([k, v]) => (
-            <div key={k} className="flex justify-between px-3.5 py-2.5 text-[13px]">
-              <dt className="text-muted-foreground">{k}</dt>
-              <dd className="font-medium">{v}</dd>
-            </div>
-          ))}
-        </dl>
 
         <div className="mt-4 flex items-center gap-1 rounded-full border bg-surface-warm px-2 py-1">
           <button onClick={() => applyMd("bold")} className="grid h-7 w-8 place-items-center rounded-full text-[13px] font-bold hover:bg-white" title="Bold">
