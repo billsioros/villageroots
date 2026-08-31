@@ -1,3 +1,10 @@
+# [1.9.0](https://github.com/billsioros/villageroots/compare/v1.8.0...v1.9.0) (2026-08-31)
+
+
+### Features
+
+* PTDN-29 move node editor from sidepanel to dialog ([#26](https://github.com/billsioros/villageroots/issues/26)) ([2e13bed](https://github.com/billsioros/villageroots/commit/2e13bed7e649afd7dfeb5b63228dc86cc0669eae))
+
 # [1.8.0](https://github.com/billsioros/villageroots/compare/v1.7.0...v1.8.0) (2026-08-31)
 
 
