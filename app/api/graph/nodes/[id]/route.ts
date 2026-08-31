@@ -31,7 +31,7 @@ export async function PATCH(
   if (!isValidDoc(doc)) {
     return NextResponse.json({ error: "document_content must be an object" }, { status: 400 });
   }
-  if (JSON.stringify(doc).length > MAX_DOC_BYTES) {
+  if (Buffer.byteLength(JSON.stringify(doc), "utf8") > MAX_DOC_BYTES) {
     return NextResponse.json({ error: "document_content too large" }, { status: 400 });
   }
 

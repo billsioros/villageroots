@@ -8,7 +8,6 @@ const mocks = vi.hoisted(() => ({
   select: vi.fn(),
   update: vi.fn(),
 }));
-
 vi.mock("@/lib/graph/session", () => ({ sessionUid: mocks.sessionUid }));
 vi.mock("@/lib/graph/admin", () => ({ isAdminUid: mocks.isAdminUid }));
 vi.mock("@/lib/graph/db", () => ({ db: { select: mocks.select, update: mocks.update } }));
@@ -20,9 +19,13 @@ function mockSelectReturn(row: unknown) {
     }),
   });
 }
+let lastSetArgs: unknown;
 function mockUpdateReturn(rows: unknown[]) {
   mocks.update.mockReturnValue({
-    set: () => ({ where: () => ({ returning: () => rows }) }),
+    set: (setArgs: unknown) => {
+      lastSetArgs = setArgs;
+      return { where: () => ({ returning: () => rows }) };
+    },
   });
 }
 
@@ -48,7 +51,10 @@ const nodeRow = {
 };
 
 describe("PATCH /api/graph/nodes/[id]", () => {
-  beforeEach(() => vi.resetAllMocks());
+  beforeEach(() => {
+    vi.resetAllMocks();
+    lastSetArgs = undefined;
+  });
 
   it("returns 401 when not logged in", async () => {
     mocks.sessionUid.mockResolvedValue(null);
@@ -80,6 +86,7 @@ describe("PATCH /api/graph/nodes/[id]", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.documentContent).toEqual(doc);
+    expect(lastSetArgs).toEqual({ documentContent: doc, updatedAt: expect.any(Date) });
   });
 
   it("updates document_content when caller is an admin", async () => {
