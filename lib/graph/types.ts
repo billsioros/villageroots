@@ -10,6 +10,8 @@ export type Status = "pending" | "approved" | "rejected";
 
 export type Privacy = "public" | "private";
 
+export type RichTextJSON = Record<string, unknown>;
+
 export type EdgeKind = "social" | "geo" | "hist";
 
 export type Verb =
@@ -39,6 +41,7 @@ export interface GraphNode {
   label: string;
   subtitle: string;
   description: string;
+  documentContent?: RichTextJSON;
   color: string; // hex, derived from TYPE_META[type].color
   mark: string; // glyph, derived from TYPE_META[type].glyph
   x: number; // seed position (mockup coords)
@@ -91,6 +94,7 @@ export interface DraftNode {
   label: string;
   subtitle?: string;
   description?: string;
+  documentContent?: RichTextJSON;
   facts?: Record<string, string>;
   deceased?: boolean;
   x: number;

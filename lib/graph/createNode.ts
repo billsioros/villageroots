@@ -1,4 +1,4 @@
-import { type NodeType, type Privacy, type Status } from "@/lib/graph/types";
+import { type NodeType, type Privacy, type RichTextJSON, type Status } from "@/lib/graph/types";
 
 export function slugify(s: string): string {
   return s
@@ -17,6 +17,7 @@ export interface CreateNodeInput {
   label: string;
   subtitle?: string | null;
   description?: string | null;
+  documentContent?: RichTextJSON | null;
   facts?: Record<string, string> | null;
   deceased?: boolean | null;
   x?: number | null;
@@ -29,6 +30,7 @@ export interface NodeInsertValues {
   label: string;
   subtitle: string | null;
   description: string | null;
+  documentContent: Record<string, unknown> | null;
   properties: Record<string, unknown>;
   status: Status;
   privacy: Privacy;
@@ -53,6 +55,7 @@ export function createNodeValues(
     label: input.label.trim(),
     subtitle: input.subtitle?.trim() || null,
     description: input.description?.trim() || null,
+    documentContent: input.documentContent ?? null,
     properties,
     status,
     privacy: derivePrivacyFor(input.type, Boolean(input.deceased)),

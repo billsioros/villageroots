@@ -5,6 +5,7 @@ import type { NodeRow, EdgeRow } from "@/drizzle/schema";
 function row(id: string): NodeRow {
   return {
     id, slug: id, type: "person", label: id, subtitle: "", description: "",
+    documentContent: null,
     properties: {}, status: "approved", privacy: "public", createdBy: "u1",
     createdAt: new Date(), updatedAt: new Date(),
   };

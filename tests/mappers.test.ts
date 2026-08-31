@@ -9,6 +9,7 @@ const nodeRow: NodeRow = {
   label: "Nikolas Katsaris",
   subtitle: "1898-1978 · miller",
   description: "desc",
+  documentContent: null,
   properties: { x: 10, y: 20 },
   status: "approved",
   privacy: "public",
