@@ -41,13 +41,13 @@ describe("resolveSelection", () => {
   it("wraps a draft into a GraphNode with TYPE_META-derived fields", () => {
     const r = resolveSelection("d1", nodesMap, draftNodes);
     expect(r).not.toBeNull();
-    expect(r!.isDraft).toBe(true);
-    expect(r!.draft.id).toBe("d1");
-    expect(r!.node.color).toBe("#2f9e62"); // landmark color
-    expect(r!.node.mark).toBe("L"); // landmark glyph
-    expect(r!.node.subtitle).toBe("");
-    expect(r!.node.description).toBe("");
-    expect(r!.node.draft).toBe(true);
+    if (!r?.isDraft) throw new Error("expected a draft selection");
+    expect(r.draft.id).toBe("d1");
+    expect(r.node.color).toBe("#2f9e62"); // landmark color
+    expect(r.node.mark).toBe("L"); // landmark glyph
+    expect(r.node.subtitle).toBe("");
+    expect(r.node.description).toBe("");
+    expect(r.node.draft).toBe(true);
   });
 
   it("returns null for an unknown id", () => {
