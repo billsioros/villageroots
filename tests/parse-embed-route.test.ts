@@ -34,4 +34,13 @@ describe("POST /api/parse-embed", () => {
     expect(body.ok).toBe(false);
     expect(body.error).toBe("Unsupported");
   });
+
+  it("returns 400 for invalid JSON", async () => {
+    const bad: NextRequest = { json: async () => { throw new Error("bad"); } } as unknown as NextRequest;
+    const res = await POST(bad);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe("Invalid JSON body");
+  });
 });
