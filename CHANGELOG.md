@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/billsioros/villageroots/compare/v1.7.0...v1.8.0) (2026-08-31)
+
+
+### Features
+
+* PTDN-44 collapse contribution modal to a single step with inline rename ([#25](https://github.com/billsioros/villageroots/issues/25)) ([312a37a](https://github.com/billsioros/villageroots/commit/312a37aa6bec9557a7abee1c249154901abe4cea))
+
 # [1.7.0](https://github.com/billsioros/villageroots/compare/v1.6.0...v1.7.0) (2026-08-30)
 
 
