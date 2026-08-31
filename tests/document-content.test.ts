@@ -48,4 +48,9 @@ describe("document content mapping", () => {
     );
     expect(vals.documentContent).toEqual(doc);
   });
+
+  it("createNodeValues defaults documentContent to null when omitted", () => {
+    const vals = createNodeValues({ type: "person", label: "Anna" } as never, "u1", "approved", 0);
+    expect(vals.documentContent).toBeNull();
+  });
 });
