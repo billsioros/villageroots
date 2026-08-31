@@ -13,7 +13,7 @@ import { Toast } from "./toast";
 import { SearchPop } from "./search-pop";
 import { LayersPop } from "./layers-pop";
 import { PhysicsPop } from "./physics-pop";
-import { SidePanel } from "./side-panel";
+import { NodeEditorDialog } from "./node-editor-dialog";
 import { ChatPanel } from "./chat-panel";
 import { OcrModal, AboutModal } from "./modals";
 import ContributePanel from "./contribute-panel";
@@ -71,7 +71,7 @@ export function GraphApp() {
           {searchOpen && <SearchPop />}
           {layersOpen && <LayersPop />}
           {physicsOpen && <PhysicsPop />}
-          <SidePanel />
+          <NodeEditorDialog />
         </div>
         <ChatPanel />
         <Toast />
