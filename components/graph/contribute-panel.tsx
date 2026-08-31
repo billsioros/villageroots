@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link2, Plus, Send, Trash2 } from "lucide-react";
 import { useGraphStore } from "@/store/graphStore";
-import { TYPE_META, VERB_KIND, VERBS, uid } from "@/lib/graph/helpers";
+import { TYPE_META, VERB_KIND, VERBS, normalizeEditedLabel, uid } from "@/lib/graph/helpers";
 import { type NodeType, type Verb } from "@/lib/graph/types";
 import { submissionPayloadFromDrafts } from "@/lib/graph/submissions";
 import { queryClient } from "@/lib/graph/query-client";
@@ -50,23 +50,24 @@ export default function ContributePanel() {
   const removeDraftEdge = useGraphStore((s) => s.removeDraftEdge);
   const addDraftNode = useGraphStore((s) => s.addDraftNode);
   const removeDraftNode = useGraphStore((s) => s.removeDraftNode);
+  const updateDraftNode = useGraphStore((s) => s.updateDraftNode);
   const addDraftEdge = useGraphStore((s) => s.addDraftEdge);
   const clearDrafts = useGraphStore((s) => s.clearDrafts);
   const canvasCenter = useGraphStore((s) => s.canvasCenter);
   const nodesMap = useGraphStore((s) => s.nodesMap);
   const pushToast = useGraphStore((s) => s.pushToast);
-  const startStep = useGraphStore((s) => s.newNodeStartStep);
-  const setNewNodeStartStep = useGraphStore((s) => s.setNewNodeStartStep);
 
   const [type, setType] = useState<NodeType>("person");
   const [name, setName] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [step, setStep] = useState<"roster" | "weave">("roster");
   const [connections, setConnections] = useState<
     Record<string, { verb: Verb; target: string }[]>
   >({});
   const [mappingNodeId, setMappingNodeId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const editRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     let active = true;
@@ -95,20 +96,44 @@ export default function ContributePanel() {
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen);
     if (!nextOpen) {
-      setStep("roster");
+      setEditingId(null);
+      setEditValue("");
       setConnections({});
       setMappingNodeId(null);
-      setNewNodeStartStep("roster");
     }
   };
 
   useEffect(() => {
-    if (open) setStep(startStep);
-  }, [open, startStep]);
-
-  useEffect(() => {
     if (mappingNodeId && !draftNodes.some((d) => d.id === mappingNodeId)) setMappingNodeId(null);
   }, [draftNodes, mappingNodeId]);
+
+  useEffect(() => {
+    if (editingId) {
+      editRef.current?.focus();
+      editRef.current?.select();
+    }
+  }, [editingId]);
+
+  const startEditing = (id: string, label: string) => {
+    setEditingId(id);
+    setEditValue(label);
+  };
+
+  const commitEdit = () => {
+    if (!editingId) return;
+    const prev = draftNodes.find((d) => d.id === editingId);
+    if (prev) {
+      const next = normalizeEditedLabel(prev.label, editValue);
+      if (next !== prev.label) updateDraftNode(editingId, { label: next });
+    }
+    setEditingId(null);
+    setEditValue("");
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditValue("");
+  };
 
   const addNode = () => {
     const trimmed = name.trim();
@@ -165,7 +190,6 @@ export default function ContributePanel() {
       clearDrafts();
       setConnections({});
       setMappingNodeId(null);
-      setStep("roster");
       setOpen(false);
       queryClient.invalidateQueries({ queryKey: invalidationKeys.nodes });
       queryClient.invalidateQueries({ queryKey: invalidationKeys.edges });
@@ -191,118 +215,65 @@ export default function ContributePanel() {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-[680px]">
         <DialogHeader>
-          <DialogTitle>
-            {step === "roster" ? "Add to the map" : "Map connections"}
-          </DialogTitle>
-          <DialogDescription>
-            Step {step === "roster" ? "1 of 2" : "2 of 2"}
-          </DialogDescription>
+          <DialogTitle>Add to the map</DialogTitle>
+          <DialogDescription>Add entries and link each one to the map.</DialogDescription>
         </DialogHeader>
 
-        {/* Step 1: Roster */}
-        {step === "roster" && (
-          <div className="space-y-5">
-            <div>
-              <div className="mb-2 text-xs font-medium text-muted-foreground">Category</div>
-              <div className="flex flex-wrap gap-2">
-                {NODE_TYPES.map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setType(t)}
-                    className={
-                      "rounded-full border px-3 py-1.5 text-xs " +
-                      (type === t
-                        ? "border-foreground bg-foreground text-background"
-                        : "text-muted-foreground hover:bg-muted")
-                    }
-                  >
-                    <span
-                      className="mr-1.5 inline-block h-2 w-2 rounded-full"
-                      style={{ background: TYPE_META[t].color }}
-                    />
-                    {TYPE_META[t].label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <div className="mb-2 text-xs font-medium text-muted-foreground">Name this entry</div>
-              <div className="flex gap-3">
-                <Input
-                  ref={inputRef}
-                  placeholder="Name this entry..."
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") addNode();
-                  }}
-                />
-                <Button size="sm" onClick={addNode}>
-                  <Plus className="mr-1 h-4 w-4" /> Add
-                </Button>
-              </div>
-            </div>
-
-            <div>
-              <div className="mb-2 text-xs font-medium text-muted-foreground">Drafted entries</div>
-              <div className="max-h-[40vh] overflow-y-auto rounded-lg border p-3">
-                {draftNodes.length === 0 ? (
-                  <p className="py-8 text-center text-[13px] text-muted-foreground">
-                    Add at least one entry to continue.
-                  </p>
-                ) : (
-                  <ul className="list-none p-0 m-0 space-y-2">
-                    {draftNodes.map((d) => (
-                      <li
-                        key={d.id}
-                        className="flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm"
-                      >
-                        <span
-                          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
-                          style={{ background: TYPE_META[d.type].color }}
-                        >
-                          {TYPE_META[d.type].glyph}
-                        </span>
-                        <span className="flex-1 truncate">{d.label}</span>
-                        <button
-                          onClick={() => setMappingNodeId(d.id)}
-                          className="text-muted-foreground hover:text-foreground"
-                          aria-label={`Map connections for ${d.label}`}
-                        >
-                          <Link2 className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          onClick={() => removeDraftNode(d.id)}
-                          className="text-muted-foreground hover:text-foreground"
-                          aria-label={`Remove ${d.label}`}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+        {/* Roster */}
+        <div className="space-y-5">
+          <div>
+            <div className="mb-2 text-xs font-medium text-muted-foreground">Category</div>
+            <div className="flex flex-wrap gap-2">
+              {NODE_TYPES.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setType(t)}
+                  className={
+                    "rounded-full border px-3 py-1.5 text-xs " +
+                    (type === t
+                      ? "border-foreground bg-foreground text-background"
+                      : "text-muted-foreground hover:bg-muted")
+                  }
+                >
+                  <span
+                    className="mr-1.5 inline-block h-2 w-2 rounded-full"
+                    style={{ background: TYPE_META[t].color }}
+                  />
+                  {TYPE_META[t].label}
+                </button>
+              ))}
             </div>
           </div>
-        )}
 
-        {/* Step 2: Weave */}
-        {step === "weave" && (
-          <div className="space-y-3">
-            {draftNodes.length === 0 ? (
-              <p className="py-8 text-center text-[13px] text-muted-foreground">
-                No entries to connect. Go back to add some.
-              </p>
-            ) : (
-              <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1">
-                {draftNodes.map((d) => {
-                  const linkCount =
-                    draftEdges.filter((e) => e.source === d.id).length +
-                    (connections[d.id] ?? []).filter((c) => c.target).length;
-                  return (
-                    <div
+          <div>
+            <div className="mb-2 text-xs font-medium text-muted-foreground">Name this entry</div>
+            <div className="flex gap-3">
+              <Input
+                ref={inputRef}
+                placeholder="Name this entry..."
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") addNode();
+                }}
+              />
+              <Button size="sm" onClick={addNode}>
+                <Plus className="mr-1 h-4 w-4" /> Add
+              </Button>
+            </div>
+          </div>
+
+          <div>
+            <div className="mb-2 text-xs font-medium text-muted-foreground">Drafted entries</div>
+            <div className="max-h-[40vh] overflow-y-auto rounded-lg border p-3">
+              {draftNodes.length === 0 ? (
+                <p className="py-8 text-center text-[13px] text-muted-foreground">
+                  Add at least one entry to continue.
+                </p>
+              ) : (
+                <ul className="list-none p-0 m-0 space-y-2">
+                  {draftNodes.map((d) => (
+                    <li
                       key={d.id}
                       className="flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm"
                     >
@@ -312,32 +283,50 @@ export default function ContributePanel() {
                       >
                         {TYPE_META[d.type].glyph}
                       </span>
-                      <span className="flex-1 truncate">{d.label}</span>
-                      <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
-                        {linkCount} {linkCount === 1 ? "link" : "links"}
-                      </span>
+                      {editingId === d.id ? (
+                          <Input
+                            ref={editRef}
+                            value={editValue}
+                            className="h-7 min-w-0 flex-1 px-2 text-sm"
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") commitEdit();
+                              else if (e.key === "Escape") cancelEdit();
+                            }}
+                            onBlur={commitEdit}
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => startEditing(d.id, d.label)}
+                            className="min-w-0 flex-1 truncate text-left"
+                            title="Click to rename"
+                            aria-label={`Rename ${d.label}`}
+                          >
+                            {d.label}
+                          </button>
+                        )}
                       <button
                         onClick={() => setMappingNodeId(d.id)}
                         className="text-muted-foreground hover:text-foreground"
                         aria-label={`Map connections for ${d.label}`}
                       >
-                        <Link2 className="h-4 w-4" />
+                        <Link2 className="h-3.5 w-3.5" />
                       </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {draftNodes.length > 0 &&
-              Object.values(connections).every((c) => c.length === 0) &&
-              draftEdges.length === 0 && (
-                <p className="text-center text-[13px] text-muted-foreground">
-                  You can submit without connections, or link your entries to existing nodes.
-                </p>
+                      <button
+                        onClick={() => removeDraftNode(d.id)}
+                        className="text-muted-foreground hover:text-foreground"
+                        aria-label={`Remove ${d.label}`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               )}
+            </div>
           </div>
-        )}
+        </div>
 
         <div className="flex items-center justify-between border-t pt-4 mt-2">
           <span className="text-xs text-muted-foreground">
@@ -347,29 +336,18 @@ export default function ContributePanel() {
             <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            {step === "roster" ? (
-              <Button
-                size="sm"
-                onClick={() => setStep("weave")}
-                disabled={draftNodes.length === 0}
-              >
-                Next: Map connections
-              </Button>
-            ) : (
-              <>
-                <Button size="sm" variant="ghost" onClick={() => setStep("roster")}>
-                  Back
-                </Button>
-                <Button size="sm" onClick={submit} disabled={submitting}>
-                  <Send className="mr-1 h-4 w-4" />
-                  {submitting
-                    ? "Submitting..."
-                    : isAdmin
-                      ? `Publish ${draftNodes.length} ${draftNodes.length === 1 ? "entry" : "entries"}`
-                      : `Submit ${draftNodes.length} ${draftNodes.length === 1 ? "contribution" : "contributions"}`}
-                </Button>
-              </>
-            )}
+            <Button
+              size="sm"
+              onClick={submit}
+              disabled={draftNodes.length === 0 || submitting}
+            >
+              <Send className="mr-1 h-4 w-4" />
+              {submitting
+                ? "Submitting..."
+                : isAdmin
+                  ? `Publish ${draftNodes.length} ${draftNodes.length === 1 ? "entry" : "entries"}`
+                  : `Submit ${draftNodes.length} ${draftNodes.length === 1 ? "contribution" : "contributions"}`}
+            </Button>
           </div>
         </div>
 
@@ -386,7 +364,7 @@ export default function ContributePanel() {
                 <DialogHeader>
                   <DialogTitle>Map connections — {mappedNode.label}</DialogTitle>
                   <DialogDescription>
-                    Step 2 of 2 · links starting from this entry
+                    Links starting from this entry
                   </DialogDescription>
                 </DialogHeader>
 

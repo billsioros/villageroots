@@ -72,6 +72,15 @@ describe("drafts slice", () => {
     expect(d.deceased).toBe(true);
   });
 
+  it("renames a draft node label and returns a fresh array (invalidates the canvas cache)", () => {
+    useGraphStore.getState().addDraftNode(draft("draft-a", "person", "Old Name"));
+    const before = useGraphStore.getState().draftNodes;
+    useGraphStore.getState().updateDraftNode("draft-a", { label: "New Name" });
+    const s = useGraphStore.getState();
+    expect(s.draftNodes[0].label).toBe("New Name");
+    expect(s.draftNodes).not.toBe(before);
+  });
+
   it("removes a draft node and its connected draft edges", () => {
     useGraphStore.setState({
       draftNodes: [draft("draft-a", "person"), draft("draft-b", "family")],

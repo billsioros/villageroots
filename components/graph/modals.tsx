@@ -39,7 +39,6 @@ export function OcrModal() {
   const open = useGraphStore((s) => s.ocrOpen);
   const setOpen = useGraphStore((s) => s.setOcrOpen);
   const setNewNodeOpen = useGraphStore((s) => s.setNewNodeOpen);
-  const setNewNodeStartStep = useGraphStore((s) => s.setNewNodeStartStep);
   const addDraftNode = useGraphStore((s) => s.addDraftNode);
   const addDraftEdge = useGraphStore((s) => s.addDraftEdge);
   const clearDrafts = useGraphStore((s) => s.clearDrafts);
@@ -144,7 +143,6 @@ export function OcrModal() {
 
     setOpen(false);
     reset();
-    setNewNodeStartStep("weave");
     setNewNodeOpen(true);
     pushToast({
       tone: "success",

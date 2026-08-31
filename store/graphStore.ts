@@ -55,7 +55,6 @@ export interface GraphStore {
   searchOpen: boolean;
   layersOpen: boolean;
   newNodeOpen: boolean;
-  newNodeStartStep: "roster" | "weave";
   ocrOpen: boolean;
   aboutOpen: boolean;
   reviewQueueOpen: boolean;
@@ -93,7 +92,6 @@ export interface GraphStore {
   setSearchOpen: (open: boolean) => void;
   setLayersOpen: (open: boolean) => void;
   setNewNodeOpen: (open: boolean) => void;
-  setNewNodeStartStep: (step: "roster" | "weave") => void;
   setOcrOpen: (open: boolean) => void;
   setAboutOpen: (open: boolean) => void;
   setReviewQueueOpen: (open: boolean) => void;
@@ -308,7 +306,6 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
   searchOpen: false,
   layersOpen: false,
   newNodeOpen: false,
-  newNodeStartStep: "roster",
   ocrOpen: false,
   aboutOpen: false,
   reviewQueueOpen: false,
@@ -364,9 +361,7 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
   toggleCollapsed: () => set((s) => ({ chatCollapsed: !s.chatCollapsed })),
   setSearchOpen: (open) => set({ searchOpen: open }),
   setLayersOpen: (open) => set({ layersOpen: open }),
-  setNewNodeOpen: (open) =>
-    set(open ? { newNodeOpen: true } : { newNodeOpen: false, newNodeStartStep: "roster" }),
-  setNewNodeStartStep: (step) => set({ newNodeStartStep: step }),
+  setNewNodeOpen: (open) => set({ newNodeOpen: open }),
   setOcrOpen: (open) => set({ ocrOpen: open }),
   setAboutOpen: (open) => set({ aboutOpen: open }),
   setReviewQueueOpen: (open) => set({ reviewQueueOpen: open }),
