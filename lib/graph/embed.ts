@@ -27,6 +27,22 @@ const MAPS_PATTERNS = [
   /^https:\/\/goo\.gl\/maps\//i,
 ];
 
+function abortAfter(ms: number): Promise<never> {
+  return new Promise((_, reject) => {
+    setTimeout(() => {
+      const err = new Error("Timed out");
+      err.name = "AbortError";
+      reject(err);
+    }, ms);
+  });
+}
+
+function isAbortError(e: unknown): boolean {
+  if (typeof e !== "object" || e === null) return false;
+  const name = (e as { name?: unknown }).name;
+  return name === "AbortError" || name === "TimeoutError";
+}
+
 export function validateEmbedUrl(raw: string): boolean {
   let url: URL;
   try {
@@ -60,11 +76,19 @@ export function validateEmbedUrl(raw: string): boolean {
     const canonical = octets.join(".");
     if (canonical !== hostname) return false;
 
-    const [a] = octets;
+    const [a, b] = octets;
     // Private/loopback: 10.x, 127.x, 169.254.x, 192.168.x
     if (a === 10 || a === 127) return false;
-    if (a === 169 && octets[1] === 254) return false;
-    if (a === 192 && octets[1] === 168) return false;
+    if (a === 169 && b === 254) return false;
+    if (a === 192 && b === 168) return false;
+    // RFC1918 private: 172.16.0.0/12 (172.16.0.0 – 172.31.255.255)
+    if (a === 172 && b >= 16 && b <= 31) return false;
+    // CGNAT: 100.64.0.0/10 (100.64.0.0 – 100.127.255.255)
+    if (a === 100 && b >= 64 && b <= 127) return false;
+    // Reserved/documentation ranges
+    if (a === 192 && (b === 0 || b === 2)) return false;
+    if (a === 198 && b === 51) return false;
+    if (a === 203 && b === 0) return false;
     // 0.0.0.0
     if (octets.every((o) => o === 0)) return false;
     // Multicast/reserved: >= 224.0.0.0
@@ -89,6 +113,7 @@ export function validateEmbedUrl(raw: string): boolean {
 export async function parseWikipedia(
   urlStr: string,
   fetchImpl: typeof fetch = fetch,
+  timeoutMs?: number,
 ): Promise<EmbedData> {
   const url = new URL(urlStr);
   const segments = url.pathname.split("/");
@@ -98,7 +123,9 @@ export async function parseWikipedia(
   const title = decodeURIComponent(rawTitle.split("/")[0]);
 
   const summaryUrl = `${url.protocol}//${url.host}/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
-  const res = await fetchImpl(summaryUrl);
+  const res = await fetchImpl(summaryUrl, {
+    signal: AbortSignal.timeout(timeoutMs ?? EMBED_TIMEOUT_MS),
+  });
   if (!res.ok) {
     throw new Error(`Wikipedia fetch failed: ${res.status}`);
   }
@@ -130,8 +157,12 @@ export async function parseGoogleMaps(urlStr: string): Promise<EmbedData> {
 export async function parseWithUnfurl(
   urlStr: string,
   fetchImpl: typeof fetch = fetch,
+  timeoutMs?: number,
 ): Promise<EmbedData> {
-  const meta = await unfurl(urlStr, { fetch: fetchImpl as (url: string) => Promise<unknown> });
+  const meta = await Promise.race([
+    unfurl(urlStr, { fetch: fetchImpl as (url: string) => Promise<unknown> }),
+    abortAfter(timeoutMs ?? EMBED_TIMEOUT_MS),
+  ]);
   const title =
     meta.title ?? meta.open_graph?.title ?? meta.twitter_card?.title;
   const description =
@@ -153,9 +184,10 @@ export async function parseWithUnfurl(
 
 export async function parseEmbed(
   urlStr: string,
-  opts?: { fetchImpl?: typeof fetch },
+  opts?: { fetchImpl?: typeof fetch; timeoutMs?: number },
 ): Promise<ParseResult> {
   const fetchImpl = opts?.fetchImpl ?? fetch;
+  const timeoutMs = opts?.timeoutMs;
 
   if (!validateEmbedUrl(urlStr)) {
     return { ok: false, error: "Invalid or unsafe URL" };
@@ -180,13 +212,10 @@ export async function parseEmbed(
 
   if (WIKI_HOSTS.test(hostname)) {
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), EMBED_TIMEOUT_MS);
-      const data = await parseWikipedia(urlStr, fetchImpl);
-      clearTimeout(timeout);
+      const data = await parseWikipedia(urlStr, fetchImpl, timeoutMs);
       return { ok: true, data };
     } catch (e) {
-      if ((e as Error).name === "AbortError") {
+      if (isAbortError(e)) {
         return { ok: false, error: "Timed out" };
       }
       return { ok: false, error: (e as Error).message };
@@ -195,13 +224,10 @@ export async function parseEmbed(
 
   // Generic unfurl
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), EMBED_TIMEOUT_MS);
-    const data = await parseWithUnfurl(urlStr, fetchImpl);
-    clearTimeout(timeout);
+    const data = await parseWithUnfurl(urlStr, fetchImpl, timeoutMs);
     return { ok: true, data };
   } catch (e) {
-    if ((e as Error).name === "AbortError") {
+    if (isAbortError(e)) {
       return { ok: false, error: "Timed out" };
     }
     return { ok: false, error: (e as Error).message };
