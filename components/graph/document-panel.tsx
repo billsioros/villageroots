@@ -1,16 +1,15 @@
 "use client";
 
-import { useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import type { GraphNode } from "@/lib/graph/types";
 import { TYPE_META } from "@/lib/graph/helpers";
+import { RichTextEditor } from "./rich-text-editor";
+import { saveNodeDocumentContent } from "@/lib/graph/save-node-doc";
 
 export function DocumentPanel({ node }: { node: GraphNode }) {
-  const editRef = useRef<HTMLDivElement>(null);
-
-  const applyMd = (cmd: string) => {
-    document.execCommand(cmd, false);
-    editRef.current?.focus();
+  const onSave = async (json: Parameters<typeof saveNodeDocumentContent>[1]) => {
+    const res = await saveNodeDocumentContent(node.id, json);
+    if (!res.ok) throw new Error(res.error);
   };
 
   return (
@@ -36,28 +35,8 @@ export function DocumentPanel({ node }: { node: GraphNode }) {
           </Badge>
         </div>
 
-        <div className="mt-4 flex items-center gap-1 rounded-full border bg-surface-warm px-2 py-1">
-          <button onClick={() => applyMd("bold")} className="grid h-7 w-8 place-items-center rounded-full text-[13px] font-bold hover:bg-white" title="Bold">
-            B
-          </button>
-          <button onClick={() => applyMd("italic")} className="grid h-7 w-8 place-items-center rounded-full text-[13px] italic hover:bg-white" title="Italic">
-            I
-          </button>
-          <button onClick={() => applyMd("insertUnorderedList")} className="grid h-7 w-8 place-items-center rounded-full text-[13px] hover:bg-white" title="List">
-            •≡
-          </button>
-          <button onClick={() => applyMd("createLink")} className="grid h-7 w-8 place-items-center rounded-full text-[13px] hover:bg-white" title="Link">
-            🔗
-          </button>
-          <span className="ml-auto text-[11px] text-muted-foreground">Markdown</span>
-        </div>
-        <div
-          ref={editRef}
-          contentEditable
-          suppressContentEditableWarning
-          className="mt-2 min-h-[90px] rounded-xl border bg-white p-3 text-[13px] leading-relaxed outline-none focus:border-primary"
-        >
-          {node.description}
+        <div className="mt-4">
+          <RichTextEditor initialContent={node.documentContent} onSave={onSave} placeholder="Write the story…" />
         </div>
       </div>
     </div>
