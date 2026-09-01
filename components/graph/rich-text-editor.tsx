@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useEditor, EditorContent, ReactRenderer } from "@tiptap/react";
+import { BubbleMenu } from "@tiptap/react/menus";
 import { Extension, type Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import TaskList from "@tiptap/extension-task-list";
@@ -12,7 +13,8 @@ import { ExternalEmbed } from "./external-embed-extension";
 import { SlashMenu, type SlashMenuItem, type SlashMenuRef } from "./slash-menu";
 import type { RichTextJSON } from "@/lib/graph/types";
 import { emptyDoc, isEmptyDoc } from "@/lib/graph/rich-text-utils";
-import { Loader2, Check } from "lucide-react";
+import { Loader2, Check, Link as LinkIcon } from "lucide-react";
+import "./editor-flat.css";
 
 export type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -23,6 +25,34 @@ export interface RichTextEditorProps {
 }
 
 const DEBOUNCE_MS = 1000;
+
+function ToolButton({
+  label,
+  title,
+  active,
+  onClick,
+  children,
+}: {
+  label: string;
+  title: string;
+  active?: boolean;
+  onClick: () => void;
+  children?: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-label={title}
+      onClick={onClick}
+      className={`grid h-6 min-w-6 place-items-center rounded px-1 text-[13px] ${
+        active ? "bg-surface-warm font-medium" : "text-muted-foreground"
+      }`}
+    >
+      {children ?? label}
+    </button>
+  );
+}
 
 export function RichTextEditor({ initialContent, onSave, placeholder }: RichTextEditorProps) {
   const [saveState, setSaveState] = useState<SaveState>("idle");
@@ -74,6 +104,26 @@ export function RichTextEditor({ initialContent, onSave, placeholder }: RichText
       title: "Italic",
       keywords: ["em"],
       onSelect: ({ editor: e }) => e.chain().focus().toggleItalic().run(),
+    },
+    {
+      title: "Blockquote",
+      keywords: ["quote", "blockquote"],
+      onSelect: ({ editor: e }) => e.chain().focus().toggleBlockquote().run(),
+    },
+    {
+      title: "Code block",
+      keywords: ["code", "pre"],
+      onSelect: ({ editor: e }) => e.chain().focus().toggleCodeBlock().run(),
+    },
+    {
+      title: "Divider",
+      keywords: ["hr", "divider", "line", "---"],
+      onSelect: ({ editor: e }) => e.chain().focus().setHorizontalRule().run(),
+    },
+    {
+      title: "Ordered list",
+      keywords: ["ol", "numbered", "1."],
+      onSelect: ({ editor: e }) => e.chain().focus().toggleOrderedList().run(),
     },
     {
       title: "External embed",
@@ -199,11 +249,67 @@ export function RichTextEditor({ initialContent, onSave, placeholder }: RichText
           </button>
         )}
       </div>
-      <div
-        className="rounded-xl border bg-white p-3 text-[13px] leading-relaxed focus-within:border-primary"
-        onClick={() => editor?.commands.focus()}
-      >
+      <div className="editor-flat" onClick={() => editor?.commands.focus()}>
         <EditorContent editor={editor} />
+        <BubbleMenu
+          editor={editor ?? undefined}
+          className="flex items-center gap-0.5 rounded-lg border border-border bg-white p-1 shadow-lg"
+        >
+          <ToolButton
+            active={editor?.isActive("bold")}
+            onClick={() => editor?.chain().focus().toggleBold().run()}
+            label="B"
+            title="Bold"
+          />
+          <ToolButton
+            active={editor?.isActive("italic")}
+            onClick={() => editor?.chain().focus().toggleItalic().run()}
+            label="I"
+            title="Italic"
+          />
+          <ToolButton
+            active={editor?.isActive("underline")}
+            onClick={() => editor?.chain().focus().toggleUnderline().run()}
+            label="U"
+            title="Underline"
+          />
+          <ToolButton
+            active={editor?.isActive("strike")}
+            onClick={() => editor?.chain().focus().toggleStrike().run()}
+            label="S"
+            title="Strike"
+          />
+          <span className="mx-1 h-4 w-px bg-border" />
+          <select
+            value={
+              editor?.isActive("heading", { level: 1 })
+                ? "h1"
+                : editor?.isActive("heading", { level: 2 })
+                  ? "h2"
+                  : "p"
+            }
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === "p") editor?.chain().focus().setParagraph().run();
+              else editor?.chain().focus().setHeading({ level: Number(v[1]) as 1 | 2 }).run();
+            }}
+            className="rounded border border-border bg-white px-1 text-[12px]"
+          >
+            <option value="p">Paragraph</option>
+            <option value="h1">Heading 1</option>
+            <option value="h2">Heading 2</option>
+          </select>
+          <ToolButton
+            title="Link"
+            label="link"
+            onClick={() => {
+              const url = window.prompt("Link URL");
+              if (url) editor?.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+            }}
+          >
+            <LinkIcon className="h-3.5 w-3.5" />
+          </ToolButton>
+        </BubbleMenu>
       </div>
     </div>
   );
