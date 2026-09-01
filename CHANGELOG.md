@@ -1,3 +1,10 @@
+# [1.11.0](https://github.com/billsioros/villageroots/compare/v1.10.0...v1.11.0) (2026-09-01)
+
+
+### Features
+
+* PTDN-47 show initial password, reorder dock, add avatar menu ([#28](https://github.com/billsioros/villageroots/issues/28)) ([f5f4daa](https://github.com/billsioros/villageroots/commit/f5f4daa29a7d99bac0a4db7be02d0670ae8b83da))
+
 # [1.10.0](https://github.com/billsioros/villageroots/compare/v1.9.0...v1.10.0) (2026-09-01)
 
 
