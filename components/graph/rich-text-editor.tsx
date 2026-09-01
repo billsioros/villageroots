@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { useEditor, EditorContent, ReactRenderer } from "@tiptap/react";
+import { createPortal } from "react-dom";
+import { createRoot, type Root } from "react-dom/client";
+import { useEditor, EditorContent } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import { Extension, type Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
@@ -179,23 +181,62 @@ export function RichTextEditor({ initialContent, onSave, placeholder }: RichText
                   `${it.title} ${(it.keywords ?? []).join(" ")}`.toLowerCase().includes(query.toLowerCase()),
                 ),
               render: () => {
-                let component: ReactRenderer | null = null;
-                let unmount: (() => void) | null = null;
+                const holder = document.createElement("div");
+                holder.style.cssText =
+                  "position:fixed;z-index:50;left:0;top:0;pointer-events:none;";
+                document.body.appendChild(holder);
+
+                let root: Root | null = null;
+                let menuRef: SlashMenuRef | null = null;
+
+                const position = (props: { clientRect?: (() => DOMRect | null) | null }) => {
+                  const rect = props.clientRect?.();
+                  if (!rect) return;
+                  holder.style.left = `${rect.left}px`;
+                  holder.style.top = `${rect.bottom + 4}px`;
+                };
+
+                const renderMenu = (props: {
+                  items: SlashMenuItem[];
+                  editor: Editor;
+                  command: (item: SlashMenuItem) => void;
+                }) => {
+                  root ??= createRoot(holder);
+                  root.render(
+                    createPortal(
+                      <SlashMenu
+                        items={props.items}
+                        editor={props.editor}
+                        command={props.command}
+                        ref={(ref) => {
+                          menuRef = ref;
+                        }}
+                      />,
+                      holder,
+                    ),
+                  );
+                };
+
                 return {
                   onStart: (props) => {
-                    component = new ReactRenderer(SlashMenu, { props, editor: props.editor });
-                    unmount = props.mount(component.element);
+                    renderMenu(props);
+                    position(props);
+                    holder.style.pointerEvents = "auto";
                   },
-                  onUpdate: (props) => component?.updateProps(props),
-                  onKeyDown: (props) => {
-                    if (props.event.key === "Escape") {
+                  onUpdate: (props) => {
+                    renderMenu(props);
+                    position(props);
+                  },
+                  onKeyDown: ({ event }) => {
+                    if (event.key === "Escape") {
                       return true;
                     }
-                    return (component?.ref as SlashMenuRef)?.onKeyDown(props) ?? false;
+                    return menuRef?.onKeyDown({ event }) ?? false;
                   },
                   onExit: () => {
-                    unmount?.();
-                    component?.destroy();
+                    root?.unmount();
+                    root = null;
+                    holder.remove();
                   },
                 };
               },
