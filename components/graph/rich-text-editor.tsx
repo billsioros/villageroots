@@ -251,10 +251,11 @@ export function RichTextEditor({ initialContent, onSave, placeholder }: RichText
       </div>
       <div className="editor-flat" onClick={() => editor?.commands.focus()}>
         <EditorContent editor={editor} />
-        <BubbleMenu
-          editor={editor ?? undefined}
-          className="flex items-center gap-0.5 rounded-lg border border-border bg-white p-1 shadow-lg"
-        >
+        {editor && (
+          <BubbleMenu
+            editor={editor}
+            className="flex items-center gap-0.5 rounded-lg border border-border bg-white p-1 shadow-lg"
+          >
           <ToolButton
             active={editor?.isActive("bold")}
             onClick={() => editor?.chain().focus().toggleBold().run()}
@@ -309,7 +310,8 @@ export function RichTextEditor({ initialContent, onSave, placeholder }: RichText
           >
             <LinkIcon className="h-3.5 w-3.5" />
           </ToolButton>
-        </BubbleMenu>
+          </BubbleMenu>
+        )}
       </div>
     </div>
   );
