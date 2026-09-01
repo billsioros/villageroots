@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import { Extension, type Editor } from "@tiptap/core";
@@ -262,6 +263,21 @@ export function RichTextEditor({ initialContent, onSave, placeholder }: RichText
     };
   }, []);
 
+  let slashPortal: ReactNode = null;
+  if (slashMenu && slashMenu.items.length > 0) {
+    slashPortal = createPortal(
+      <div className="fixed z-50" style={{ left: slashMenu.left, top: slashMenu.top }}>
+        <SlashMenu
+          items={slashMenu.items}
+          editor={editor ?? undefined}
+          command={slashCommand.current}
+          ref={slashMenuRef}
+        />
+      </div>,
+      document.body,
+    );
+  }
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-end gap-2 text-[11px] text-muted-foreground">
@@ -344,16 +360,7 @@ export function RichTextEditor({ initialContent, onSave, placeholder }: RichText
           </ToolButton>
           </BubbleMenu>
         )}
-        {slashMenu && slashMenu.items.length > 0 && (
-          <div className="fixed z-50" style={{ left: slashMenu.left, top: slashMenu.top }}>
-            <SlashMenu
-              items={slashMenu.items}
-              editor={editor ?? undefined}
-              command={slashCommand.current}
-              ref={slashMenuRef}
-            />
-          </div>
-        )}
+        {slashPortal}
       </div>
     </div>
   );
