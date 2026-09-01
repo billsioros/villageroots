@@ -40,9 +40,6 @@ export function Dock() {
       <button title="Import document" onClick={() => setOcrOpen(true)} className="grid h-12 w-12 place-items-center rounded-full border shadow-elev-raised transition-colors bg-card/90 text-foreground backdrop-blur hover:bg-surface-warm" aria-label="Import document">
         <Upload size={18} />
       </button>
-      <button title="Layers" onClick={() => setLayersOpen(!layersOpen)} className={`grid h-12 w-12 place-items-center rounded-full border shadow-elev-raised transition-colors ${layersOpen ? "bg-primary text-primary-foreground" : "bg-card/90 text-foreground backdrop-blur hover:bg-surface-warm"}`} aria-label="Layers">
-        <Layers size={18} />
-      </button>
       <button
         type="button"
         onClick={() => setActiveView(activeView === 'TREE' ? 'GRAPH' : 'TREE')}
@@ -56,9 +53,6 @@ export function Dock() {
       >
         <GitBranch size={20} />
       </button>
-      <button title="Physics" onClick={() => setPhysicsOpen(!physicsOpen)} className={`grid h-12 w-12 place-items-center rounded-full border shadow-elev-raised transition-colors ${physicsOpen ? "bg-primary text-primary-foreground" : "bg-card/90 text-foreground backdrop-blur hover:bg-surface-warm"}`} aria-label="Physics">
-        <SlidersHorizontal size={18} />
-      </button>
       <button title="Chat" onClick={toggleChat} className="grid h-12 w-12 place-items-center rounded-full border shadow-elev-raised transition-colors bg-card/90 text-foreground backdrop-blur hover:bg-surface-warm" aria-label="Chat">
         <Sparkles size={18} />
       </button>
@@ -67,6 +61,12 @@ export function Dock() {
           <ShieldCheck size={18} />
         </button>
       )}
+      <button title="Layers" onClick={() => setLayersOpen(!layersOpen)} className={`grid h-12 w-12 place-items-center rounded-full border shadow-elev-raised transition-colors ${layersOpen ? "bg-primary text-primary-foreground" : "bg-card/90 text-foreground backdrop-blur hover:bg-surface-warm"}`} aria-label="Layers">
+        <Layers size={18} />
+      </button>
+      <button title="Physics" onClick={() => setPhysicsOpen(!physicsOpen)} className={`grid h-12 w-12 place-items-center rounded-full border shadow-elev-raised transition-colors ${physicsOpen ? "bg-primary text-primary-foreground" : "bg-card/90 text-foreground backdrop-blur hover:bg-surface-warm"}`} aria-label="Physics">
+        <SlidersHorizontal size={18} />
+      </button>
     </div>
   );
 }
