@@ -1,3 +1,10 @@
+# [1.10.0](https://github.com/billsioros/villageroots/compare/v1.9.0...v1.10.0) (2026-09-01)
+
+
+### Features
+
+* PTDN-8 rich text editor with embeds ([#27](https://github.com/billsioros/villageroots/issues/27)) ([69d0037](https://github.com/billsioros/villageroots/commit/69d00377b6c5f08297fe71c0075d93d1c8283c54))
+
 # [1.9.0](https://github.com/billsioros/villageroots/compare/v1.8.0...v1.9.0) (2026-08-31)
 
 
