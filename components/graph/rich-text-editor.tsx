@@ -172,6 +172,7 @@ export function RichTextEditor({ initialContent, onSave, placeholder }: RichText
             Suggestion({
               editor: this.editor,
               char: "/",
+              shouldResetDismissed: () => true,
               command: ({ editor: e, range, props }) => {
                 e.chain().focus().deleteRange(range).run();
                 props.onSelect({ editor: e });
@@ -189,9 +190,24 @@ export function RichTextEditor({ initialContent, onSave, placeholder }: RichText
                 let root: Root | null = null;
                 let menuRef: SlashMenuRef | null = null;
 
-                const position = (props: { clientRect?: (() => DOMRect | null) | null }) => {
-                  const rect = props.clientRect?.();
-                  if (!rect) return;
+                const position = (props: {
+                  clientRect?: (() => DOMRect | null) | null;
+                  editor: Editor;
+                }) => {
+                  let rect = props.clientRect?.() ?? null;
+                  if (!rect) {
+                    const pos = props.editor.state.selection.$anchor.pos;
+                    try {
+                      const c = props.editor.view.coordsAtPos(pos);
+                      rect = new DOMRect(c.left, c.top, c.right - c.left, c.bottom - c.top);
+                    } catch {
+                      rect = null;
+                    }
+                  }
+                  if (!rect) {
+                    console.log("[slash] no rect to position", props.editor.view.dom.dataset);
+                    return;
+                  }
                   holder.style.left = `${rect.left}px`;
                   holder.style.top = `${rect.bottom + 4}px`;
                 };
@@ -219,11 +235,13 @@ export function RichTextEditor({ initialContent, onSave, placeholder }: RichText
 
                 return {
                   onStart: (props) => {
+                    console.log("[slash] onStart items=", props.items?.length, "clientRect=", Boolean(props.clientRect));
                     renderMenu(props);
                     position(props);
                     holder.style.pointerEvents = "auto";
                   },
                   onUpdate: (props) => {
+                    console.log("[slash] onUpdate items=", props.items?.length, "clientRect=", Boolean(props.clientRect));
                     renderMenu(props);
                     position(props);
                   },
@@ -234,9 +252,13 @@ export function RichTextEditor({ initialContent, onSave, placeholder }: RichText
                     return menuRef?.onKeyDown({ event }) ?? false;
                   },
                   onExit: () => {
-                    root?.unmount();
-                    root = null;
-                    holder.remove();
+                    console.log("[slash] onExit");
+                    holder.style.pointerEvents = "none";
+                    setTimeout(() => {
+                      root?.unmount();
+                      root = null;
+                      holder.remove();
+                    }, 0);
                   },
                 };
               },
