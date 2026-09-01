@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Save } from "lucide-react";
 import { useGraphStore } from "@/store/graphStore";
-import { type DraftNode } from "@/lib/graph/types";
+import { type DraftNode, type RichTextJSON } from "@/lib/graph/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -40,6 +40,7 @@ export default function DraftEditor({ draft }: { draft: DraftNode }) {
   const [subtitle, setSubtitle] = useState(draft.subtitle ?? "");
   const [facts, setFacts] = useState<Record<string, string>>(draft.facts ?? {});
   const [deceased, setDeceased] = useState(Boolean(draft.deceased));
+  const latestDoc = useRef<RichTextJSON | null>(null);
 
   useEffect(() => {
     setLabel(draft.label);
@@ -52,10 +53,11 @@ export default function DraftEditor({ draft }: { draft: DraftNode }) {
     updateDraftNode(draft.id, {
       label: label.trim() || draft.label,
       subtitle: subtitle.trim() || undefined,
-      documentContent: draft.documentContent,
+      documentContent: latestDoc.current ?? draft.documentContent,
       facts,
       deceased,
     });
+    latestDoc.current = null;
     pushToast({ tone: "success", message: "Draft saved" });
   };
 
@@ -96,6 +98,7 @@ export default function DraftEditor({ draft }: { draft: DraftNode }) {
         placeholder="Write the story…"
         onSave={async (json) => {
           updateDraftNode(draft.id, { documentContent: json });
+          latestDoc.current = json;
         }}
       />
 
