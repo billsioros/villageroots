@@ -30,7 +30,7 @@ export function NodeEditorDialog() {
 
   return (
     <Dialog open={sidepanelOpen} onOpenChange={clearSelection}>
-      <DialogContent className="max-w-3xl overflow-hidden p-0">
+      <DialogContent className="max-w-4xl overflow-hidden p-0">
         <DialogHeader>
           <DialogTitle className="sr-only">
             {selected?.node.label ?? "Node"}

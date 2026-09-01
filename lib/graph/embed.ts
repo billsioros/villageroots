@@ -143,13 +143,33 @@ export async function parseWikipedia(
 
 export async function parseGoogleMaps(urlStr: string): Promise<EmbedData> {
   const url = new URL(urlStr);
-  const q = url.searchParams.get("q") ?? urlStr;
-  const embedUrl = `https://www.google.com/maps?q=${encodeURIComponent(q)}&output=embed`;
+
+  // Already an embed URL (e.g. pasted from the Maps "Embed a map" dialog) —
+  // use it as-is so the exact pinned spot is preserved.
+  if (url.pathname.startsWith("/maps/embed")) {
+    return {
+      kind: "map",
+      url: urlStr,
+      embedHtml: `<iframe src="${urlStr}" width="100%" height="100%" style="border:0" loading="lazy" allowfullscreen></iframe>`,
+      width: undefined,
+      height: 320,
+    };
+  }
+
+  // Prefer an explicit query for pinning, then the `ll`/`@lat,lng` center.
+  const q = url.searchParams.get("q");
+  const ll = url.searchParams.get("ll");
+  const atCoord = url.pathname.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+  const coord = q ?? ll ?? (atCoord ? `${atCoord[1]},${atCoord[2]}` : null);
+
+  const embedUrl = coord
+    ? `https://www.google.com/maps?q=${encodeURIComponent(coord)}&output=embed`
+    : urlStr;
   return {
     kind: "map",
     url: urlStr,
     embedHtml: `<iframe src="${embedUrl}" width="100%" height="100%" style="border:0" loading="lazy" allowfullscreen></iframe>`,
-    width: 480,
+    width: undefined,
     height: 320,
   };
 }

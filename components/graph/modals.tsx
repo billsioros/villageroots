@@ -16,7 +16,7 @@ export function ModalShell({ title, onClose, children, className }: { title: str
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 animate-[modal-bg-in_0.2s_ease] backdrop-blur-sm" onMouseDown={onClose}>
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 animate-[modal-bg-in_0.2s_ease]" onMouseDown={onClose}>
       <div
         className={`w-[420px] rounded-2xl bg-card p-6 shadow-elev-raised animate-[modal-in_0.2s_ease] ${className ?? ""}`}
         onMouseDown={(e) => e.stopPropagation()}

@@ -33,6 +33,18 @@
   line-height: 1.35;
 }
 
+.editor-flat .ProseMirror a {
+  color: hsl(var(--muted-foreground));
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.editor-flat .ProseMirror a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .editor-flat .ProseMirror ul,
 .editor-flat .ProseMirror ol {
   padding-left: 1.5rem;

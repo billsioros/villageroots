@@ -27,7 +27,7 @@ export const ExternalEmbed = Node.create({
       description: { default: undefined },
       thumbnail: { default: undefined },
       embedHtml: { default: undefined },
-      width: { default: 480 },
+      width: { default: undefined },
       height: { default: 320 },
     };
   },

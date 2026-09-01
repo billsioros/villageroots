@@ -10,11 +10,12 @@ import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import Placeholder from "@tiptap/extension-placeholder";
 import Suggestion from "@tiptap/suggestion";
+import { NodeSelection } from "@tiptap/pm/state";
 import { ExternalEmbed } from "./external-embed-extension";
 import { SlashMenu, type SlashMenuItem, type SlashMenuRef } from "./slash-menu";
 import type { RichTextJSON } from "@/lib/graph/types";
 import { emptyDoc, isEmptyDoc } from "@/lib/graph/rich-text-utils";
-import { Loader2, Check, Link as LinkIcon } from "lucide-react";
+import { Loader2, Check, Link as LinkIcon, ChevronDown } from "lucide-react";
 import "./editor-flat.css";
 
 export type SaveState = "idle" | "saving" | "saved" | "error";
@@ -46,12 +47,97 @@ function ToolButton({
       title={title}
       aria-label={title}
       onClick={onClick}
-      className={`grid h-6 min-w-6 place-items-center rounded px-1 text-[13px] ${
-        active ? "bg-surface-warm font-medium" : "text-muted-foreground"
+      className={`grid h-7 min-w-7 place-items-center rounded-lg px-1.5 text-[14px] transition-colors ${
+        active
+          ? "bg-fg-soft-2 font-semibold text-foreground"
+          : "text-muted-foreground hover:bg-surface-warm hover:text-foreground"
       }`}
     >
       {children ?? label}
     </button>
+  );
+}
+
+function BlockStyleMenu({ editor }: { editor: Editor | null }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const current = editor?.isActive("heading", { level: 1 })
+    ? "Heading 1"
+    : editor?.isActive("heading", { level: 2 })
+      ? "Heading 2"
+      : "Paragraph";
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const options = [
+    {
+      label: "Paragraph",
+      run: () => editor?.chain().focus().setParagraph().run(),
+    },
+    {
+      label: "Heading 1",
+      run: () => editor?.chain().focus().setHeading({ level: 1 }).run(),
+    },
+    {
+      label: "Heading 2",
+      run: () => editor?.chain().focus().setHeading({ level: 2 }).run(),
+    },
+  ];
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1 rounded-lg bg-surface-warm py-1 pl-2.5 pr-1.5 text-[12px] font-medium text-foreground transition-colors hover:bg-fg-soft-2"
+      >
+        {current}
+        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+      </button>
+      {open && (
+        <div
+          role="listbox"
+          className="absolute left-0 top-full z-20 mt-1 w-36 overflow-hidden rounded-xl border border-border bg-white p-1 shadow-[0_8px_30px_rgba(0,0,0,0.14)]"
+        >
+          {options.map((option) => (
+            <button
+              key={option.label}
+              type="button"
+              role="option"
+              aria-selected={option.label === current}
+              onClick={() => {
+                option.run();
+                setOpen(false);
+              }}
+              className={`block w-full rounded-lg px-3 py-1.5 text-left text-[13px] transition-colors ${
+                option.label === current
+                  ? "bg-fg-soft-2 font-medium text-foreground"
+                  : "text-muted-foreground hover:bg-surface-warm hover:text-foreground"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -154,7 +240,7 @@ export function RichTextEditor({ initialContent, onSave, placeholder }: RichText
       onSelect: ({ editor: e }) => e.chain().focus().toggleOrderedList().run(),
     },
     {
-      title: "External embed",
+      title: "Embed",
       keywords: ["embed", "link", "wikipedia", "map"],
       onSelect: ({ editor: e }) => {
         const url = window.prompt("Paste a URL to embed (Wikipedia, Google Maps, or any link)");
@@ -266,7 +352,11 @@ export function RichTextEditor({ initialContent, onSave, placeholder }: RichText
   let slashPortal: ReactNode = null;
   if (slashMenu && slashMenu.items.length > 0) {
     slashPortal = createPortal(
-      <div className="fixed z-50" style={{ left: slashMenu.left, top: slashMenu.top }}>
+      <div
+        className="fixed z-50 pointer-events-auto"
+        data-slash-menu
+        style={{ left: slashMenu.left, top: slashMenu.top }}
+      >
         <SlashMenu
           items={slashMenu.items}
           editor={editor ?? undefined}
@@ -280,19 +370,19 @@ export function RichTextEditor({ initialContent, onSave, placeholder }: RichText
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-end gap-2 text-[11px] text-muted-foreground">
+      <div className="sticky top-0 z-10 -mx-4 flex items-center justify-end gap-2 bg-background px-4 py-2 text-[13px] text-muted-foreground">
         {saveState === "saving" && (
-          <span className="flex items-center gap-1">
-            <Loader2 className="h-3 w-3 animate-spin" /> Saving…
+          <span className="flex items-center gap-1.5 font-medium">
+            <Loader2 className="h-4 w-4 animate-spin" /> Saving…
           </span>
         )}
         {saveState === "saved" && (
-          <span className="flex items-center gap-1 text-emerald-600">
-            <Check className="h-3 w-3" /> Saved
+          <span className="flex items-center gap-1.5 font-medium text-emerald-600">
+            <Check className="h-4 w-4" /> Saved
           </span>
         )}
         {saveState === "error" && (
-          <button type="button" className="text-destructive underline" onClick={() => void flush()}>
+          <button type="button" className="font-medium text-destructive underline" onClick={() => void flush()}>
             Save failed — retry
           </button>
         )}
@@ -302,7 +392,14 @@ export function RichTextEditor({ initialContent, onSave, placeholder }: RichText
         {editor && (
           <BubbleMenu
             editor={editor}
-            className="flex items-center gap-0.5 rounded-lg border border-border bg-white p-1 shadow-lg"
+            className="z-50 flex items-center gap-0.5 rounded-xl border border-border bg-white p-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.14)]"
+            shouldShow={({ editor: e, state, from, to, view }) => {
+              const selection = state.selection;
+              const isEmptyTextBlock = !state.doc.textBetween(from, to).length && !(selection instanceof NodeSelection);
+              if (!view.hasFocus() || selection.empty || isEmptyTextBlock || !e.isEditable) return false;
+              if (selection instanceof NodeSelection) return false;
+              return true;
+            }}
           >
           <ToolButton
             active={editor?.isActive("bold")}
@@ -329,25 +426,7 @@ export function RichTextEditor({ initialContent, onSave, placeholder }: RichText
             title="Strike"
           />
           <span className="mx-1 h-4 w-px bg-border" />
-          <select
-            value={
-              editor?.isActive("heading", { level: 1 })
-                ? "h1"
-                : editor?.isActive("heading", { level: 2 })
-                  ? "h2"
-                  : "p"
-            }
-            onChange={(e) => {
-              const v = e.target.value;
-              if (v === "p") editor?.chain().focus().setParagraph().run();
-              else editor?.chain().focus().setHeading({ level: Number(v[1]) as 1 | 2 }).run();
-            }}
-            className="rounded border border-border bg-white px-1 text-[12px]"
-          >
-            <option value="p">Paragraph</option>
-            <option value="h1">Heading 1</option>
-            <option value="h2">Heading 2</option>
-          </select>
+          <BlockStyleMenu editor={editor ?? null} />
           <ToolButton
             title="Link"
             label="link"

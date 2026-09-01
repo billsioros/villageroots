@@ -127,6 +127,16 @@ export function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+/** Mixes a hex color toward white; returns an `rgb()` string. towardWhite 0 = unchanged, 1 = white. */
+export function tintHex(hex: string, towardWhite: number): string {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  const mix = (c: number) => Math.round(c + (255 - c) * towardWhite);
+  return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
+}
+
 export type VerbDirection =
   | { symmetric: true }
   | { symmetric: false; reading: string }

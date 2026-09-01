@@ -1,7 +1,7 @@
 "use client";
 
 import type { GraphNode, RichTextJSON } from "@/lib/graph/types";
-import { TYPE_META } from "@/lib/graph/helpers";
+import { TYPE_META, tintHex } from "@/lib/graph/helpers";
 import { RichTextEditor } from "./rich-text-editor";
 import { saveNodeDocumentContent } from "@/lib/graph/save-node-doc";
 import { useGraphStore } from "@/store/graphStore";
@@ -20,15 +20,21 @@ export function buildNodeDocSave(
 export function DocumentPanel({ node }: { node: GraphNode }) {
   const updateNode = useGraphStore((s) => s.updateNode);
   const onSave = buildNodeDocSave(node.id, updateNode);
+  const nodeColor = TYPE_META[node.type].color;
 
   return (
     <div className="flex flex-col">
-      <div className="shrink-0 border-b bg-gradient-to-br from-[#f3e9dd] to-[#e3d3bf] shadow-md">
+      <div
+        className="shrink-0 border-b shadow-md"
+        style={{
+          background: `linear-gradient(to bottom right, ${tintHex(nodeColor, 0.78)}, ${tintHex(nodeColor, 0.58)})`,
+        }}
+      >
         <div className="flex items-center justify-between gap-3 px-6 py-8 pr-12">
           <div className="flex min-w-0 items-center gap-4">
             <span
               className="grid h-14 w-14 shrink-0 place-items-center rounded-full text-xl text-white shadow-sm"
-              style={{ backgroundColor: TYPE_META[node.type].color }}
+              style={{ backgroundColor: nodeColor }}
             >
               {node.mark}
             </span>
