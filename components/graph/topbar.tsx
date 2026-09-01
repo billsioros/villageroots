@@ -2,8 +2,8 @@
 
 import { ChevronRight } from "lucide-react";
 import { BrandMark } from "./brand-mark";
-import { LogoutButton } from "@/components/logout-button";
 import { NotificationBell } from "./notification-bell";
+import { AvatarMenu } from "./avatar-menu";
 
 export function Topbar() {
   return (
@@ -19,10 +19,7 @@ export function Topbar() {
       </div>
       <div className="ml-auto flex items-center gap-3">
         <NotificationBell />
-        <div className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-[11px] font-semibold text-background">
-          VS
-        </div>
-        <LogoutButton />
+        <AvatarMenu />
       </div>
     </header>
   );

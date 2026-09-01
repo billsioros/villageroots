@@ -50,3 +50,5 @@ next-env.d.ts
 # supabase local dev
 /supabase/.temp/
 .env*
+.agents
+skills-lock.json

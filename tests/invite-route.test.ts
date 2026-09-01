@@ -6,11 +6,15 @@ const mocks = vi.hoisted(() => ({
   isAdminUid: vi.fn(),
   createAdminClient: vi.fn(),
   inviteUserByEmail: vi.fn(),
+  listUsers: vi.fn(),
+  updateUserById: vi.fn(),
+  generateInitialPassword: vi.fn(),
 }));
 
 vi.mock("@/lib/graph/session", () => ({ sessionUid: mocks.sessionUid }));
 vi.mock("@/lib/graph/admin", () => ({ isAdminUid: mocks.isAdminUid }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }));
+vi.mock("@/lib/auth/password", () => ({ generateInitialPassword: mocks.generateInitialPassword }));
 
 function req(body: unknown, origin = "http://127.0.0.1:3000") {
   return {
@@ -22,9 +26,21 @@ function req(body: unknown, origin = "http://127.0.0.1:3000") {
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.createAdminClient.mockReturnValue({
-    auth: { admin: { inviteUserByEmail: mocks.inviteUserByEmail } },
+    auth: {
+      admin: {
+        inviteUserByEmail: mocks.inviteUserByEmail,
+        listUsers: mocks.listUsers,
+        updateUserById: mocks.updateUserById,
+      },
+    },
   } as never);
   mocks.inviteUserByEmail.mockResolvedValue({ data: { user: null }, error: null } as never);
+  mocks.listUsers.mockResolvedValue({
+    data: { users: [{ id: "new-user-id", email: "ana@potidaneia.gr" }] },
+    error: null,
+  } as never);
+  mocks.updateUserById.mockResolvedValue({ data: { user: { id: "new-user-id" } }, error: null } as never);
+  mocks.generateInitialPassword.mockReturnValue("Test!Pass1234");
 });
 
 describe("POST /api/admin/invite", () => {
@@ -56,14 +72,49 @@ describe("POST /api/admin/invite", () => {
     expect(res.status).toBe(500);
   });
 
-  it("sends the invite and returns 200 for a valid email", async () => {
+  it("sends the invite and returns 200 with a password for a valid email", async () => {
     mocks.sessionUid.mockResolvedValue("user-1");
     mocks.isAdminUid.mockResolvedValue(true);
     const res = await POST(req({ email: "  ana@potidaneia.gr  " }));
+    const body = await res.json();
     expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.password).toBe("Test!Pass1234");
     expect(mocks.inviteUserByEmail).toHaveBeenCalledWith("ana@potidaneia.gr", {
       redirectTo: "http://127.0.0.1:3000/auth/invite",
     });
+  });
+
+  it("sets the generated password and confirms the email on the new user", async () => {
+    mocks.sessionUid.mockResolvedValue("user-1");
+    mocks.isAdminUid.mockResolvedValue(true);
+    await POST(req({ email: "  ana@potidaneia.gr  " }));
+    expect(mocks.updateUserById).toHaveBeenCalledWith("new-user-id", {
+      password: "Test!Pass1234",
+      email_confirm: true,
+    });
+  });
+
+  it("returns 500 when listUsers fails", async () => {
+    mocks.sessionUid.mockResolvedValue("user-1");
+    mocks.isAdminUid.mockResolvedValue(true);
+    mocks.listUsers.mockResolvedValue({
+      data: { users: [] },
+      error: { message: "db error" },
+    } as never);
+    const res = await POST(req({ email: "a@b.example" }));
+    expect(res.status).toBe(500);
+  });
+
+  it("returns 500 when updateUserById fails", async () => {
+    mocks.sessionUid.mockResolvedValue("user-1");
+    mocks.isAdminUid.mockResolvedValue(true);
+    mocks.updateUserById.mockResolvedValue({
+      data: { user: null },
+      error: { message: "update failed" },
+    } as never);
+    const res = await POST(req({ email: "a@b.example" }));
+    expect(res.status).toBe(500);
   });
 
   it("maps upstream 4xx errors to 400", async () => {

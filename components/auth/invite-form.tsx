@@ -11,6 +11,7 @@ export function InviteForm() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [password, setPassword] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -46,10 +47,11 @@ export function InviteForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      const body = (await res.json().catch(() => ({}))) as { error?: string; password?: string };
       if (res.ok) {
         setEmail("");
         setMessage(`Invitation sent to ${email}.`);
+        setPassword(body.password ?? null);
       } else {
         setError(body.error ?? "Invite failed — please try again.");
       }
@@ -88,6 +90,15 @@ export function InviteForm() {
           </p>
         )}
         {message && <p className="text-[13px] text-foreground">{message}</p>}
+        {password && (
+          <div className="rounded-md border border-border-soft bg-muted px-3 py-2.5">
+            <p className="text-[13px] font-medium text-foreground">Initial password</p>
+            <p className="mt-1 font-mono text-sm text-foreground">{password}</p>
+            <p className="mt-1 text-[13px] text-muted-foreground">
+              Share this password with the user so they can sign in.
+            </p>
+          </div>
+        )}
       </div>
     </form>
   );

@@ -3,6 +3,7 @@ import { sessionUid } from "@/lib/graph/session";
 import { isAdminUid } from "@/lib/graph/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { validateEmail } from "@/lib/auth/validation";
+import { generateInitialPassword } from "@/lib/auth/password";
 
 export async function POST(request: NextRequest) {
   const uid = await sessionUid();
@@ -42,5 +43,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invite failed. Please try again." }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true });
+  // Generate an initial password so the admin can share it directly
+  const password = generateInitialPassword();
+
+  // Find the newly created user to set the password
+  const { data: listData, error: listError } = await admin.auth.admin.listUsers();
+  if (listError) {
+    return NextResponse.json({ error: "Invite sent but could not set password. Please try again." }, { status: 500 });
+  }
+  const newUser = listData.users.find((u) => u.email === email);
+  if (!newUser) {
+    return NextResponse.json({ error: "Invite sent but could not set password. Please try again." }, { status: 500 });
+  }
+
+  const { error: updateError } = await admin.auth.admin.updateUserById(newUser.id, {
+    password,
+    email_confirm: true,
+  });
+  if (updateError) {
+    return NextResponse.json({ error: "Invite sent but could not set password. Please try again." }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true, password });
 }
