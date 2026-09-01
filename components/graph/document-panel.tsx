@@ -1,16 +1,26 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import type { GraphNode } from "@/lib/graph/types";
+import type { GraphNode, RichTextJSON } from "@/lib/graph/types";
 import { TYPE_META } from "@/lib/graph/helpers";
 import { RichTextEditor } from "./rich-text-editor";
 import { saveNodeDocumentContent } from "@/lib/graph/save-node-doc";
+import { useGraphStore } from "@/store/graphStore";
+
+export function buildNodeDocSave(
+  nodeId: string,
+  updateNode: (id: string, patch: { documentContent: RichTextJSON }) => void,
+) {
+  return async (json: RichTextJSON) => {
+    const res = await saveNodeDocumentContent(nodeId, json);
+    if (!res.ok) throw new Error(res.error);
+    updateNode(nodeId, { documentContent: json });
+  };
+}
 
 export function DocumentPanel({ node }: { node: GraphNode }) {
-  const onSave = async (json: Parameters<typeof saveNodeDocumentContent>[1]) => {
-    const res = await saveNodeDocumentContent(node.id, json);
-    if (!res.ok) throw new Error(res.error);
-  };
+  const updateNode = useGraphStore((s) => s.updateNode);
+  const onSave = buildNodeDocSave(node.id, updateNode);
 
   return (
     <div className="flex flex-col">
