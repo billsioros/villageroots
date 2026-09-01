@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { createRoot, type Root } from "react-dom/client";
+import { createRoot } from "react-dom/client";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import { Extension, type Editor } from "@tiptap/core";
@@ -175,7 +175,11 @@ export function RichTextEditor({ initialContent, onSave, placeholder }: RichText
               shouldResetDismissed: () => true,
               command: ({ editor: e, range, props }) => {
                 e.chain().focus().deleteRange(range).run();
-                props.onSelect({ editor: e });
+                try {
+                  props.onSelect({ editor: e });
+                } catch (err) {
+                  console.error("[slash] command failed", err);
+                }
               },
               items: ({ query }) =>
                 slashItems().filter((it) =>
@@ -184,10 +188,10 @@ export function RichTextEditor({ initialContent, onSave, placeholder }: RichText
               render: () => {
                 const holder = document.createElement("div");
                 holder.style.cssText =
-                  "position:fixed;z-index:50;left:0;top:0;pointer-events:none;";
+                  "position:fixed;z-index:50;left:0;top:0;display:none;pointer-events:none;";
                 document.body.appendChild(holder);
 
-                let root: Root | null = null;
+                const root = createRoot(holder);
                 let menuRef: SlashMenuRef | null = null;
 
                 const position = (props: {
@@ -217,7 +221,6 @@ export function RichTextEditor({ initialContent, onSave, placeholder }: RichText
                   editor: Editor;
                   command: (item: SlashMenuItem) => void;
                 }) => {
-                  root ??= createRoot(holder);
                   root.render(
                     createPortal(
                       <SlashMenu
@@ -238,6 +241,7 @@ export function RichTextEditor({ initialContent, onSave, placeholder }: RichText
                     console.log("[slash] onStart items=", props.items?.length, "clientRect=", Boolean(props.clientRect));
                     renderMenu(props);
                     position(props);
+                    holder.style.display = "block";
                     holder.style.pointerEvents = "auto";
                   },
                   onUpdate: (props) => {
@@ -253,12 +257,8 @@ export function RichTextEditor({ initialContent, onSave, placeholder }: RichText
                   },
                   onExit: () => {
                     console.log("[slash] onExit");
+                    holder.style.display = "none";
                     holder.style.pointerEvents = "none";
-                    setTimeout(() => {
-                      root?.unmount();
-                      root = null;
-                      holder.remove();
-                    }, 0);
                   },
                 };
               },
