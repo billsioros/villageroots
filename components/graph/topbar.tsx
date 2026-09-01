@@ -13,14 +13,14 @@ export function Topbar() {
         <span className="text-[15px] font-semibold tracking-tight">VillageRoots</span>
       </div>
       <div className="flex items-center gap-1 text-[13px] text-muted-foreground">
-        <span>Potidaneia</span>
+        <span>Fokida</span>
         <ChevronRight size={13} />
-        <span className="text-foreground">Fokida</span>
+        <span className="text-foreground">Potidaneia</span>
       </div>
       <div className="ml-auto flex items-center gap-3">
         <NotificationBell />
         <div className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-[11px] font-semibold text-background">
-          EK
+          VS
         </div>
         <LogoutButton />
       </div>

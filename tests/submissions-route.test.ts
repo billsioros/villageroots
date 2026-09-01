@@ -131,4 +131,29 @@ describe("POST /api/submissions", () => {
     const res = await POST(mreq({ nodes: [{ id: "d", type: "person", label: "x".repeat(201) }], edges: [] }));
     expect(res.status).toBe(400);
   });
+
+  it("returns 400 when documentContent exceeds 1MB", async () => {
+    const hugeDoc = { text: "x".repeat(1_000_001) };
+    const res = await POST(
+      mreq({
+        nodes: [{ id: "draft-a", type: "person", label: "A", documentContent: hugeDoc }],
+        edges: [],
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "documentContent too large" });
+  });
+
+  it("persists documentContent when provided in submission", async () => {
+    const doc = { type: "doc", content: [] };
+    const res = await POST(
+      mreq({
+        nodes: [{ id: "draft-a", type: "person", label: "A", documentContent: doc }],
+        edges: [],
+      }),
+    );
+    expect(res.status).toBe(201);
+    const nodeCall = mocks.insertValues.mock.calls[0][0];
+    expect(nodeCall.documentContent).toEqual(doc);
+  });
 });

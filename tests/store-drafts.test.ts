@@ -65,9 +65,15 @@ describe("drafts slice", () => {
     useGraphStore.getState().addDraftNode(draft("draft-a", "person"));
     useGraphStore
       .getState()
-      .updateDraftNode("draft-a", { description: "From Kato Potamia", facts: { born: "1924" }, deceased: true });
+      .updateDraftNode("draft-a", {
+        description: "From Kato Potamia",
+        documentContent: { type: "doc", content: [] },
+        facts: { born: "1924" },
+        deceased: true,
+      });
     const d = useGraphStore.getState().draftNodes[0];
     expect(d.description).toBe("From Kato Potamia");
+    expect(d.documentContent).toEqual({ type: "doc", content: [] });
     expect(d.facts?.born).toBe("1924");
     expect(d.deceased).toBe(true);
   });

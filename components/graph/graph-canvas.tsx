@@ -319,8 +319,9 @@ export function GraphCanvas() {
       if (now - lastViewportUpdate.current > 100) {
         lastViewportUpdate.current = now;
         const zoom = fg.zoom();
-        const cx = fg.center().x;
-        const cy = fg.center().y;
+        const center = fg.centerAt();
+        const cx = center.x;
+        const cy = center.y;
         const w = size.w / zoom;
         const h = size.h / zoom;
         const bounds = {

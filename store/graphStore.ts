@@ -230,6 +230,7 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
         if (patch.label !== undefined) rowPatch.label = patch.label;
         if (patch.subtitle !== undefined) rowPatch.subtitle = patch.subtitle;
         if (patch.description !== undefined) rowPatch.description = patch.description;
+        if (patch.documentContent !== undefined) rowPatch.documentContent = patch.documentContent;
         const properties =
           patch.x === undefined && patch.y === undefined
             ? r.properties

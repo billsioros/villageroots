@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bold, Italic, Link as LinkIcon, List, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import { useGraphStore } from "@/store/graphStore";
-import { type DraftNode } from "@/lib/graph/types";
+import { type DraftNode, type RichTextJSON } from "@/lib/graph/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { RichTextEditor } from "./rich-text-editor";
 
 const FACT_FIELDS: Record<DraftNode["type"], { key: string; label: string }[]> = {
   person: [
@@ -39,33 +40,31 @@ export default function DraftEditor({ draft }: { draft: DraftNode }) {
   const [subtitle, setSubtitle] = useState(draft.subtitle ?? "");
   const [facts, setFacts] = useState<Record<string, string>>(draft.facts ?? {});
   const [deceased, setDeceased] = useState(Boolean(draft.deceased));
-  const descRef = useRef<HTMLDivElement>(null);
+  const latestDoc = useRef<RichTextJSON | null>(null);
 
   useEffect(() => {
     setLabel(draft.label);
     setSubtitle(draft.subtitle ?? "");
     setFacts(draft.facts ?? {});
     setDeceased(Boolean(draft.deceased));
-    if (descRef.current) descRef.current.textContent = draft.description ?? "";
-  }, [draft.id, draft.label, draft.subtitle, draft.description, draft.facts, draft.deceased]);
-
-  const applyMd = (cmd: string) => document.execCommand(cmd);
+  }, [draft.id, draft.label, draft.subtitle, draft.facts, draft.deceased]);
 
   const save = () => {
     updateDraftNode(draft.id, {
       label: label.trim() || draft.label,
       subtitle: subtitle.trim() || undefined,
-      description: descRef.current?.innerText.trim() || undefined,
+      documentContent: latestDoc.current ?? draft.documentContent,
       facts,
       deceased,
     });
+    latestDoc.current = null;
     pushToast({ tone: "success", message: "Draft saved" });
   };
 
   const fields = FACT_FIELDS[draft.type];
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto p-4">
+    <div className="flex h-full flex-col overflow-y-auto p-4 pr-12">
       <div className="mb-1 text-xs font-medium text-muted-foreground">Label</div>
       <Input value={label} onChange={(e) => setLabel(e.target.value)} />
 
@@ -93,19 +92,15 @@ export default function DraftEditor({ draft }: { draft: DraftNode }) {
         </div>
       )}
 
-      <div className="mt-4 flex items-center gap-1">
-        {[
-          { cmd: "bold", Icon: Bold, label: "Bold" },
-          { cmd: "italic", Icon: Italic, label: "Italic" },
-          { cmd: "insertUnorderedList", Icon: List, label: "List" },
-          { cmd: "createLink", Icon: LinkIcon, label: "Link" },
-        ].map(({ cmd, Icon, label: aria }) => (
-          <Button key={cmd} type="button" variant="ghost" size="sm" onClick={() => applyMd(cmd)} aria-label={aria}>
-            <Icon className="h-4 w-4" />
-          </Button>
-        ))}
-      </div>
-      <div className="mt-2 min-h-[120px] rounded-md border p-3 text-sm" ref={descRef} contentEditable />
+      <div className="mt-4 text-xs font-medium text-muted-foreground">Story</div>
+      <RichTextEditor
+        initialContent={draft.documentContent}
+        placeholder="Write the story…"
+        onSave={async (json) => {
+          updateDraftNode(draft.id, { documentContent: json });
+          latestDoc.current = json;
+        }}
+      />
 
       <Button className="mt-4" onClick={save}>
         <Save className="mr-2 h-4 w-4" /> Save

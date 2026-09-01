@@ -19,6 +19,13 @@
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
     "@tanstack/react-query": "^5.101.4",
+    "@tiptap/core": "^3.30.5",
+    "@tiptap/extension-placeholder": "^3.30.5",
+    "@tiptap/extension-task-item": "^3.30.5",
+    "@tiptap/extension-task-list": "^3.30.5",
+    "@tiptap/react": "^3.30.5",
+    "@tiptap/starter-kit": "^3.30.5",
+    "@tiptap/suggestion": "^3.30.5",
     "animejs": "^4.5.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -32,6 +39,7 @@
     "react-dom": "^19.0.0",
     "react-force-graph-2d": "^1.29.1",
     "tailwind-merge": "^3.3.0",
+    "unfurl.js": "^6.4.0",
     "zustand": "^5.0.14"
   },
   "devDependencies": {

@@ -63,6 +63,7 @@ export const nodes = pgTable(
     label: text("label").notNull(),
     subtitle: text("subtitle"),
     description: text("description"),
+    documentContent: jsonb("document_content").$type<Record<string, unknown> | null>(),
     properties: jsonb("properties")
       .$type<Record<string, unknown>>()
       .notNull()

@@ -22,6 +22,13 @@ export async function POST(req: Request) {
   const shape = validateSubmissionShape(body);
   if (!shape.ok) return NextResponse.json({ error: shape.error }, { status: 400 });
 
+  for (const n of shape.value.nodes) {
+    const size = n.documentContent ? JSON.stringify(n.documentContent).length : 0;
+    if (size > 1_000_000) {
+      return NextResponse.json({ error: "documentContent too large" }, { status: 400 });
+    }
+  }
+
   const draftIds = new Set(shape.value.nodes.map((n) => n.id));
   const slugs = new Set<string>();
   for (const e of shape.value.edges) {

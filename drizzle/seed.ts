@@ -22,10 +22,10 @@ async function ensureUser(
 ) {
   const existing = (await tx.execute(
     sql`select id from auth.users where email = ${email}`,
-  )) as { rows: { id: string }[] };
+  )) as { id: string }[];
   let userId: string;
-  if (existing.rows.length > 0) {
-    userId = existing.rows[0].id;
+  if (existing.length > 0) {
+    userId = existing[0].id;
     console.log(`user ${email} already exists (${userId})`);
   } else {
     const hash = await bcrypt.hash(password, 10);
@@ -45,8 +45,8 @@ async function ensureUser(
           now(), now()
         ) returning id
       `,
-    )) as { rows: { id: string }[] };
-    userId = created.rows[0].id;
+    )) as { id: string }[];
+    userId = created[0].id;
     console.log(`created ${role} user ${email} (${userId})`);
   }
 
