@@ -15,6 +15,7 @@ export interface SubmissionNode {
   label: string;
   subtitle: string | null;
   description: string | null;
+  documentContent?: Record<string, unknown> | null;
   facts?: Record<string, string> | null;
   deceased?: boolean | null;
   x?: number | null;
@@ -59,6 +60,13 @@ export function validateSubmissionShape(
     if (typeof n.description === "string" && n.description.length > MAX_DESCRIPTION_LENGTH) {
       return { ok: false, error: "Description too long" };
     }
+    let documentContent: Record<string, unknown> | undefined;
+    if (n.documentContent !== undefined && n.documentContent !== null) {
+      if (typeof n.documentContent !== "object" || Array.isArray(n.documentContent)) {
+        return { ok: false, error: "documentContent must be an object" };
+      }
+      documentContent = n.documentContent as Record<string, unknown>;
+    }
     let facts: Record<string, string> | undefined;
     if (n.facts !== undefined && n.facts !== null) {
       if (typeof n.facts !== "object") return { ok: false, error: "facts must be an object" };
@@ -76,6 +84,7 @@ export function validateSubmissionShape(
       label: n.label,
       subtitle: typeof n.subtitle === "string" ? n.subtitle : null,
       description: typeof n.description === "string" ? n.description : null,
+      documentContent,
       facts,
       deceased: typeof n.deceased === "boolean" ? n.deceased : null,
       x: typeof n.x === "number" ? n.x : null,
@@ -127,6 +136,7 @@ export function submissionPayloadFromDrafts(draftNodes: DraftNode[], draftEdges:
       label: d.label,
       subtitle: d.subtitle ?? null,
       description: d.description ?? null,
+      documentContent: d.documentContent ?? null,
       facts: d.facts ?? null,
       deceased: d.deceased ?? null,
       x: d.x,

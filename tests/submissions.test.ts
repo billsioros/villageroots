@@ -121,6 +121,7 @@ describe("submissionPayloadFromDrafts", () => {
           label: "Yiayia",
           subtitle: null,
           description: null,
+          documentContent: null,
           facts: { born: "1924" },
           deceased: null,
           x: 1,
