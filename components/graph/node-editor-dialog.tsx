@@ -30,7 +30,7 @@ export function NodeEditorDialog() {
 
   return (
     <Dialog open={sidepanelOpen} onOpenChange={clearSelection}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-3xl overflow-hidden p-0">
         <DialogHeader>
           <DialogTitle className="sr-only">
             {selected?.node.label ?? "Node"}
@@ -38,7 +38,7 @@ export function NodeEditorDialog() {
         </DialogHeader>
 
         {selected && !selected.isDraft && (
-          <div className="mb-4 flex gap-1">
+          <div className="flex gap-1 px-6 pt-5 pb-3">
             {TABS.map((t) => (
               <button
                 key={t.id}
@@ -59,7 +59,9 @@ export function NodeEditorDialog() {
           ) : !selected ? null : tab === "document" ? (
             <DocumentPanel node={selected.node} />
           ) : (
-            <RelationsPanel node={selected.node} />
+            <div className="p-6">
+              <RelationsPanel node={selected.node} />
+            </div>
           )}
         </div>
       </DialogContent>

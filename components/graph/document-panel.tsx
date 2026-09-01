@@ -23,26 +23,23 @@ export function DocumentPanel({ node }: { node: GraphNode }) {
 
   return (
     <div className="flex flex-col">
-      <div className="shrink-0 border-b bg-gradient-to-br from-[#f3e9dd] to-[#e3d3bf]">
-        <div className="flex items-center justify-between gap-3 p-5">
-          <div className="flex min-w-0 items-center gap-3">
+      <div className="shrink-0 border-b bg-gradient-to-br from-[#f3e9dd] to-[#e3d3bf] shadow-md">
+        <div className="flex items-center justify-between gap-3 px-6 py-8 pr-12">
+          <div className="flex min-w-0 items-center gap-4">
             <span
-              className="grid h-12 w-12 shrink-0 place-items-center rounded-full text-lg text-white shadow-sm"
+              className="grid h-14 w-14 shrink-0 place-items-center rounded-full text-xl text-white shadow-sm"
               style={{ backgroundColor: TYPE_META[node.type].color }}
             >
               {node.mark}
             </span>
-            <div className="min-w-0">
-              <h2 className="truncate text-2xl font-semibold tracking-tight">{node.label}</h2>
-              {node.subtitle && <p className="mt-0.5 truncate text-[13px] text-muted-foreground">{node.subtitle}</p>}
-            </div>
+            <h2 className="min-w-0 truncate text-2xl font-semibold tracking-tight">{node.label}</h2>
           </div>
           <span className="shrink-0 rounded-full bg-black/55 px-3 py-1 text-[11px] text-white">
             {TYPE_META[node.type].label}
           </span>
         </div>
       </div>
-      <div className="p-5">
+      <div className="p-6">
         <RichTextEditor initialContent={node.documentContent} onSave={onSave} placeholder="Write the story…" />
       </div>
     </div>

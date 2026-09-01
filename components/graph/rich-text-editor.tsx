@@ -1,8 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
-import { createRoot } from "react-dom/client";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import { Extension, type Editor } from "@tiptap/core";
@@ -62,6 +60,33 @@ export function RichTextEditor({ initialContent, onSave, placeholder }: RichText
   const saveRef = useRef(onSave);
   saveRef.current = onSave;
   const editorRef = useRef<Editor | null>(null);
+
+  const [slashMenu, setSlashMenu] = useState<{ items: SlashMenuItem[]; left: number; top: number } | null>(null);
+  const slashMenuRef = useRef<SlashMenuRef | null>(null);
+  const slashCommand = useRef<(item: SlashMenuItem) => void>(() => {});
+
+  const positionSlash = (props: {
+    items?: SlashMenuItem[];
+    clientRect?: (() => DOMRect | null) | null;
+    editor: Editor;
+  }) => {
+    let left = 0;
+    let top = 0;
+    const rect = props.clientRect?.() ?? null;
+    if (rect) {
+      left = rect.left;
+      top = rect.bottom + 4;
+    } else {
+      try {
+        const c = props.editor.view.coordsAtPos(props.editor.state.selection.$anchor.pos);
+        left = c.left;
+        top = c.bottom + 4;
+      } catch {
+        return null;
+      }
+    }
+    return { items: props.items ?? [], left, top };
+  };
 
   const flush = useCallback(async () => {
     if (timer.current) clearTimeout(timer.current);
@@ -185,83 +210,27 @@ export function RichTextEditor({ initialContent, onSave, placeholder }: RichText
                 slashItems().filter((it) =>
                   `${it.title} ${(it.keywords ?? []).join(" ")}`.toLowerCase().includes(query.toLowerCase()),
                 ),
-              render: () => {
-                const holder = document.createElement("div");
-                holder.style.cssText =
-                  "position:fixed;z-index:50;left:0;top:0;display:none;pointer-events:none;";
-                document.body.appendChild(holder);
-
-                const root = createRoot(holder);
-                let menuRef: SlashMenuRef | null = null;
-
-                const position = (props: {
-                  clientRect?: (() => DOMRect | null) | null;
-                  editor: Editor;
-                }) => {
-                  let rect = props.clientRect?.() ?? null;
-                  if (!rect) {
-                    const pos = props.editor.state.selection.$anchor.pos;
-                    try {
-                      const c = props.editor.view.coordsAtPos(pos);
-                      rect = new DOMRect(c.left, c.top, c.right - c.left, c.bottom - c.top);
-                    } catch {
-                      rect = null;
-                    }
+              render: () => ({
+                onStart: (props) => {
+                  slashCommand.current = props.command;
+                  const pos = positionSlash(props);
+                  if (pos) setSlashMenu(pos);
+                },
+                onUpdate: (props) => {
+                  slashCommand.current = props.command;
+                  const pos = positionSlash(props);
+                  if (pos) setSlashMenu(pos);
+                },
+                onKeyDown: ({ event }) => {
+                  if (event.key === "Escape") {
+                    return true;
                   }
-                  if (!rect) {
-                    console.log("[slash] no rect to position", props.editor.view.dom.dataset);
-                    return;
-                  }
-                  holder.style.left = `${rect.left}px`;
-                  holder.style.top = `${rect.bottom + 4}px`;
-                };
-
-                const renderMenu = (props: {
-                  items: SlashMenuItem[];
-                  editor: Editor;
-                  command: (item: SlashMenuItem) => void;
-                }) => {
-                  root.render(
-                    createPortal(
-                      <SlashMenu
-                        items={props.items}
-                        editor={props.editor}
-                        command={props.command}
-                        ref={(ref) => {
-                          menuRef = ref;
-                        }}
-                      />,
-                      holder,
-                    ),
-                  );
-                };
-
-                return {
-                  onStart: (props) => {
-                    console.log("[slash] onStart items=", props.items?.length, "clientRect=", Boolean(props.clientRect));
-                    renderMenu(props);
-                    position(props);
-                    holder.style.display = "block";
-                    holder.style.pointerEvents = "auto";
-                  },
-                  onUpdate: (props) => {
-                    console.log("[slash] onUpdate items=", props.items?.length, "clientRect=", Boolean(props.clientRect));
-                    renderMenu(props);
-                    position(props);
-                  },
-                  onKeyDown: ({ event }) => {
-                    if (event.key === "Escape") {
-                      return true;
-                    }
-                    return menuRef?.onKeyDown({ event }) ?? false;
-                  },
-                  onExit: () => {
-                    console.log("[slash] onExit");
-                    holder.style.display = "none";
-                    holder.style.pointerEvents = "none";
-                  },
-                };
-              },
+                  return slashMenuRef.current?.onKeyDown({ event }) ?? false;
+                },
+                onExit: () => {
+                  setSlashMenu(null);
+                },
+              }),
             }),
           ];
         },
@@ -374,6 +343,16 @@ export function RichTextEditor({ initialContent, onSave, placeholder }: RichText
             <LinkIcon className="h-3.5 w-3.5" />
           </ToolButton>
           </BubbleMenu>
+        )}
+        {slashMenu && slashMenu.items.length > 0 && (
+          <div className="fixed z-50" style={{ left: slashMenu.left, top: slashMenu.top }}>
+            <SlashMenu
+              items={slashMenu.items}
+              editor={editor ?? undefined}
+              command={slashCommand.current}
+              ref={slashMenuRef}
+            />
+          </div>
         )}
       </div>
     </div>

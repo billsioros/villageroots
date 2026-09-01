@@ -64,7 +64,7 @@ export default function DraftEditor({ draft }: { draft: DraftNode }) {
   const fields = FACT_FIELDS[draft.type];
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto p-4">
+    <div className="flex h-full flex-col overflow-y-auto p-4 pr-12">
       <div className="mb-1 text-xs font-medium text-muted-foreground">Label</div>
       <Input value={label} onChange={(e) => setLabel(e.target.value)} />
 
