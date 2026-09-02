@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, Plus, Upload, Layers, ShieldCheck, Sparkles, SlidersHorizontal, GitBranch } from "lucide-react";
+import { Search, Plus, Upload, Layers, ShieldCheck, /* Sparkles, */ SlidersHorizontal, GitBranch } from "lucide-react";
 import { useGraphStore } from "@/store/graphStore";
 
 export function Dock() {
@@ -13,7 +13,7 @@ export function Dock() {
   const physicsOpen = useGraphStore((s) => s.physicsOpen);
   const setPhysicsOpen = useGraphStore((s) => s.setPhysicsOpen);
   const setReviewQueueOpen = useGraphStore((s) => s.setReviewQueueOpen);
-  const toggleChat = useGraphStore((s) => s.toggleChat);
+  // const toggleChat = useGraphStore((s) => s.toggleChat);
   const activeView = useGraphStore((s) => s.activeView);
   const setActiveView = useGraphStore((s) => s.setActiveView);
 
@@ -53,9 +53,9 @@ export function Dock() {
       >
         <GitBranch size={20} />
       </button>
-      <button title="Chat" onClick={toggleChat} className="grid h-12 w-12 place-items-center rounded-full border shadow-elev-raised transition-colors bg-card/90 text-foreground backdrop-blur hover:bg-surface-warm" aria-label="Chat">
+      {/* <button title="Chat" onClick={toggleChat} className="grid h-12 w-12 place-items-center rounded-full border shadow-elev-raised transition-colors bg-card/90 text-foreground backdrop-blur hover:bg-surface-warm" aria-label="Chat">
         <Sparkles size={18} />
-      </button>
+      </button> */}
       {isAdmin && (
         <button title="Review queue" onClick={() => setReviewQueueOpen(true)} className="grid h-12 w-12 place-items-center rounded-full border shadow-elev-raised transition-colors bg-card/90 text-foreground backdrop-blur hover:bg-surface-warm" aria-label="Review queue">
           <ShieldCheck size={18} />
