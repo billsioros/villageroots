@@ -84,18 +84,22 @@ export async function POST(req: Request) {
   }
 
   if (status === "pending") {
-    const admins = await db
-      .select({ userId: userRoles.userId })
-      .from(userRoles)
-      .where(eq(userRoles.role, "admin"));
+    try {
+      const admins = await db
+        .select({ userId: userRoles.userId })
+        .from(userRoles)
+        .where(eq(userRoles.role, "admin"));
 
-    for (const { userId } of admins) {
-      await db.insert(notifications).values({
-        userId,
-        type: "submission_pending",
-        message: `New edge submission awaiting review: ${verb.replace(/_/g, " ")}`,
-        metadata: { edge_id: result.id },
-      });
+      for (const { userId } of admins) {
+        await db.insert(notifications).values({
+          userId,
+          type: "submission_pending",
+          message: `New edge submission awaiting review: ${verb.replace(/_/g, " ")}`,
+          metadata: { edge_id: result.id },
+        });
+      }
+    } catch (err) {
+      console.error("[edge-submission] failed to notify admins", err);
     }
   }
 
