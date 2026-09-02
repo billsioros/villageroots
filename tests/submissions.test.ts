@@ -65,6 +65,9 @@ describe("validateSubmissionShape", () => {
   it("rejects duplicate edges (source,target,verb)", () => {
     expect(validateSubmissionShape({ nodes: [n("a"), n("b")], edges: [e("a", "b"), e("a", "b")] }).ok).toBe(false);
   });
+  it("rejects a self-loop edge (source === target)", () => {
+    expect(validateSubmissionShape({ nodes: [n("a"), n("b")], edges: [e("a", "a")] }).ok).toBe(false);
+  });
   it("rejects duplicate node ids", () => {
     expect(validateSubmissionShape({ nodes: [n("draft-a"), n("draft-a", "family")], edges: [] }).ok).toBe(false);
   });
