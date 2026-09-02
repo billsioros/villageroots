@@ -1,3 +1,10 @@
+# [1.13.0](https://github.com/billsioros/villageroots/compare/v1.12.0...v1.13.0) (2026-09-02)
+
+
+### Features
+
+* PTDN-30 manual data entry edge cases — duplicate detection, client-side validation, self-loop guard ([#30](https://github.com/billsioros/villageroots/issues/30)) ([578139e](https://github.com/billsioros/villageroots/commit/578139e948c96fd67817397e7b4777e1e0618020))
+
 # [1.12.0](https://github.com/billsioros/villageroots/compare/v1.11.0...v1.12.0) (2026-09-02)
 
 
