@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronRight, Plus } from "lucide-react";
+import { ChevronRight, Loader2, Plus } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useShallow } from "zustand/react/shallow";
 import { useGraphStore, selectAllNodes } from "@/store/graphStore";
@@ -18,15 +19,16 @@ export function RelationsPanel({ node }: { node: GraphNode }) {
   const related = edges.filter((e) => e.source === node.id || e.target === node.id);
   const suggestions = suggestedEdges.filter((e) => e.source === node.id || e.target === node.id);
 
+  const queryClient = useQueryClient();
   const [verb, setVerb] = useState<Verb>("related_to");
   const [target, setTarget] = useState("");
-  const [note, setNote] = useState("");
   const [open, setOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const other = (e: { source: string; target: string }) =>
     e.source === node.id ? e.target : e.source;
 
-  const submit = () => {
+  const submit = async () => {
     if (!verb) {
       pushToast({ tone: "error", message: "Pick a verb" });
       return;
@@ -35,10 +37,30 @@ export function RelationsPanel({ node }: { node: GraphNode }) {
       pushToast({ tone: "error", message: "Pick a node" });
       return;
     }
-    pushToast({ tone: "success", message: "Proposal submitted for moderation" });
-    setOpen(false);
-    setNote("");
-    setTarget("");
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/submissions/edge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceId: node.id, targetId: target, verb }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        pushToast({ tone: "error", message: data.error || "Submission failed" });
+        return;
+      }
+      pushToast({
+        tone: "success",
+        message: data.status === "approved" ? "Relation added" : "Relation submitted for review",
+      });
+      queryClient.invalidateQueries({ queryKey: ["graph", "edges"] });
+      setOpen(false);
+      setTarget("");
+    } catch {
+      pushToast({ tone: "error", message: "Network error — try again" });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -64,8 +86,15 @@ export function RelationsPanel({ node }: { node: GraphNode }) {
                 {n.mark}
               </span>
               <span className="text-[13px] font-medium">{n.label}</span>
-              <span className="ml-auto rounded-full bg-surface-warm px-2 py-0.5 text-[11px] text-muted-foreground">
-                {e.verb.replaceAll("_", " ")}
+              <span className="ml-auto flex items-center gap-2">
+                <span className="rounded-full bg-surface-warm px-2 py-0.5 text-[11px] text-muted-foreground">
+                  {e.verb.replaceAll("_", " ")}
+                </span>
+                {e.status === "pending" && (
+                  <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-[11px] text-yellow-700">
+                    pending
+                  </span>
+                )}
               </span>
             </button>
           );
@@ -138,14 +167,9 @@ export function RelationsPanel({ node }: { node: GraphNode }) {
                   ))}
               </select>
             </div>
-            <input
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Add a note (optional)…"
-              className="rounded-lg border bg-white px-2 py-2 text-[13px] outline-none focus:border-primary"
-            />
-            <Button size="sm" className="rounded-full self-end" onClick={submit}>
-              Queue for review
+            <Button size="sm" className="rounded-full self-end" onClick={submit} disabled={submitting}>
+              {submitting ? <Loader2 size={14} className="animate-spin mr-1" /> : null}
+              {submitting ? "Submitting…" : "Queue for review"}
             </Button>
           </div>
         )}
