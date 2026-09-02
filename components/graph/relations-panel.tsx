@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useShallow } from "zustand/react/shallow";
 import { useGraphStore, selectAllNodes } from "@/store/graphStore";
 import { TYPE_META } from "@/lib/graph/helpers";
+import { invalidationKeys } from "@/lib/graph/queries";
 import type { GraphNode, Verb } from "@/lib/graph/types";
 
 export function RelationsPanel({ node }: { node: GraphNode }) {
@@ -53,7 +54,7 @@ export function RelationsPanel({ node }: { node: GraphNode }) {
         tone: "success",
         message: data.status === "approved" ? "Relation added" : "Relation submitted for review",
       });
-      queryClient.invalidateQueries({ queryKey: ["graph", "edges"] });
+      queryClient.invalidateQueries({ queryKey: invalidationKeys.edges });
       setOpen(false);
       setTarget("");
     } catch {
