@@ -665,14 +665,14 @@ export function GraphCanvas() {
           linkColor={(l: any) => {
             if (activeView === "TREE") return "rgba(0,0,0,0)";
             if (litEdgeIds.includes(l.id)) return tokenColor("primary");
-            if (l.draft) return tokenColor("meta", 0.8);
+            if (l.draft || l.status === "pending") return tokenColor("meta", 0.8);
             if (l.suggested) return tokenColor("primary", 0.8);
             if (l.kind === "geo") return tokenColor("success", 0.55);
             if (l.kind === "hist") return tokenColor("warn", 0.55);
             return tokenColor("fg", 0.45);
           }}
           linkWidth={(l: any) => (l.suggested ? 1.4 : litEdgeIds.includes(l.id) ? 2.4 : 1.2)}
-          linkLineDash={(l: any) => (l.suggested || l.draft ? ([5, 4] as any) : null)}
+          linkLineDash={(l: any) => (l.suggested || l.draft || l.status === "pending" ? ([5, 4] as any) : null)}
           linkDirectionalParticles={(l: any) => (litEdgeIds.includes(l.id) ? 2 : 0)}
           linkDirectionalParticleSpeed={0.008}
           linkCanvasObject={activeView === "TREE" ? treeLinkPaint : undefined}
