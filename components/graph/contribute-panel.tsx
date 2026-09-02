@@ -6,6 +6,8 @@ import { useGraphStore } from "@/store/graphStore";
 import { TYPE_META, VERB_KIND, VERBS, normalizeEditedLabel, uid } from "@/lib/graph/helpers";
 import { type NodeType, type Verb } from "@/lib/graph/types";
 import { submissionPayloadFromDrafts } from "@/lib/graph/submissions";
+import { validateBeforeSubmit } from "@/lib/graph/validate-submission";
+import { fetchSearchNodes, type SearchResult } from "@/lib/graph/search";
 import { queryClient } from "@/lib/graph/query-client";
 import { invalidationKeys } from "@/lib/graph/queries";
 import { Button } from "@/components/ui/button";
@@ -69,6 +71,8 @@ export default function ContributePanel() {
   const [editValue, setEditValue] = useState("");
   const editRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [duplicateResults, setDuplicateResults] = useState<SearchResult[]>([]);
+  const abortRef = useRef<AbortController | null>(null);
   useEffect(() => {
     let active = true;
     fetch("/api/me/role")
@@ -114,6 +118,35 @@ export default function ContributePanel() {
     }
   }, [editingId]);
 
+  useEffect(() => {
+    if (name.trim().length < 2) {
+      setDuplicateResults([]);
+      return;
+    }
+    const controller = new AbortController();
+    abortRef.current?.abort();
+    abortRef.current = controller;
+
+    const timer = setTimeout(async () => {
+      try {
+        const results = await fetchSearchNodes(name.trim(), 8, controller.signal);
+        if (!controller.signal.aborted) setDuplicateResults(results);
+      } catch (e) {
+        if (e instanceof DOMException && e.name === "AbortError") return;
+        if (!controller.signal.aborted) setDuplicateResults([]);
+      }
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [name]);
+
+  useEffect(() => {
+    setDuplicateResults([]);
+  }, [type]);
+
   const startEditing = (id: string, label: string) => {
     setEditingId(id);
     setEditValue(label);
@@ -151,11 +184,19 @@ export default function ContributePanel() {
       y: canvasCenter.y + (Math.random() - 0.5) * 120,
     });
     setName("");
+    setDuplicateResults([]);
     inputRef.current?.focus();
   };
 
   const submit = async () => {
     if (draftNodes.length === 0 || submitting) return;
+
+    const error = validateBeforeSubmit(draftNodes, draftEdges, connections);
+    if (error) {
+      pushToast({ tone: "error", message: error });
+      return;
+    }
+
     setSubmitting(true);
     try {
       for (const [nodeId, conns] of Object.entries(connections)) {
@@ -262,6 +303,53 @@ export default function ContributePanel() {
               </Button>
             </div>
           </div>
+
+          {duplicateResults.length > 0 && (
+            <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3" role="status" aria-live="polite">
+              <p className="mb-2 text-xs text-amber-700">
+                Similar entries found:
+              </p>
+              <ul className="list-none p-0 m-0 space-y-1">
+                {[...duplicateResults]
+                  .sort((a, b) => {
+                    const aSame = a.type === type ? 0 : 1;
+                    const bSame = b.type === type ? 0 : 1;
+                    return aSame - bSame;
+                  })
+                  .map((r) => {
+                    const sameType = r.type === type;
+                    return (
+                      <li
+                        key={r.id}
+                        className={
+                          "flex items-center gap-2 rounded px-2 py-1 text-xs " +
+                          (sameType
+                            ? "text-amber-800"
+                            : "text-muted-foreground")
+                        }
+                      >
+                        <span
+                          className="inline-block h-2 w-2 shrink-0 rounded-full"
+                          style={{
+                            background: sameType ? "#d97706" : "#a1a1aa",
+                          }}
+                        />
+                        <span className="font-medium">{r.label}</span>
+                        {r.subtitle && (
+                          <span className="truncate opacity-60">
+                            {r.subtitle}
+                          </span>
+                        )}
+                        <span className="ml-auto opacity-50">{r.type}</span>
+                      </li>
+                    );
+                  })}
+              </ul>
+              <p className="mt-2 text-[10px] text-amber-600/60">
+                Showing top {duplicateResults.length} matches
+              </p>
+            </div>
+          )}
 
           <div>
             <div className="mb-2 text-xs font-medium text-muted-foreground">Drafted entries</div>

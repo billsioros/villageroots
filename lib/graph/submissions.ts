@@ -100,6 +100,7 @@ export function validateSubmissionShape(
       return { ok: false, error: "Connection needs source and target" };
     }
     if (!VERBS.includes(e.verb as Verb)) return { ok: false, error: `Unknown connection type: ${String(e.verb)}` };
+    if (e.source === e.target) return { ok: false, error: "A connection cannot link a node to itself" };
     const key = `${e.source}|${e.target}|${e.verb}`;
     if (seen.has(key)) return { ok: false, error: "Duplicate connection" };
     seen.add(key);
