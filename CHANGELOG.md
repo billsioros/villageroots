@@ -1,3 +1,15 @@
+# [1.12.0](https://github.com/billsioros/villageroots/compare/v1.11.0...v1.12.0) (2026-09-02)
+
+
+### Bug Fixes
+
+* ptdn-26 tighten scan_uploads INSERT to force status=pending ([7739103](https://github.com/billsioros/villageroots/commit/773910394dbd71f50cad8d5c9c3ffdf308a2289d))
+
+
+### Features
+
+* ptdn-26 add WITH CHECK clauses to prevent self-approval via PostgREST ([f9afa4a](https://github.com/billsioros/villageroots/commit/f9afa4a67e7dcd63fa658ddbd91271482b752593))
+
 # [1.11.0](https://github.com/billsioros/villageroots/compare/v1.10.0...v1.11.0) (2026-09-01)
 
 
