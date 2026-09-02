@@ -28,6 +28,7 @@ export function edgeRowToGraph(row: EdgeRow): GraphEdge {
     target: row.targetSlug ?? row.targetId,
     verb: row.type,
     kind: VERB_KIND[row.type],
+    status: row.status,
   };
 }
 

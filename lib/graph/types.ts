@@ -59,6 +59,7 @@ export interface GraphEdge {
   suggested?: boolean;
   confidence?: number;
   draft?: boolean;
+  status?: Status;
 }
 
 export interface SuggestedEdge extends GraphEdge {
