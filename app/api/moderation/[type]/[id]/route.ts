@@ -5,6 +5,7 @@ import { nodes, edges, scanUploads, moderations, notifications } from "@/drizzle
 import { sessionUid } from "@/lib/graph/session";
 import { isAdminUid } from "@/lib/graph/admin";
 import { applyModeration, type ModerationAction } from "@/lib/graph/moderation";
+import { logAudit } from "@/lib/graph/audit";
 import type { Status } from "@/lib/graph/types";
 
 const TABLE = {
@@ -73,6 +74,16 @@ export async function POST(
         message,
         metadata: { submission_id: id, node_count: 1 },
       });
+    }
+
+    if (changed) {
+      const entityType = type === "nodes" ? "node" : type === "edges" ? "edge" : null;
+      if (entityType) {
+        await logAudit("status_change", entityType, id, {
+          statusBefore: current[0].status as string,
+          statusAfter: status,
+        }, tx);
+      }
     }
 
     return { id, status };

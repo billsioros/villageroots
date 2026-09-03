@@ -111,8 +111,8 @@ describe("POST /api/moderation/[type]/[id]", () => {
     mocks.transaction.mockImplementation(async (fn) => fn({ update, insert, select: txSelect }));
     const res = await POST(mreq({ action: "approve" }), cparams("nodes", "n1"));
     expect(res.status).toBe(200);
-    // insert called twice: moderations + notifications
-    expect(insert).toHaveBeenCalledTimes(2);
+    // insert called three times: moderations + notifications + audit log
+    expect(insert).toHaveBeenCalledTimes(3);
     // Assert notification content
     expect(values).toHaveBeenCalledWith(expect.objectContaining({
       userId: "user-1",
