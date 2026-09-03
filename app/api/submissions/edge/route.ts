@@ -4,6 +4,7 @@ import { db } from "@/lib/graph/db";
 import { edges as edgesTable, nodes as nodesTable, notifications, userRoles } from "@/drizzle/schema";
 import { sessionUid } from "@/lib/graph/session";
 import { isAdminUid } from "@/lib/graph/admin";
+import { logAudit } from "@/lib/graph/audit";
 import { VERBS } from "@/lib/graph/helpers";
 import type { Verb, Status } from "@/lib/graph/types";
 
@@ -70,10 +71,11 @@ export async function POST(req: Request) {
 
   let result;
   try {
+    const edgeSlug = `edge-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     const [row] = await db
       .insert(edgesTable)
       .values({
-        slug: `edge-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+        slug: edgeSlug,
         sourceId: sourceRow.id,
         targetId: targetRow.id,
         type: verb,
@@ -82,6 +84,7 @@ export async function POST(req: Request) {
         createdBy: uid,
       })
       .returning();
+    await logAudit("create", "edge", edgeSlug, { verb });
     result = { id: row.id, status };
   } catch {
     return NextResponse.json({ error: "Submission failed" }, { status: 500 });

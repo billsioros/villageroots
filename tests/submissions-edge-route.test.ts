@@ -119,7 +119,7 @@ describe("POST /api/submissions/edge", () => {
     const body = await res.json();
     expect(body.status).toBe("pending");
     expect(body.id).toBe("edge-new");
-    expect(mocks.insertValues).toHaveBeenCalledTimes(1);
+    expect(mocks.insertValues).toHaveBeenCalledTimes(2);
     const call = mocks.insertValues.mock.calls[0][0];
     expect(call.sourceId).toBe(SOURCE_ID);
     expect(call.targetId).toBe(TARGET_ID);
