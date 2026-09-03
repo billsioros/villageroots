@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 interface UserInfo {
-  name: string;
   email: string;
   initials: string;
 }
@@ -33,12 +32,8 @@ export function ProfileModal() {
     supabase.auth.getUser().then(({ data }) => {
       const u = data.user;
       if (!u) return;
-      const name =
-        (u.user_metadata?.full_name as string) ||
-        (u.user_metadata?.name as string) ||
-        "";
       const email = u.email ?? "";
-      setUser({ name, email, initials: getInitials(email) });
+      setUser({ email, initials: getInitials(email) });
     });
     fetch("/api/me/role")
       .then((r) => r.json())
@@ -76,34 +71,38 @@ export function ProfileModal() {
   if (!open) return null;
 
   return (
-    <ModalShell title="Profile" onClose={() => setOpen(false)}>
-      <div className="flex flex-col items-center gap-4">
-        <div className="grid h-16 w-16 place-items-center rounded-full bg-foreground text-lg font-semibold text-background">
+    <ModalShell
+      title="Profile"
+      onClose={() => setOpen(false)}
+      className="w-[480px]"
+    >
+      <div className="flex flex-col items-center gap-8 py-6">
+        <div className="grid h-20 w-20 place-items-center rounded-full bg-foreground text-2xl font-semibold text-background">
           {user?.initials ?? "…"}
         </div>
 
-        <div className="flex flex-col items-center gap-1 text-center">
-          {user?.name && (
-            <p className="text-sm font-semibold">{user.name}</p>
-          )}
-          <p className="text-sm text-muted-foreground">{user?.email ?? "…"}</p>
+        <div className="flex flex-col items-center gap-3 text-center">
+          <p className="text-base text-muted-foreground">{user?.email ?? "…"}</p>
           {role && (
-            <Badge variant={role === "admin" ? "default" : "secondary"} className="mt-1 text-xs">
+            <Badge
+              variant={role === "admin" ? "default" : "secondary"}
+              className="px-3 py-1 text-sm"
+            >
               {role === "admin" ? "Admin" : "Contributor"}
             </Badge>
           )}
         </div>
 
-        <div className="flex w-full gap-3 pt-2">
+        <div className="flex w-full gap-4">
           <Button
             className="flex-1"
             onClick={handleExport}
             disabled={exporting}
           >
             {exporting ? (
-              <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+              <LoaderCircle className="mr-2 h-5 w-5 animate-spin" />
             ) : (
-              <Download className="mr-2 h-4 w-4" />
+              <Download className="mr-2 h-5 w-5" />
             )}
             Export Data
           </Button>
@@ -112,7 +111,7 @@ export function ProfileModal() {
             className="flex-1"
             onClick={handleChangePassword}
           >
-            <KeyRound className="mr-2 h-4 w-4" />
+            <KeyRound className="mr-2 h-5 w-5" />
             Change Password
           </Button>
         </div>
