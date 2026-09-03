@@ -212,3 +212,30 @@ export type UserRoleRow = typeof userRoles.$inferSelect;
 export type ModerationRow = typeof moderations.$inferSelect;
 export type ScanUploadRow = typeof scanUploads.$inferSelect;
 export type NotificationRow = typeof notifications.$inferSelect;
+
+export const auditLogs = pgTable(
+  "audit_logs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    actorId: uuid("actor_id")
+      .notNull()
+      .references(() => authUsers.id),
+    entityType: text("entity_type", { enum: ["node", "edge"] }).notNull(),
+    entityId: uuid("entity_id").notNull(),
+    entitySlug: text("entity_slug").notNull(),
+    action: text("action", { enum: ["create", "update", "status_change"] }).notNull(),
+    statusBefore: statusEnum("status_before"),
+    statusAfter: statusEnum("status_after"),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("audit_logs_actor_idx").on(t.actorId),
+    index("audit_logs_entity_idx").on(t.entityType, t.entityId),
+    index("audit_logs_created_at_idx").on(t.createdAt),
+  ],
+);
+
+export type AuditLogRow = typeof auditLogs.$inferSelect;
