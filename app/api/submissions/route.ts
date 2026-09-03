@@ -6,6 +6,7 @@ import { sessionUid } from "@/lib/graph/session";
 import { isAdminUid } from "@/lib/graph/admin";
 import { createNodeValues } from "@/lib/graph/createNode";
 import { resolveEdgeEndpoints, validateSubmissionShape } from "@/lib/graph/submissions";
+import { logAudit } from "@/lib/graph/audit";
 import { type Status } from "@/lib/graph/types";
 
 export async function POST(req: Request) {
@@ -62,13 +63,15 @@ export async function POST(req: Request) {
           .values(createNodeValues(n, uid, status, i))
           .returning();
         draftToId.set(n.id, row.id);
+        await logAudit("create", "node", row.slug, { label: n.label }, tx);
       }
       let edgeCount = 0;
       for (const e of resolved.edges) {
         const sourceId = draftToId.get(e.source) ?? e.source;
         const targetId = draftToId.get(e.target) ?? e.target;
+        const edgeSlug = `edge-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
         await tx.insert(edgesTable).values({
-          slug: `edge-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+          slug: edgeSlug,
           sourceId,
           targetId,
           type: e.verb,
@@ -76,6 +79,7 @@ export async function POST(req: Request) {
           status,
           createdBy: uid,
         });
+        await logAudit("create", "edge", edgeSlug, {}, tx);
         edgeCount++;
       }
       return { nodes: shape.value.nodes.length, edges: edgeCount };
