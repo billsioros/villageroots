@@ -63,6 +63,16 @@ describe("edgeRowToGraph", () => {
     expect(g.verb).toBe("married_to");
     expect(g.kind).toBe("social");
   });
+
+  it("carries status from the row", () => {
+    const g = edgeRowToGraph({ ...edgeRow, status: "pending" });
+    expect(g.status).toBe("pending");
+  });
+
+  it("defaults status to approved when not overridden", () => {
+    const g = edgeRowToGraph(edgeRow);
+    expect(g.status).toBe("approved");
+  });
 });
 
 describe("back-mappers", () => {
