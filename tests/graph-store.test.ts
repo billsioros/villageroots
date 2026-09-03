@@ -28,6 +28,24 @@ function stubNode(id: string): GraphNode {
   };
 }
 
+describe("profile modal store state", () => {
+  beforeEach(() => {
+    useGraphStore.setState({ profileOpen: false });
+  });
+
+  it("opens and closes the profile modal", () => {
+    useGraphStore.getState().setProfileOpen(true);
+    expect(useGraphStore.getState().profileOpen).toBe(true);
+    useGraphStore.getState().setProfileOpen(false);
+    expect(useGraphStore.getState().profileOpen).toBe(false);
+  });
+
+  it("defaults to closed", () => {
+    useGraphStore.setState({ profileOpen: false });
+    expect(useGraphStore.getState().profileOpen).toBe(false);
+  });
+});
+
 describe("contribution modal store state", () => {
   beforeEach(() => {
     useGraphStore.setState({ newNodeOpen: false });
