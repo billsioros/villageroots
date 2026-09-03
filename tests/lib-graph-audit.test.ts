@@ -1,11 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockInsert, mockValues, mockDb, mockSessionUid } = vi.hoisted(() => {
-  const mockInsert = vi.fn().mockResolvedValue(undefined);
+const { mockValues, mockDb, mockSessionUid } = vi.hoisted(() => {
   const mockValues = vi.fn().mockResolvedValue(undefined);
   const mockDb = { insert: vi.fn().mockReturnValue({ values: mockValues }) };
   const mockSessionUid = vi.fn().mockResolvedValue("test-user-id");
-  return { mockInsert, mockValues, mockDb, mockSessionUid };
+  return { mockValues, mockDb, mockSessionUid };
 });
 
 vi.mock("@/lib/graph/session", () => ({
@@ -74,6 +73,7 @@ describe("logAudit", () => {
 
     const { logAudit } = await import("@/lib/graph/audit");
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await logAudit("create", "node", "x", {}, mockTx as any);
 
     expect(mockTx.insert).toHaveBeenCalled();

@@ -25,7 +25,8 @@ export async function logAudit(
 ): Promise<void> {
   try {
     const uid = await sessionUid();
-    const executor = tx ?? db;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const executor: any = tx ?? db;
     await executor.insert(auditLogs).values({
       actorId: uid,
       entityType,
