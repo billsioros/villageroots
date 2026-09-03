@@ -12,7 +12,7 @@ export function Dock() {
   const layersOpen = useGraphStore((s) => s.layersOpen);
   const physicsOpen = useGraphStore((s) => s.physicsOpen);
   const setPhysicsOpen = useGraphStore((s) => s.setPhysicsOpen);
-  const setReviewQueueOpen = useGraphStore((s) => s.setReviewQueueOpen);
+  const setAdminDialogOpen = useGraphStore((s) => s.setAdminDialogOpen);
   // const toggleChat = useGraphStore((s) => s.toggleChat);
   const activeView = useGraphStore((s) => s.activeView);
   const setActiveView = useGraphStore((s) => s.setActiveView);
@@ -57,7 +57,7 @@ export function Dock() {
         <Sparkles size={18} />
       </button> */}
       {isAdmin && (
-        <button title="Review queue" onClick={() => setReviewQueueOpen(true)} className="grid h-12 w-12 place-items-center rounded-full border shadow-elev-raised transition-colors bg-card/90 text-foreground backdrop-blur hover:bg-surface-warm" aria-label="Review queue">
+        <button title="Admin" onClick={() => setAdminDialogOpen(true)} className="grid h-12 w-12 place-items-center rounded-full border shadow-elev-raised transition-colors bg-card/90 text-foreground backdrop-blur hover:bg-surface-warm" aria-label="Admin">
           <ShieldCheck size={18} />
         </button>
       )}

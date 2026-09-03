@@ -18,7 +18,7 @@ import { ChatPanel } from "./chat-panel";
 import { OcrModal, AboutModal } from "./modals";
 import { ProfileModal } from "./profile-modal";
 import ContributePanel from "./contribute-panel";
-import { AdminReviewQueue } from "@/components/admin/review-queue";
+import { AdminDialog } from "@/components/admin/admin-dialog";
 import { GraphLoader } from "./graph-loader";
 import { useGraphStore } from "@/store/graphStore";
 
@@ -30,7 +30,7 @@ export function GraphApp() {
   const ocrOpen = useGraphStore((s) => s.ocrOpen);
   const aboutOpen = useGraphStore((s) => s.aboutOpen);
   const chatOpen = useGraphStore((s) => s.chatOpen);
-  const reviewQueueOpen = useGraphStore((s) => s.reviewQueueOpen);
+  const adminDialogOpen = useGraphStore((s) => s.adminDialogOpen);
   const profileOpen = useGraphStore((s) => s.profileOpen);
   const nodeCount = useGraphStore((s) => Object.keys(s.nodesMap).length);
   const clearSelection = useGraphStore((s) => s.clearSelection);
@@ -43,7 +43,7 @@ export function GraphApp() {
         e.preventDefault();
         setSearchOpen(true);
       } else if (e.key === "Escape") {
-        if (aboutOpen || reviewQueueOpen || chatOpen || profileOpen) return; // modal shells handle their own Escape
+        if (aboutOpen || adminDialogOpen || chatOpen || profileOpen) return; // modal shells handle their own Escape
         if (newNodeOpen) {
           setNewNodeOpen(false);
           return;
@@ -55,7 +55,7 @@ export function GraphApp() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [aboutOpen, reviewQueueOpen, chatOpen, profileOpen, newNodeOpen, ocrOpen, clearSelection, setSearchOpen, setNewNodeOpen]);
+  }, [aboutOpen, adminDialogOpen, chatOpen, profileOpen, newNodeOpen, ocrOpen, clearSelection, setSearchOpen, setNewNodeOpen]);
 
   return (
     <GraphLoader>
@@ -79,7 +79,7 @@ export function GraphApp() {
         <Toast />
         <OcrModal />
         <AboutModal />
-        <AdminReviewQueue />
+        <AdminDialog />
         <ProfileModal />
       </div>
     </GraphLoader>
