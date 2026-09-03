@@ -66,7 +66,7 @@ export async function POST(request: Request) {
   }
 
   const { error } = await admin.auth.admin.updateUserById(userId, {
-    ban_duration: isActive ? "none" : "100y",
+    ban_duration: isActive ? "none" : "876000h",
   });
   if (error) {
     return NextResponse.json({ error: "Failed to update user." }, { status: 500 });
