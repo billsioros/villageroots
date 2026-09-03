@@ -76,12 +76,12 @@ export function ProfileModal() {
       onClose={() => setOpen(false)}
       className="w-[480px]"
     >
-      <div className="flex flex-col items-center gap-8 py-6">
+      <div className="flex flex-col items-center gap-6 py-4">
         <div className="grid h-20 w-20 place-items-center rounded-full bg-foreground text-2xl font-semibold text-background">
           {user?.initials ?? "…"}
         </div>
 
-        <div className="flex flex-col items-center gap-3 text-center">
+        <div className="flex flex-col items-center gap-2 text-center">
           <p className="text-base text-muted-foreground">{user?.email ?? "…"}</p>
           {role && (
             <Badge
