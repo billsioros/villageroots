@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, ne, or } from "drizzle-orm";
 import { db } from "@/lib/graph/db";
 import { edges as edgesTable, nodes as nodesTable, notifications, userRoles } from "@/drizzle/schema";
 import { sessionUid } from "@/lib/graph/session";
@@ -37,14 +37,14 @@ export async function POST(req: Request) {
   const [sourceRow] = await db
     .select({ id: nodesTable.id })
     .from(nodesTable)
-    .where(and(eq(nodesTable.slug, sourceId), eq(nodesTable.status, "approved")))
+    .where(and(eq(nodesTable.slug, sourceId), or(eq(nodesTable.status, "approved"), eq(nodesTable.createdBy, uid))))
     .limit(1);
   if (!sourceRow) return NextResponse.json({ error: "Source node not found" }, { status: 400 });
 
   const [targetRow] = await db
     .select({ id: nodesTable.id })
     .from(nodesTable)
-    .where(and(eq(nodesTable.slug, targetId), eq(nodesTable.status, "approved")))
+    .where(and(eq(nodesTable.slug, targetId), or(eq(nodesTable.status, "approved"), eq(nodesTable.createdBy, uid))))
     .limit(1);
   if (!targetRow) return NextResponse.json({ error: "Target node not found" }, { status: 400 });
 

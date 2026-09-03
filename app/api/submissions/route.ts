@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { db } from "@/lib/graph/db";
 import { edges as edgesTable, nodes as nodesTable, notifications, userRoles } from "@/drizzle/schema";
 import { sessionUid } from "@/lib/graph/session";
@@ -40,10 +40,12 @@ export async function POST(req: Request) {
   const slugToId = new Map<string, string>();
   if (slugs.size > 0) {
     const rows = await db
-      .select({ id: nodesTable.id, slug: nodesTable.slug })
+      .select({ id: nodesTable.id, slug: nodesTable.slug, createdBy: nodesTable.createdBy, status: nodesTable.status })
       .from(nodesTable)
-      .where(and(inArray(nodesTable.slug, [...slugs]), eq(nodesTable.status, "approved")));
-    for (const r of rows) slugToId.set(r.slug, r.id);
+      .where(and(inArray(nodesTable.slug, [...slugs]), or(eq(nodesTable.status, "approved"), eq(nodesTable.createdBy, uid))));
+    for (const r of rows) {
+      if (r.status === "approved" || r.createdBy === uid) slugToId.set(r.slug, r.id);
+    }
   }
 
   const resolved = resolveEdgeEndpoints(shape.value.edges, draftIds, slugToId);
