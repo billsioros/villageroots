@@ -1,3 +1,10 @@
+# [1.15.0](https://github.com/billsioros/villageroots/compare/v1.14.0...v1.15.0) (2026-09-03)
+
+
+### Features
+
+* PTDN-43 export personal data in Excel + profile modal ([#32](https://github.com/billsioros/villageroots/issues/32)) ([c12e0b3](https://github.com/billsioros/villageroots/commit/c12e0b33a874b0aa96fa10e0b710453c1ae99e2e))
+
 # [1.14.0](https://github.com/billsioros/villageroots/compare/v1.13.0...v1.14.0) (2026-09-03)
 
 
