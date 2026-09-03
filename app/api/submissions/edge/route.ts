@@ -29,31 +29,35 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "A connection cannot link a node to itself" }, { status: 400 });
   }
 
+  const verb = b.verb as Verb;
   const sourceId = b.sourceId;
   const targetId = b.targetId;
-  const verb = b.verb as Verb;
 
   const [sourceRow] = await db
     .select({ id: nodesTable.id })
     .from(nodesTable)
-    .where(and(eq(nodesTable.id, sourceId), eq(nodesTable.status, "approved")))
+    .where(and(eq(nodesTable.slug, sourceId), eq(nodesTable.status, "approved")))
     .limit(1);
   if (!sourceRow) return NextResponse.json({ error: "Source node not found" }, { status: 400 });
 
   const [targetRow] = await db
     .select({ id: nodesTable.id })
     .from(nodesTable)
-    .where(and(eq(nodesTable.id, targetId), eq(nodesTable.status, "approved")))
+    .where(and(eq(nodesTable.slug, targetId), eq(nodesTable.status, "approved")))
     .limit(1);
   if (!targetRow) return NextResponse.json({ error: "Target node not found" }, { status: 400 });
+
+  if (sourceRow.id === targetRow.id) {
+    return NextResponse.json({ error: "A connection cannot link a node to itself" }, { status: 400 });
+  }
 
   const [existing] = await db
     .select({ id: edgesTable.id })
     .from(edgesTable)
     .where(
       and(
-        eq(edgesTable.sourceId, sourceId),
-        eq(edgesTable.targetId, targetId),
+        eq(edgesTable.sourceId, sourceRow.id),
+        eq(edgesTable.targetId, targetRow.id),
         eq(edgesTable.type, verb),
         ne(edgesTable.status, "rejected"),
       ),
@@ -70,8 +74,8 @@ export async function POST(req: Request) {
       .insert(edgesTable)
       .values({
         slug: `edge-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-        sourceId,
-        targetId,
+        sourceId: sourceRow.id,
+        targetId: targetRow.id,
         type: verb,
         properties: {},
         status,

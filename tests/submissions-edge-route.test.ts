@@ -24,9 +24,13 @@ vi.mock("@/lib/graph/admin", () => ({ isAdminUid: mocks.isAdminUid }));
 import { POST } from "@/app/api/submissions/edge/route";
 
 const mreq = (body: unknown) => ({ json: async () => body }) as Request;
+const SOURCE_SLUG = "source-slug";
+const TARGET_SLUG = "target-slug";
+const SOURCE_ID = "11111111-1111-4111-8111-111111111111";
+const TARGET_ID = "22222222-2222-4222-8222-222222222222";
 const payload = () => ({
-  sourceId: "uuid-source",
-  targetId: "uuid-target",
+  sourceId: SOURCE_SLUG,
+  targetId: TARGET_SLUG,
   verb: "married_to",
 });
 
@@ -42,7 +46,7 @@ describe("POST /api/submissions/edge", () => {
     mocks.limit.mockClear();
     mocks.sessionUid.mockResolvedValue("u-1");
     mocks.isAdminUid.mockResolvedValue(false);
-    mocks.limit.mockResolvedValueOnce([{ id: "uuid-source" }]).mockResolvedValueOnce([{ id: "uuid-target" }]);
+    mocks.limit.mockResolvedValueOnce([{ id: SOURCE_ID }]).mockResolvedValueOnce([{ id: TARGET_ID }]);
     mocks.limit.mockResolvedValue([]);
   });
 
@@ -53,41 +57,48 @@ describe("POST /api/submissions/edge", () => {
   });
 
   it("returns 400 when sourceId is missing", async () => {
-    const res = await POST(mreq({ targetId: "uuid-target", verb: "married_to" }));
+    const res = await POST(mreq({ targetId: TARGET_SLUG, verb: "married_to" }));
     expect(res.status).toBe(400);
   });
 
   it("returns 400 when targetId is missing", async () => {
-    const res = await POST(mreq({ sourceId: "uuid-source", verb: "married_to" }));
+    const res = await POST(mreq({ sourceId: SOURCE_SLUG, verb: "married_to" }));
     expect(res.status).toBe(400);
   });
 
   it("returns 400 when verb is missing", async () => {
-    const res = await POST(mreq({ sourceId: "uuid-source", targetId: "uuid-target" }));
+    const res = await POST(mreq({ sourceId: SOURCE_SLUG, targetId: TARGET_SLUG }));
     expect(res.status).toBe(400);
   });
 
   it("returns 400 for an invalid verb", async () => {
-    const res = await POST(mreq({ sourceId: "uuid-source", targetId: "uuid-target", verb: "invalid_verb" }));
+    const res = await POST(mreq({ sourceId: SOURCE_SLUG, targetId: TARGET_SLUG, verb: "invalid_verb" }));
     expect(res.status).toBe(400);
   });
 
   it("returns 400 for a self-loop", async () => {
-    const res = await POST(mreq({ sourceId: "uuid-a", targetId: "uuid-a", verb: "married_to" }));
+    const res = await POST(mreq({ sourceId: SOURCE_SLUG, targetId: SOURCE_SLUG, verb: "married_to" }));
+    expect(res.status).toBe(400);
+  });
+
+  it("resolves source and target slugs to UUIDs and rejects a self-loop on resolution", async () => {
+    mocks.limit.mockReset();
+    mocks.limit.mockResolvedValueOnce([{ id: SOURCE_ID }]).mockResolvedValueOnce([{ id: SOURCE_ID }]);
+    const res = await POST(mreq({ sourceId: SOURCE_SLUG, targetId: TARGET_SLUG, verb: "married_to" }));
     expect(res.status).toBe(400);
   });
 
   it("returns 400 when source node does not exist", async () => {
     mocks.limit.mockReset();
     mocks.limit.mockResolvedValueOnce([]);
-    mocks.limit.mockResolvedValueOnce([{ id: "uuid-target" }]);
+    mocks.limit.mockResolvedValueOnce([{ id: TARGET_ID }]);
     const res = await POST(mreq(payload()));
     expect(res.status).toBe(400);
   });
 
   it("returns 400 when target node does not exist", async () => {
     mocks.limit.mockReset();
-    mocks.limit.mockResolvedValueOnce([{ id: "uuid-source" }]);
+    mocks.limit.mockResolvedValueOnce([{ id: SOURCE_ID }]);
     mocks.limit.mockResolvedValueOnce([]);
     const res = await POST(mreq(payload()));
     expect(res.status).toBe(400);
@@ -95,8 +106,8 @@ describe("POST /api/submissions/edge", () => {
 
   it("returns 409 for duplicate edge", async () => {
     mocks.limit.mockReset();
-    mocks.limit.mockResolvedValueOnce([{ id: "uuid-source" }]);
-    mocks.limit.mockResolvedValueOnce([{ id: "uuid-target" }]);
+    mocks.limit.mockResolvedValueOnce([{ id: SOURCE_ID }]);
+    mocks.limit.mockResolvedValueOnce([{ id: TARGET_ID }]);
     mocks.limit.mockResolvedValueOnce([{ id: "edge-existing" }]);
     const res = await POST(mreq(payload()));
     expect(res.status).toBe(409);
@@ -110,8 +121,8 @@ describe("POST /api/submissions/edge", () => {
     expect(body.id).toBe("edge-new");
     expect(mocks.insertValues).toHaveBeenCalledTimes(1);
     const call = mocks.insertValues.mock.calls[0][0];
-    expect(call.sourceId).toBe("uuid-source");
-    expect(call.targetId).toBe("uuid-target");
+    expect(call.sourceId).toBe(SOURCE_ID);
+    expect(call.targetId).toBe(TARGET_ID);
     expect(call.type).toBe("married_to");
     expect(call.status).toBe("pending");
     expect(call.createdBy).toBe("u-1");
