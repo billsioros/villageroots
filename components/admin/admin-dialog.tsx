@@ -1,14 +1,15 @@
 "use client";
 
 import { useState, useEffect, type ReactNode } from "react";
-import { Users, ListChecks } from "lucide-react";
+import { Users, ListChecks, History } from "lucide-react";
 import { useGraphStore } from "@/store/graphStore";
 import { ModalShell } from "@/components/graph/modals";
 import { ReviewQueueTab } from "@/components/admin/review-queue-tab";
 import { UserManagementTab } from "@/components/admin/user-management-tab";
+import { AuditTab } from "@/components/admin/audit-tab";
 
 interface TabDef {
-  id: "users" | "review";
+  id: "users" | "review" | "audit";
   label: string;
   icon: typeof Users;
   component: () => ReactNode;
@@ -17,6 +18,7 @@ interface TabDef {
 const TABS: TabDef[] = [
   { id: "users", label: "User Management", icon: Users, component: UserManagementTab },
   { id: "review", label: "Review Queue", icon: ListChecks, component: ReviewQueueTab },
+  { id: "audit", label: "Audit Log", icon: History, component: AuditTab },
 ];
 
 export function AdminDialog() {
