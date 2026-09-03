@@ -7,11 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { InviteForm } from "@/components/auth/invite-form";
 import { ModerationHistory } from "@/components/admin/moderation-history";
 import { invalidationKeys } from "@/lib/graph/queries";
-import { useGraphStore } from "@/store/graphStore";
-import { ModalShell } from "@/components/graph/modals";
 
 type ApiType = "nodes" | "edges" | "scan_uploads";
 
@@ -63,10 +60,8 @@ async function fetchQueue(type: ApiType): Promise<ReviewQueueResponse> {
   return (await res.json()) as ReviewQueueResponse;
 }
 
-export function AdminReviewQueue() {
+export function ReviewQueueTab() {
   const queryClient = useQueryClient();
-  const open = useGraphStore((s) => s.reviewQueueOpen);
-  const setOpen = useGraphStore((s) => s.setReviewQueueOpen);
   const [tab, setTab] = useState<Tab>("nodes");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [active, setActive] = useState<{ type: string; id: string } | null>(
@@ -164,12 +159,8 @@ export function AdminReviewQueue() {
     setSelected(new Set());
   };
 
-  if (!open) return null;
-
   return (
-    <ModalShell title="Review Queue" onClose={() => setOpen(false)} className="w-[820px] max-w-[95vw]">
-      <div className="flex flex-col gap-5 max-h-[70vh] overflow-hidden">
-      <InviteForm />
+    <div className="flex flex-col gap-5">
       <div className="flex gap-3">
         {TABS.map((t) => (
           <Button
@@ -297,6 +288,5 @@ export function AdminReviewQueue() {
         />
       )}
     </div>
-    </ModalShell>
   );
 }

@@ -58,7 +58,8 @@ export interface GraphStore {
   ocrOpen: boolean;
   aboutOpen: boolean;
   profileOpen: boolean;
-  reviewQueueOpen: boolean;
+  adminDialogOpen: boolean;
+  adminDialogTab: "users" | "review";
   activeView: "GRAPH" | "TREE";
   focalPersonId: string | null;
   toast: Toast | null;
@@ -96,7 +97,8 @@ export interface GraphStore {
   setOcrOpen: (open: boolean) => void;
   setAboutOpen: (open: boolean) => void;
   setProfileOpen: (open: boolean) => void;
-  setReviewQueueOpen: (open: boolean) => void;
+  setAdminDialogOpen: (open: boolean) => void;
+  setAdminDialogTab: (tab: "users" | "review") => void;
   setActiveView: (view: "GRAPH" | "TREE") => void;
   setFocalPersonId: (id: string | null) => void;
   dismissHint: () => void;
@@ -312,7 +314,8 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
   ocrOpen: false,
   aboutOpen: false,
   profileOpen: false,
-  reviewQueueOpen: false,
+  adminDialogOpen: false,
+  adminDialogTab: "users",
   activeView: "GRAPH",
   focalPersonId: null,
   toast: null,
@@ -369,7 +372,8 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
   setOcrOpen: (open) => set({ ocrOpen: open }),
   setAboutOpen: (open) => set({ aboutOpen: open }),
   setProfileOpen: (profileOpen) => set({ profileOpen }),
-  setReviewQueueOpen: (open) => set({ reviewQueueOpen: open }),
+  setAdminDialogOpen: (open) => set({ adminDialogOpen: open }),
+  setAdminDialogTab: (tab) => set({ adminDialogTab: tab }),
   setFocalPersonId: (id) => set({ focalPersonId: id }),
   setActiveView: (view) => {
     const { activeView, focalPersonId, selectedId, nodesMap, setFocalPersonId } = get();
