@@ -4,6 +4,7 @@ import { db } from "@/lib/graph/db";
 import { nodes } from "@/drizzle/schema";
 import { sessionUid } from "@/lib/graph/session";
 import { isAdminUid } from "@/lib/graph/admin";
+import { logAudit } from "@/lib/graph/audit";
 import type { RichTextJSON } from "@/lib/graph/types";
 
 const MAX_DOC_BYTES = 1_000_000;
@@ -48,6 +49,8 @@ export async function PATCH(
     .set({ documentContent: doc, updatedAt: new Date() })
     .where(eq(nodes.slug, id))
     .returning();
+
+  await logAudit("update", "node", id, { documentContent: true });
 
   return NextResponse.json(updated);
 }
