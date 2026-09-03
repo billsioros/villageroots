@@ -1,3 +1,10 @@
+# [1.14.0](https://github.com/billsioros/villageroots/compare/v1.13.0...v1.14.0) (2026-09-03)
+
+
+### Features
+
+* PTDN-49 wire relations panel add-relation form to create submissions + hide GraphRAG ([#31](https://github.com/billsioros/villageroots/issues/31)) ([af0a241](https://github.com/billsioros/villageroots/commit/af0a241e79f7d44c45871207d6134b78c4c4c699))
+
 # [1.13.0](https://github.com/billsioros/villageroots/compare/v1.12.0...v1.13.0) (2026-09-02)
 
 
