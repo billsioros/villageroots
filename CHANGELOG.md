@@ -1,3 +1,10 @@
+## [1.16.1](https://github.com/billsioros/villageroots/compare/v1.16.0...v1.16.1) (2026-09-03)
+
+
+### Bug Fixes
+
+* use valid ban duration and optimistic user toggle ([#34](https://github.com/billsioros/villageroots/issues/34)) ([d37034c](https://github.com/billsioros/villageroots/commit/d37034c7e493735964d31e6201af144b37bfb04c))
+
 # [1.16.0](https://github.com/billsioros/villageroots/compare/v1.15.0...v1.16.0) (2026-09-03)
 
 
