@@ -16,6 +16,7 @@ import { PhysicsPop } from "./physics-pop";
 import { NodeEditorDialog } from "./node-editor-dialog";
 import { ChatPanel } from "./chat-panel";
 import { OcrModal, AboutModal } from "./modals";
+import { ProfileModal } from "./profile-modal";
 import ContributePanel from "./contribute-panel";
 import { AdminReviewQueue } from "@/components/admin/review-queue";
 import { GraphLoader } from "./graph-loader";
@@ -30,6 +31,7 @@ export function GraphApp() {
   const aboutOpen = useGraphStore((s) => s.aboutOpen);
   const chatOpen = useGraphStore((s) => s.chatOpen);
   const reviewQueueOpen = useGraphStore((s) => s.reviewQueueOpen);
+  const profileOpen = useGraphStore((s) => s.profileOpen);
   const nodeCount = useGraphStore((s) => Object.keys(s.nodesMap).length);
   const clearSelection = useGraphStore((s) => s.clearSelection);
   const setSearchOpen = useGraphStore((s) => s.setSearchOpen);
@@ -41,7 +43,7 @@ export function GraphApp() {
         e.preventDefault();
         setSearchOpen(true);
       } else if (e.key === "Escape") {
-        if (aboutOpen || reviewQueueOpen || chatOpen) return; // modal shells handle their own Escape
+        if (aboutOpen || reviewQueueOpen || chatOpen || profileOpen) return; // modal shells handle their own Escape
         if (newNodeOpen) {
           setNewNodeOpen(false);
           return;
@@ -53,7 +55,7 @@ export function GraphApp() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [aboutOpen, reviewQueueOpen, chatOpen, newNodeOpen, ocrOpen, clearSelection, setSearchOpen, setNewNodeOpen]);
+  }, [aboutOpen, reviewQueueOpen, chatOpen, profileOpen, newNodeOpen, ocrOpen, clearSelection, setSearchOpen, setNewNodeOpen]);
 
   return (
     <GraphLoader>
@@ -78,6 +80,7 @@ export function GraphApp() {
         <OcrModal />
         <AboutModal />
         <AdminReviewQueue />
+        <ProfileModal />
       </div>
     </GraphLoader>
   );

@@ -57,6 +57,7 @@ export interface GraphStore {
   newNodeOpen: boolean;
   ocrOpen: boolean;
   aboutOpen: boolean;
+  profileOpen: boolean;
   reviewQueueOpen: boolean;
   activeView: "GRAPH" | "TREE";
   focalPersonId: string | null;
@@ -94,6 +95,7 @@ export interface GraphStore {
   setNewNodeOpen: (open: boolean) => void;
   setOcrOpen: (open: boolean) => void;
   setAboutOpen: (open: boolean) => void;
+  setProfileOpen: (open: boolean) => void;
   setReviewQueueOpen: (open: boolean) => void;
   setActiveView: (view: "GRAPH" | "TREE") => void;
   setFocalPersonId: (id: string | null) => void;
@@ -309,6 +311,7 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
   newNodeOpen: false,
   ocrOpen: false,
   aboutOpen: false,
+  profileOpen: false,
   reviewQueueOpen: false,
   activeView: "GRAPH",
   focalPersonId: null,
@@ -365,6 +368,7 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
   setNewNodeOpen: (open) => set({ newNodeOpen: open }),
   setOcrOpen: (open) => set({ ocrOpen: open }),
   setAboutOpen: (open) => set({ aboutOpen: open }),
+  setProfileOpen: (profileOpen) => set({ profileOpen }),
   setReviewQueueOpen: (open) => set({ reviewQueueOpen: open }),
   setFocalPersonId: (id) => set({ focalPersonId: id }),
   setActiveView: (view) => {
