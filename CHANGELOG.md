@@ -1,3 +1,10 @@
+# [1.16.0](https://github.com/billsioros/villageroots/compare/v1.15.0...v1.16.0) (2026-09-03)
+
+
+### Features
+
+* admin dialog with dock menu (PTDN-52) ([#33](https://github.com/billsioros/villageroots/issues/33)) ([5eee393](https://github.com/billsioros/villageroots/commit/5eee393fdadddf49c8e7852b36571ab4fc50210e))
+
 # [1.15.0](https://github.com/billsioros/villageroots/compare/v1.14.0...v1.15.0) (2026-09-03)
 
 
