@@ -4,6 +4,14 @@ import { GET } from "@/app/api/me/export/route";
 const mocks = vi.hoisted(() => ({
   sessionUid: vi.fn(),
   dbSelect: vi.fn(),
+  addedRows: [] as { sheet: string; row: Record<string, unknown> }[],
+  makeWorksheet: (name: string) => ({
+    name,
+    columns: [] as unknown[],
+    addRow: (row: Record<string, unknown>) => {
+      mocks.addedRows.push({ sheet: name, row });
+    },
+  }),
 }));
 
 vi.mock("@/lib/graph/session", () => ({ sessionUid: mocks.sessionUid }));
@@ -18,31 +26,22 @@ vi.mock("drizzle-orm/pg-core", async (importOriginal) => {
   const actual = await importOriginal<typeof import("drizzle-orm/pg-core")>();
   return { ...actual, alias: vi.fn((_table: unknown, name: string) => ({ name })) };
 });
-vi.mock("exceljs", () => {
-  const worksheet = {
-    columns: [] as unknown[],
-    addRow: vi.fn(),
-  };
-  const workbook = {
-    creator: "",
-    created: null as Date | null,
-    addWorksheet: vi.fn(() => worksheet),
-    xlsx: { writeBuffer: vi.fn(async () => Buffer.from("mock-xlsx")) },
-  };
-  class MockWorkbook {
-    constructor() {
-      Object.assign(this, workbook);
-    }
-  }
-  return {
-    default: { Workbook: MockWorkbook },
-    workbook,
-    worksheet,
-  };
-});
+vi.mock("exceljs", () => ({
+  default: {
+    Workbook: class {
+      constructor() {
+        this.creator = "";
+        this.created = null;
+        this.addWorksheet = (name: string) => mocks.makeWorksheet(name);
+        this.xlsx = { writeBuffer: vi.fn(async () => Buffer.from("mock-xlsx")) };
+      }
+    },
+  },
+}));
 
 beforeEach(() => {
   vi.resetAllMocks();
+  mocks.addedRows.length = 0;
 });
 
 function nodesChain(result: unknown[]) {
@@ -87,6 +86,18 @@ describe("GET /api/me/export", () => {
     const disposition = res.headers.get("Content-Disposition");
     expect(disposition).toContain("village-roots-");
     expect(disposition).toContain(".xlsx");
+
+    const edgeRows = mocks.addedRows.filter((r) => r.sheet === "Edges");
+    const nodeRows = mocks.addedRows.filter((r) => r.sheet === "Nodes");
+    expect(edgeRows.length).toBe(1);
+    expect(edgeRows[0].row).toMatchObject({
+      slug: "e1",
+      sourceSlug: "src1",
+      targetSlug: "tgt1",
+      type: "married_to",
+    });
+    expect(nodeRows.length).toBe(1);
+    expect(nodeRows[0].row).toMatchObject({ slug: "a", label: "Alice" });
   });
 
   it("returns 500 on database errors", async () => {
