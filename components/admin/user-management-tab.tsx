@@ -95,6 +95,8 @@ export function UserManagementTab() {
     queryFn: fetchUsers,
   });
 
+  const queryKey = ["admin-users"] as const;
+
   const mutation = useMutation({
     mutationFn: async ({ userId, isActive }: { userId: string; isActive: boolean }) => {
       const res = await fetch("/api/admin/users", {
@@ -105,8 +107,21 @@ export function UserManagementTab() {
       if (!res.ok) throw new Error("Failed to update user");
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    onMutate: async ({ userId, isActive }) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<User[]>(queryKey);
+      queryClient.setQueryData<User[]>(queryKey, (old) =>
+        old?.map((u) => (u.id === userId ? { ...u, is_active: isActive } : u)),
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKey, context.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey });
     },
   });
 
