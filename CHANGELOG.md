@@ -1,3 +1,10 @@
+# [1.18.0](https://github.com/billsioros/villageroots/compare/v1.17.1...v1.18.0) (2026-09-04)
+
+
+### Features
+
+* PTDN-53 rework public routes & add custom 404 + PTDN-54 fix zoom indicator ([10985cf](https://github.com/billsioros/villageroots/commit/10985cf900fbbd2c5bd00a9796c1c7973300f26b))
+
 ## [1.17.1](https://github.com/billsioros/villageroots/compare/v1.17.0...v1.17.1) (2026-09-04)
 
 
