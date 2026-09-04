@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { validatePassword } from "@/lib/auth/validation";
-import { Input } from "@/components/ui/input";
+import { Lock } from "lucide-react";
+import { IconInput } from "@/components/auth/icon-input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/auth/submit-button";
 import { PasswordStrength } from "@/components/auth/password-strength";
@@ -88,10 +89,11 @@ export function SetPasswordForm() {
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
         <div className="grid gap-2">
           <Label htmlFor="password">Password</Label>
-          <Input
+          <IconInput
             id="password"
             type="password"
             autoComplete="new-password"
+            icon={<Lock className="h-4 w-4" />}
             value={password}
             disabled={isLoading}
             aria-invalid={fieldError != null}
@@ -110,10 +112,11 @@ export function SetPasswordForm() {
 
         <div className="grid gap-2">
           <Label htmlFor="confirm">Confirm password</Label>
-          <Input
+          <IconInput
             id="confirm"
             type="password"
             autoComplete="new-password"
+            icon={<Lock className="h-4 w-4" />}
             value={confirm}
             disabled={isLoading}
             aria-invalid={confirmError != null}
