@@ -159,4 +159,16 @@ describe("submissionPayloadFromDrafts", () => {
     const payload = submissionPayloadFromDrafts(drafts, edges);
     expect(payload.edges).toHaveLength(3);
   });
+  it("drops orphan draft edges whose endpoints are not in the submitted nodes", () => {
+    const drafts: DraftNode[] = [
+      { id: "draft-a", type: "person", label: "A", draft: true },
+      { id: "draft-b", type: "person", label: "B", draft: true },
+    ];
+    const edges: DraftEdge[] = [
+      { id: "orphan", source: "draft-x", target: "draft-y", verb: "related_to", kind: "social", draft: true },
+      { id: "valid", source: "draft-a", target: "draft-b", verb: "related_to", kind: "social", draft: true },
+    ];
+    const payload = submissionPayloadFromDrafts(drafts, edges);
+    expect(payload.edges).toEqual([{ source: "draft-a", target: "draft-b", verb: "related_to" }]);
+  });
 });
