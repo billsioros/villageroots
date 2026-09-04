@@ -126,14 +126,18 @@ export function UserManagementTab() {
   });
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex h-full flex-col gap-4">
+      <div>
+        <h3 className="text-sm font-semibold text-foreground">User Management</h3>
+        <p className="text-xs text-muted-foreground">
+          Invite contributors and manage account access
+        </p>
+      </div>
+
       <InviteForm />
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-1 flex-col gap-3 overflow-y-auto">
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-medium text-muted-foreground">
-            Registered Users
-          </h4>
           {users && (
             <span className="text-[13px] text-muted-foreground">
               {users.length} user{users.length !== 1 ? "s" : ""}
@@ -161,7 +165,9 @@ export function UserManagementTab() {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">No users found.</p>
+          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border-soft p-8 text-center">
+            <p className="text-sm text-muted-foreground">No users found.</p>
+          </div>
         )}
       </div>
     </div>

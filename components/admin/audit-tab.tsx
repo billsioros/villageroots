@@ -19,14 +19,14 @@ interface AuditLogItem {
 }
 
 const ACTION_STYLES: Record<string, string> = {
-  create: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
-  update: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
-  status_change: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+  create: "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200",
+  update: "border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/60 dark:text-blue-200",
+  status_change: "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-200",
 };
 
 const ENTITY_STYLES: Record<string, string> = {
-  node: "bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-400",
-  edge: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400",
+  node: "border-violet-300 bg-violet-50 text-violet-800 dark:border-violet-800 dark:bg-violet-950/60 dark:text-violet-200",
+  edge: "border-cyan-300 bg-cyan-50 text-cyan-800 dark:border-cyan-800 dark:bg-cyan-950/60 dark:text-cyan-200",
 };
 
 function formatAction(action: string): string {
@@ -81,9 +81,9 @@ export function AuditTab() {
   const items = data?.items ?? [];
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex h-full flex-col gap-4">
       <div>
-        <h3 className="text-sm font-medium">Audit Log</h3>
+        <h3 className="text-sm font-semibold text-foreground">Audit Log</h3>
         <p className="text-xs text-muted-foreground">
           Graph mutations — who changed what and when
         </p>
@@ -95,12 +95,12 @@ export function AuditTab() {
           placeholder="Filter by user ID..."
           value={actorFilter}
           onChange={(e) => setActorFilter(e.target.value)}
-          className="flex-1 rounded-md border border-border-soft bg-card px-3 py-1.5 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          className="flex-1 rounded-md border border-border-soft bg-card px-3 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
         />
         <select
           value={entityTypeFilter}
           onChange={(e) => setEntityTypeFilter(e.target.value)}
-          className="rounded-md border border-border-soft bg-card px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+          className="rounded-md border border-border-soft bg-card px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
         >
           <option value="">All types</option>
           <option value="node">Nodes</option>
@@ -109,7 +109,7 @@ export function AuditTab() {
         <select
           value={actionFilter}
           onChange={(e) => setActionFilter(e.target.value)}
-          className="rounded-md border border-border-soft bg-card px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+          className="rounded-md border border-border-soft bg-card px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
         >
           <option value="">All actions</option>
           <option value="create">Created</option>
@@ -118,48 +118,50 @@ export function AuditTab() {
         </select>
       </div>
 
-      {isLoading ? (
-        <div className="space-y-2">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-12 animate-pulse rounded-lg bg-muted" />
-          ))}
-        </div>
-      ) : items.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border-soft p-6 text-center">
-          <p className="text-xs text-muted-foreground">No audit entries found</p>
-        </div>
-      ) : (
-        <div className="space-y-1">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center gap-2 rounded-lg border border-border-soft bg-card px-3 py-2 text-xs"
-            >
-              <span className="min-w-0 flex-1 truncate text-muted-foreground">
-                {item.actorEmail ?? item.actorId.slice(0, 8)}
-              </span>
-              <Badge
-                variant="secondary"
-                className={`shrink-0 text-[10px] ${ACTION_STYLES[item.action] ?? ""}`}
+      <div className="flex-1 overflow-y-auto">
+        {isLoading ? (
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-12 animate-pulse rounded-lg bg-muted" />
+            ))}
+          </div>
+        ) : items.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border-soft p-8 text-center">
+            <p className="text-sm text-muted-foreground">No audit entries found</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {items.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center gap-2 rounded-lg border border-border-soft bg-card px-3 py-2 text-sm"
               >
-                {formatAction(item.action)}
-              </Badge>
-              <Badge
-                variant="secondary"
-                className={`shrink-0 text-[10px] ${ENTITY_STYLES[item.entityType] ?? ""}`}
-              >
-                {formatEntityType(item.entityType)}
-              </Badge>
-              <span className="min-w-0 flex-1 truncate text-muted-foreground">
-                {describeItem(item)}
-              </span>
-              <span className="shrink-0 text-muted-foreground/60">
-                {formatTime(item.createdAt)}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
+                <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                  {item.actorEmail ?? item.actorId.slice(0, 8)}
+                </span>
+                <Badge
+                  variant="outline"
+                  className={`shrink-0 text-xs ${ACTION_STYLES[item.action] ?? ""}`}
+                >
+                  {formatAction(item.action)}
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className={`shrink-0 text-xs ${ENTITY_STYLES[item.entityType] ?? ""}`}
+                >
+                  {formatEntityType(item.entityType)}
+                </Badge>
+                <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                  {describeItem(item)}
+                </span>
+                <span className="shrink-0 text-muted-foreground/60">
+                  {formatTime(item.createdAt)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

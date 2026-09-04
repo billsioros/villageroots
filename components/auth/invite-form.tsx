@@ -63,7 +63,7 @@ export function InviteForm() {
   };
 
   return (
-    <form onSubmit={onSubmit} noValidate className="flex flex-col gap-3 border-t border-border-soft pt-4">
+    <form onSubmit={onSubmit} noValidate className="flex flex-col gap-3">
       <div className="flex items-end gap-2">
         <div className="grid flex-1 gap-1.5">
           <Label htmlFor="invite-email">Invite a contributor</Label>

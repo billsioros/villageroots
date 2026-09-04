@@ -160,7 +160,14 @@ export function ReviewQueueTab() {
   };
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex h-full flex-col gap-4">
+      <div>
+        <h3 className="text-sm font-semibold text-foreground">Review Queue</h3>
+        <p className="text-xs text-muted-foreground">
+          Pending moderation — approve before the public graph updates
+        </p>
+      </div>
+
       <div className="flex gap-3">
         {TABS.map((t) => (
           <Button
@@ -198,13 +205,14 @@ export function ReviewQueueTab() {
         </div>
       )}
 
-      {isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading...</p>
-      ) : isError ? (
-        <p className="text-sm text-destructive">Failed to load review queue.</p>
-      ) : data && data.items.length > 0 ? (
-        <ul className="flex flex-col gap-4 overflow-y-auto">
-          {data.items.map((item) => (
+      <div className="flex-1 overflow-y-auto">
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        ) : isError ? (
+          <p className="text-sm text-destructive">Failed to load review queue.</p>
+        ) : data && data.items.length > 0 ? (
+          <ul className="flex flex-col gap-4">
+            {data.items.map((item) => (
             <li
               key={item.id}
               className="flex flex-col gap-3 rounded-lg border bg-card p-5"
@@ -275,10 +283,13 @@ export function ReviewQueueTab() {
               )}
             </li>
           ))}
-        </ul>
-      ) : (
-        <p className="text-sm text-muted-foreground">No items to review.</p>
-      )}
+          </ul>
+        ) : (
+          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border-soft p-8 text-center">
+            <p className="text-sm text-muted-foreground">No items to review.</p>
+          </div>
+        )}
+      </div>
 
       {active && (
         <ModerationHistory

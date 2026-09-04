@@ -56,9 +56,9 @@ export function AdminDialog() {
     <ModalShell
       title="Admin"
       onClose={() => setOpen(false)}
-      className="w-[820px] max-w-[95vw] p-0"
+      className="w-[1000px] max-w-[95vw] p-0"
     >
-      <div className="flex h-[560px] overflow-hidden">
+      <div className="flex h-[600px] overflow-hidden">
         <div
           role="tablist"
           aria-orientation="vertical"
