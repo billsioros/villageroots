@@ -1,3 +1,10 @@
+## [1.17.1](https://github.com/billsioros/villageroots/compare/v1.17.0...v1.17.1) (2026-09-04)
+
+
+### Bug Fixes
+
+* resolve admin dialog title squeeze from modal width merge ([3b118ae](https://github.com/billsioros/villageroots/commit/3b118ae302cea8b16143a8b159cdbabb133965b1))
+
 # [1.17.0](https://github.com/billsioros/villageroots/compare/v1.16.1...v1.17.0) (2026-09-04)
 
 
