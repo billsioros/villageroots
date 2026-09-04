@@ -7,6 +7,7 @@ import { useGraphStore } from "@/store/graphStore";
 import { createClient } from "@/lib/supabase/client";
 import { validateScanFile } from "@/lib/ocr/validate-file";
 import type { DraftEdge, DraftNode } from "@/lib/graph/types";
+import { cn } from "@/lib/utils";
 
 export function ModalShell({ title, onClose, children, className }: { title: string; onClose: () => void; children: ReactNode; className?: string }) {
   useEffect(() => {
@@ -18,7 +19,7 @@ export function ModalShell({ title, onClose, children, className }: { title: str
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 animate-[modal-bg-in_0.2s_ease]" onMouseDown={onClose}>
       <div
-        className={`w-[420px] rounded-2xl bg-card p-6 shadow-elev-raised animate-[modal-in_0.2s_ease] ${className ?? ""}`}
+        className={cn("w-[420px] rounded-2xl bg-card p-6 shadow-elev-raised animate-[modal-in_0.2s_ease]", className)}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="mb-6 flex items-center justify-between">

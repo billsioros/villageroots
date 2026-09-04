@@ -56,7 +56,7 @@ export function AdminDialog() {
     <ModalShell
       title="Admin"
       onClose={() => setOpen(false)}
-      className="w-[1000px] max-w-[95vw] p-0"
+      className="w-[1000px] max-w-[95vw]"
     >
       <div className="flex h-[600px] overflow-hidden">
         <div
