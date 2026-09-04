@@ -1,3 +1,10 @@
+# [1.17.0](https://github.com/billsioros/villageroots/compare/v1.16.1...v1.17.0) (2026-09-04)
+
+
+### Features
+
+* PTDN-51 audit user actions and graph contributions ([#35](https://github.com/billsioros/villageroots/issues/35)) ([3105f3e](https://github.com/billsioros/villageroots/commit/3105f3edd4cd2e1fa93c3f5de24ef058984daa92))
+
 ## [1.16.1](https://github.com/billsioros/villageroots/compare/v1.16.0...v1.16.1) (2026-09-03)
 
 
