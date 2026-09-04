@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => {
   transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn({ insert }));
   select.mockReturnValue({ from });
   from.mockReturnValue({ where });
-  where.mockImplementation(async () => [{ id: "n-9", slug: "kato-potamia" }]);
+  where.mockImplementation(async () => [{ id: "n-9", slug: "kato-potamia", createdBy: "other", status: "approved" }]);
   return { insert, insertValues, transaction, select, from, where, sessionUid: vi.fn(), isAdminUid: vi.fn() };
 });
 vi.mock("@/lib/graph/db", () => ({ db: { insert: mocks.insert, transaction: mocks.transaction, select: mocks.select } }));
@@ -38,7 +38,7 @@ describe("POST /api/submissions", () => {
     mocks.insertValues.mockClear();
     mocks.transaction.mockClear();
     mocks.where.mockClear();
-    mocks.where.mockImplementation(async () => [{ id: "n-9", slug: "kato-potamia" }]);
+    mocks.where.mockImplementation(async () => [{ id: "n-9", slug: "kato-potamia", createdBy: "other", status: "approved" }]);
     mocks.sessionUid.mockResolvedValue("u-1");
     mocks.isAdminUid.mockResolvedValue(false);
   });
@@ -63,8 +63,8 @@ describe("POST /api/submissions", () => {
     const res = await POST(mreq(payload()));
     expect(res.status).toBe(201);
     expect(await res.json()).toEqual({ nodes: 2, edges: 1 });
-    // 2 node inserts + 1 edge insert + 1 admin notification insert
-    expect(mocks.insert).toHaveBeenCalledTimes(4);
+    // 2 node inserts + 2 node audit logs + 1 edge insert + 1 edge audit log + 1 admin notification
+    expect(mocks.insert).toHaveBeenCalledTimes(7);
     const nodeCall = mocks.insertValues.mock.calls[0][0];
     expect(nodeCall.status).toBe("pending");
     expect(nodeCall.privacy).toBe("public"); // deceased person
@@ -94,6 +94,24 @@ describe("POST /api/submissions", () => {
     const edgeCall = mocks.insertValues.mock.calls[1][0];
     expect(edgeCall.sourceId).toBe("node-1");
     expect(edgeCall.targetId).toBe("n-9");
+  });
+
+  it("resolves pending nodes owned by the user as edge targets", async () => {
+    mocks.where.mockImplementation(async () => [{ id: "n-owned", slug: "my-pending-node", createdBy: "u-1", status: "pending" }]);
+    const res = await POST(
+      mreq({ nodes: [{ id: "draft-a", type: "person", label: "Nikos" }], edges: [{ source: "draft-a", target: "my-pending-node", verb: "lived_at" }] }),
+    );
+    expect(res.status).toBe(201);
+    const edgeCall = mocks.insertValues.mock.calls[1][0];
+    expect(edgeCall.targetId).toBe("n-owned");
+  });
+
+  it("rejects connecting to another user's pending node", async () => {
+    mocks.where.mockImplementation(async () => [{ id: "n-other", slug: "their-pending", createdBy: "u-2", status: "pending" }]);
+    const res = await POST(
+      mreq({ nodes: [{ id: "draft-a", type: "person", label: "Nikos" }], edges: [{ source: "draft-a", target: "their-pending", verb: "lived_at" }] }),
+    );
+    expect(res.status).toBe(400);
   });
 
   it("returns 400 for an unknown referenced slug", async () => {

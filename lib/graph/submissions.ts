@@ -130,6 +130,19 @@ export function resolveEdgeEndpoints(
 }
 
 export function submissionPayloadFromDrafts(draftNodes: DraftNode[], draftEdges: DraftEdge[]): SubmissionPayload {
+  const draftNodeIds = new Set(draftNodes.map((d) => d.id));
+  const seen = new Set<string>();
+  const edges: SubmissionEdge[] = [];
+  for (const e of draftEdges) {
+    const sourceIsDraft = e.source.startsWith("draft-");
+    const targetIsDraft = e.target.startsWith("draft-");
+    if (sourceIsDraft && !draftNodeIds.has(e.source)) continue;
+    if (targetIsDraft && !draftNodeIds.has(e.target)) continue;
+    const key = `${e.source}|${e.target}|${e.verb}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    edges.push({ source: e.source, target: e.target, verb: e.verb });
+  }
   return {
     nodes: draftNodes.map((d) => ({
       id: d.id,
@@ -143,6 +156,6 @@ export function submissionPayloadFromDrafts(draftNodes: DraftNode[], draftEdges:
       x: d.x,
       y: d.y,
     })),
-    edges: draftEdges.map((e) => ({ source: e.source, target: e.target, verb: e.verb })),
+    edges,
   };
 }

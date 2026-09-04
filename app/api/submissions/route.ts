@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { db } from "@/lib/graph/db";
 import { edges as edgesTable, nodes as nodesTable, notifications, userRoles } from "@/drizzle/schema";
 import { sessionUid } from "@/lib/graph/session";
 import { isAdminUid } from "@/lib/graph/admin";
 import { createNodeValues } from "@/lib/graph/createNode";
 import { resolveEdgeEndpoints, validateSubmissionShape } from "@/lib/graph/submissions";
+import { logAudit } from "@/lib/graph/audit";
 import { type Status } from "@/lib/graph/types";
 
 export async function POST(req: Request) {
@@ -39,10 +40,12 @@ export async function POST(req: Request) {
   const slugToId = new Map<string, string>();
   if (slugs.size > 0) {
     const rows = await db
-      .select({ id: nodesTable.id, slug: nodesTable.slug })
+      .select({ id: nodesTable.id, slug: nodesTable.slug, createdBy: nodesTable.createdBy, status: nodesTable.status })
       .from(nodesTable)
-      .where(and(inArray(nodesTable.slug, [...slugs]), eq(nodesTable.status, "approved")));
-    for (const r of rows) slugToId.set(r.slug, r.id);
+      .where(and(inArray(nodesTable.slug, [...slugs]), or(eq(nodesTable.status, "approved"), eq(nodesTable.createdBy, uid))));
+    for (const r of rows) {
+      if (r.status === "approved" || r.createdBy === uid) slugToId.set(r.slug, r.id);
+    }
   }
 
   const resolved = resolveEdgeEndpoints(shape.value.edges, draftIds, slugToId);
@@ -52,6 +55,7 @@ export async function POST(req: Request) {
   const status: Status = admin ? "approved" : "pending";
 
   let result;
+  const auditEntries: { entityType: "node" | "edge"; entitySlug: string; metadata: Record<string, unknown> }[] = [];
   try {
     result = await db.transaction(async (tx) => {
       const draftToId = new Map<string, string>();
@@ -62,13 +66,15 @@ export async function POST(req: Request) {
           .values(createNodeValues(n, uid, status, i))
           .returning();
         draftToId.set(n.id, row.id);
+        auditEntries.push({ entityType: "node", entitySlug: row.slug, metadata: { label: n.label } });
       }
       let edgeCount = 0;
       for (const e of resolved.edges) {
         const sourceId = draftToId.get(e.source) ?? e.source;
         const targetId = draftToId.get(e.target) ?? e.target;
+        const edgeSlug = `edge-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
         await tx.insert(edgesTable).values({
-          slug: `edge-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+          slug: edgeSlug,
           sourceId,
           targetId,
           type: e.verb,
@@ -76,12 +82,18 @@ export async function POST(req: Request) {
           status,
           createdBy: uid,
         });
+        auditEntries.push({ entityType: "edge", entitySlug: edgeSlug, metadata: {} });
         edgeCount++;
       }
       return { nodes: shape.value.nodes.length, edges: edgeCount };
     });
-  } catch {
+  } catch (e) {
+    console.error("SUBMISSION_TX_ERROR", e);
     return NextResponse.json({ error: "Submission failed" }, { status: 500 });
+  }
+
+  for (const entry of auditEntries) {
+    await logAudit("create", entry.entityType, entry.entitySlug, entry.metadata);
   }
 
   // Notify admins about pending submission

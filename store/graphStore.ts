@@ -59,7 +59,7 @@ export interface GraphStore {
   aboutOpen: boolean;
   profileOpen: boolean;
   adminDialogOpen: boolean;
-  adminDialogTab: "users" | "review";
+  adminDialogTab: "users" | "review" | "audit";
   activeView: "GRAPH" | "TREE";
   focalPersonId: string | null;
   toast: Toast | null;
@@ -98,7 +98,7 @@ export interface GraphStore {
   setAboutOpen: (open: boolean) => void;
   setProfileOpen: (open: boolean) => void;
   setAdminDialogOpen: (open: boolean) => void;
-  setAdminDialogTab: (tab: "users" | "review") => void;
+  setAdminDialogTab: (tab: "users" | "review" | "audit") => void;
   setActiveView: (view: "GRAPH" | "TREE") => void;
   setFocalPersonId: (id: string | null) => void;
   dismissHint: () => void;
