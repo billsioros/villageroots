@@ -76,18 +76,17 @@ export async function POST(
       });
     }
 
-    if (changed) {
-      const entityType = type === "nodes" ? "node" : type === "edges" ? "edge" : null;
-      if (entityType) {
-        await logAudit("status_change", entityType, id, {
-          statusBefore: current[0].status as string,
-          statusAfter: status,
-        }, tx);
-      }
-    }
-
     return { id, status };
   });
+
+  // Audit logged after the transaction commits so a failure never rolls back moderation
+  const entityType = type === "nodes" ? "node" : type === "edges" ? "edge" : null;
+  if (changed && entityType) {
+    await logAudit("status_change", entityType, id, {
+      statusBefore: current[0].status,
+      statusAfter: status,
+    });
+  }
 
   return NextResponse.json(result);
 }

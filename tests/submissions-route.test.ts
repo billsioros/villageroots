@@ -71,7 +71,7 @@ describe("POST /api/submissions", () => {
     expect(nodeCall.createdBy).toBe("u-1");
     expect(nodeCall.slug).toMatch(/^yiayia-/);
     expect(nodeCall.properties).toMatchObject({ facts: { born: "1924" }, deceased: true, x: 1, y: 2 });
-    const edgeCall = mocks.insertValues.mock.calls[4][0];
+    const edgeCall = mocks.insertValues.mock.calls[2][0];
     expect(edgeCall.sourceId).toBe("node-1");
     expect(edgeCall.targetId).toBe("node-1");
     expect(edgeCall.type).toBe("child_of");
@@ -83,7 +83,7 @@ describe("POST /api/submissions", () => {
     const res = await POST(mreq(payload()));
     expect(res.status).toBe(201);
     expect(mocks.insertValues.mock.calls[0][0].status).toBe("approved");
-    expect(mocks.insertValues.mock.calls[4][0].status).toBe("approved");
+    expect(mocks.insertValues.mock.calls[2][0].status).toBe("approved");
   });
 
   it("resolves existing approved slugs to node ids", async () => {
@@ -91,7 +91,7 @@ describe("POST /api/submissions", () => {
       mreq({ nodes: [{ id: "draft-a", type: "person", label: "Nikos" }], edges: [{ source: "draft-a", target: "kato-potamia", verb: "lived_at" }] }),
     );
     expect(res.status).toBe(201);
-    const edgeCall = mocks.insertValues.mock.calls[2][0];
+    const edgeCall = mocks.insertValues.mock.calls[1][0];
     expect(edgeCall.sourceId).toBe("node-1");
     expect(edgeCall.targetId).toBe("n-9");
   });
@@ -102,7 +102,7 @@ describe("POST /api/submissions", () => {
       mreq({ nodes: [{ id: "draft-a", type: "person", label: "Nikos" }], edges: [{ source: "draft-a", target: "my-pending-node", verb: "lived_at" }] }),
     );
     expect(res.status).toBe(201);
-    const edgeCall = mocks.insertValues.mock.calls[2][0];
+    const edgeCall = mocks.insertValues.mock.calls[1][0];
     expect(edgeCall.targetId).toBe("n-owned");
   });
 

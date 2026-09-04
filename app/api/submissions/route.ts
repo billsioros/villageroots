@@ -55,6 +55,7 @@ export async function POST(req: Request) {
   const status: Status = admin ? "approved" : "pending";
 
   let result;
+  const auditEntries: { entityType: "node" | "edge"; entitySlug: string; metadata: Record<string, unknown> }[] = [];
   try {
     result = await db.transaction(async (tx) => {
       const draftToId = new Map<string, string>();
@@ -65,7 +66,7 @@ export async function POST(req: Request) {
           .values(createNodeValues(n, uid, status, i))
           .returning();
         draftToId.set(n.id, row.id);
-        await logAudit("create", "node", row.slug, { label: n.label }, tx);
+        auditEntries.push({ entityType: "node", entitySlug: row.slug, metadata: { label: n.label } });
       }
       let edgeCount = 0;
       for (const e of resolved.edges) {
@@ -81,13 +82,18 @@ export async function POST(req: Request) {
           status,
           createdBy: uid,
         });
-        await logAudit("create", "edge", edgeSlug, {}, tx);
+        auditEntries.push({ entityType: "edge", entitySlug: edgeSlug, metadata: {} });
         edgeCount++;
       }
       return { nodes: shape.value.nodes.length, edges: edgeCount };
     });
-  } catch {
+  } catch (e) {
+    console.error("SUBMISSION_TX_ERROR", e);
     return NextResponse.json({ error: "Submission failed" }, { status: 500 });
+  }
+
+  for (const entry of auditEntries) {
+    await logAudit("create", entry.entityType, entry.entitySlug, entry.metadata);
   }
 
   // Notify admins about pending submission

@@ -4,16 +4,11 @@ import { auditLogs } from "@/drizzle/schema";
 
 type AuditAction = "create" | "update" | "status_change";
 type AuditEntityType = "node" | "edge";
-
-type AuditTransaction = Parameters<typeof db.transaction>[0] extends (
-  tx: infer T,
-) => Promise<unknown>
-  ? T
-  : never;
+type StatusValue = "pending" | "approved" | "rejected";
 
 interface AuditMetadata extends Record<string, unknown> {
-  statusBefore?: string;
-  statusAfter?: string;
+  statusBefore?: StatusValue;
+  statusAfter?: StatusValue;
 }
 
 export async function logAudit(
@@ -21,13 +16,11 @@ export async function logAudit(
   entityType: AuditEntityType,
   entitySlug: string,
   metadata: AuditMetadata,
-  tx?: AuditTransaction,
 ): Promise<void> {
   try {
     const uid = await sessionUid();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const executor: any = tx ?? db;
-    await executor.insert(auditLogs).values({
+    if (!uid) return;
+    await db.insert(auditLogs).values({
       actorId: uid,
       entityType,
       entityId: entitySlug,

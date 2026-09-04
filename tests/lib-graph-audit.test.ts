@@ -66,17 +66,11 @@ describe("logAudit", () => {
     ).resolves.toBeUndefined();
   });
 
-  it("accepts a provided transaction object", async () => {
-    const mockTx = {
-      insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) }),
-    };
-
+  it("logs via the standalone db, never a transaction", async () => {
     const { logAudit } = await import("@/lib/graph/audit");
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await logAudit("create", "node", "x", {}, mockTx as any);
+    await logAudit("create", "node", "x", {});
 
-    expect(mockTx.insert).toHaveBeenCalled();
-    expect(mockDb.insert).not.toHaveBeenCalled();
+    expect(mockDb.insert).toHaveBeenCalled();
   });
 });

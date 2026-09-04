@@ -2,7 +2,7 @@ CREATE TABLE "audit_logs" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
   "actor_id" uuid NOT NULL REFERENCES auth.users(id),
   "entity_type" text NOT NULL,
-  "entity_id" uuid NOT NULL,
+  "entity_id" text NOT NULL,
   "entity_slug" text NOT NULL,
   "action" text NOT NULL,
   "status_before" "status",

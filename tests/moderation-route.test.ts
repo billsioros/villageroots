@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   transaction: vi.fn(),
   update: vi.fn(),
   select: vi.fn(),
+  dbInsert: vi.fn(),
 }));
 
 vi.mock("@/lib/graph/session", () => ({ sessionUid: mocks.sessionUid }));
@@ -18,6 +19,7 @@ vi.mock("@/lib/graph/db", () => ({
     transaction: mocks.transaction,
     update: mocks.update,
     select: mocks.select,
+    insert: mocks.dbInsert,
   },
 }));
 
@@ -100,6 +102,7 @@ describe("POST /api/moderation/[type]/[id]", () => {
     const update = vi.fn().mockReturnValue({
       set: () => ({ where: () => ({}) }),
     });
+    mocks.dbInsert.mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) });
     // Transaction mock must include select for the createdBy lookup
     const txSelect = vi.fn().mockReturnValue({
       from: () => ({
@@ -111,8 +114,10 @@ describe("POST /api/moderation/[type]/[id]", () => {
     mocks.transaction.mockImplementation(async (fn) => fn({ update, insert, select: txSelect }));
     const res = await POST(mreq({ action: "approve" }), cparams("nodes", "n1"));
     expect(res.status).toBe(200);
-    // insert called three times: moderations + notifications + audit log
-    expect(insert).toHaveBeenCalledTimes(3);
+    // insert called twice in the tx: moderations + notifications (audit runs after commit)
+    expect(insert).toHaveBeenCalledTimes(2);
+    // standalone audit insert runs after the transaction
+    expect(mocks.dbInsert).toHaveBeenCalledTimes(1);
     // Assert notification content
     expect(values).toHaveBeenCalledWith(expect.objectContaining({
       userId: "user-1",
