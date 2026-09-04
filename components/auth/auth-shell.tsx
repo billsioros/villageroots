@@ -1,4 +1,5 @@
 import { AuthBackground } from "@/components/auth/auth-background";
+import { BrandMark } from "@/components/auth/brand-mark";
 
 export function AuthShell({
   children,
@@ -36,6 +37,9 @@ export function AuthShell({
       />
 
       <div className="relative z-10 mx-auto my-auto flex w-full max-w-md flex-col items-center px-6 py-12">
+        <div className="mb-6 auth-rise" style={{ animation: "rise 0.5s ease-out 0.1s both" }}>
+          <BrandMark className="h-8 w-auto" />
+        </div>
         <div
           className="auth-rise w-full rounded-[18px] p-8"
           style={{
