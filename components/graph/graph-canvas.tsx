@@ -306,14 +306,12 @@ export function GraphCanvas() {
     return () => clearTimeout(t);
   }, [setCanvasCenter, size.w, forceConfig, degreeMap, graphReady]);
 
-  // --- zoom % rAF poll ---
+  // --- viewport bounds rAF poll ---
   useEffect(() => {
     const fg = graphRef.current;
     if (!fg) return;
     let raf = 0;
     const tick = () => {
-      setZoomPct(Math.round(fg.zoom() * 100));
-
       // Track viewport bounds (throttled to 100ms)
       const now = Date.now();
       if (now - lastViewportUpdate.current > 100) {
@@ -338,7 +336,7 @@ export function GraphCanvas() {
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [setZoomPct, size.w, setViewportBounds]);
+  }, [size.w, setViewportBounds]);
 
   // --- smooth camera glide to a node ---
   // Pan and zoom are locked to one shared motion: the clicked node rides a
@@ -676,6 +674,7 @@ export function GraphCanvas() {
           linkDirectionalParticles={(l: any) => (litEdgeIds.includes(l.id) ? 2 : 0)}
           linkDirectionalParticleSpeed={0.008}
           linkCanvasObject={activeView === "TREE" ? treeLinkPaint : undefined}
+          onZoom={({ k }) => setZoomPct(Math.round(k * 100))}
           onNodeClick={(node: any) => {
             selectNode(node.id);
             setCanvasCenter({ x: node.x ?? 0, y: node.y ?? 0 });

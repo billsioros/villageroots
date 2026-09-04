@@ -4,7 +4,8 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { validateEmail } from "@/lib/auth/validation";
-import { Input } from "@/components/ui/input";
+import { Mail } from "lucide-react";
+import { IconInput } from "@/components/auth/icon-input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/auth/submit-button";
 
@@ -72,12 +73,13 @@ export function ForgotPasswordForm() {
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
         <div className="grid gap-2">
           <Label htmlFor="email">Email</Label>
-          <Input
+          <IconInput
             id="email"
             type="email"
             inputMode="email"
             autoComplete="email"
             placeholder="you@example.com"
+            icon={<Mail className="h-4 w-4" />}
             value={email}
             disabled={isLoading}
             aria-invalid={error != null}

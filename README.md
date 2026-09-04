@@ -53,7 +53,7 @@ The system is a semantic network of **nodes** (entities) and **edges** (relation
 
 ## Status
 
-**Scaffold phase.** The codebase is the `with-supabase` starter (auth flow + placeholder landing/protected pages). No product feature code has landed yet. The UI scaffold design is approved (local `docs/superpowers/` spec) and tracked on Linear (PTDN-19).
+**Scaffold phase.** The codebase is the `with-supabase` starter (auth flow + graph app at root). The UI scaffold design is approved (local `docs/superpowers/` spec) and tracked on Linear (PTDN-19).
 
 ## Getting started
 

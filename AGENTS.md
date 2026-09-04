@@ -2,7 +2,7 @@
 
 ## What this repo is
 
-Next.js (App Router) + Supabase starter repurposed for **VillageRoots**: an infinite 2D spatial knowledge graph of village heritage. **No feature code has landed yet** — the codebase is the stock `with-supabase` scaffold (auth flow + placeholder landing/protected pages). Only design/planning docs exist for the product itself.
+Next.js (App Router) + Supabase starter repurposed for **VillageRoots**: an infinite 2D spatial knowledge graph of village heritage. The codebase is the stock `with-supabase` scaffold (auth flow + graph app at root). Only design/planning docs exist for the product itself.
 
 Docs (all committed — keep them in sync when implementing):
 
@@ -34,7 +34,7 @@ Without these set, `hasEnvVars` in `lib/utils.ts` makes the proxy skip the auth 
 
 ## Auth guard gotcha
 
-The session/auth guard lives in **`proxy.ts` at the repo root** (NOT `middleware.ts`), calling `updateSession` in `lib/supabase/proxy.ts`. It redirects unauthenticated users to `/auth/login` unless the path is `/`, `/login`, or `/auth*`. **When adding protected routes, whitelist them in `proxy.ts`** or users will be silently redirected.
+The session/auth guard lives in **`proxy.ts` at the repo root** (NOT `middleware.ts`), calling `updateSession` in `lib/supabase/proxy.ts`. It redirects unauthenticated users to `/auth/login` unless the path is `/login` or `/auth*`. **When adding routes to the whitelist, add them in `proxy.ts`** or users will be silently redirected.
 
 Supabase clients (fresh per request, per the Fluid-compute comment):
 - `lib/supabase/client.ts` — browser client
