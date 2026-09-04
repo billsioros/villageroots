@@ -45,12 +45,12 @@ begin
 
   job_text := format(
     $job$
-    select extensions.net.http_post(
-      url := '%s',
+    select net.http_post(
+      url := %L,
       headers := jsonb_build_object(
         'content-type', 'application/json',
-        'apikey', '%s',
-        'x-cleanup-secret', '%s'
+        'apikey', %L,
+        'x-cleanup-secret', %L
       ),
       body := '{}'::jsonb,
       timeout_milliseconds := 30000
