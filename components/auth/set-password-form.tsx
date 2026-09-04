@@ -74,7 +74,7 @@ export function SetPasswordForm() {
     } finally {
       setIsLoading(false);
     }
-    router.push("/protected");
+    router.push("/");
   };
 
   return (

@@ -42,7 +42,7 @@ export function SignInForm({
       setFormError("The email or password you entered is incorrect.");
       return;
     }
-    router.push("/protected");
+    router.push("/");
   };
 
   return (
