@@ -33,7 +33,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <main className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
+            {children}
+          </main>
         </ThemeProvider>
       </body>
     </html>
