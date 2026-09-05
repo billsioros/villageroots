@@ -136,3 +136,82 @@ describe("GET /api/graph/search — matching & ranking", () => {
     expect(await res.json()).toEqual({ error: "Search failed" });
   });
 });
+
+describe("GET /api/graph/search — policy & masking", () => {
+  it("includes the visibility policy in the where clause", async () => {
+    mocks.rows = [row()];
+    await GET(mreq("mill"));
+    const whereSql = toSql(mocks.where.mock.calls[0][0] as SQL);
+    expect(whereSql.toUpperCase()).toContain('"STATUS"');
+    expect(whereSql.toUpperCase()).toContain('"CREATED_BY"');
+  });
+
+  it("masks a private living person's label and subtitle for non-owners", async () => {
+    seedRows(row({
+      id: "p1",
+      type: "person",
+      label: "Maria Papadopoulou",
+      subtitle: "Village elder",
+      privacy: "private",
+      properties: { x: 0, y: 0, deceased: false },
+      createdBy: "someone-else",
+      rank: 0,
+    }));
+    const res = await GET(mreq("papadopoulou"));
+    const body = await res.json();
+    expect(body.results[0]).toEqual({
+      id: "p1",
+      label: "Living Person",
+      subtitle: "",
+      type: "person",
+      rank: 0,
+    });
+  });
+
+  it("does NOT mask a deceased private person", async () => {
+    seedRows(row({
+      id: "p2",
+      type: "person",
+      label: "Giorgos Zografos",
+      subtitle: null,
+      privacy: "private",
+      properties: { x: 0, y: 0, deceased: true },
+      createdBy: "someone-else",
+      rank: 0,
+    }));
+    const res = await GET(mreq("zografos"));
+    const body = await res.json();
+    expect(body.results[0].label).toBe("Giorgos Zografos");
+  });
+
+  it("does NOT mask a private living person for the owner or an admin", async () => {
+    seedRows(row({
+      id: "p3",
+      type: "person",
+      label: "Nikos Karalis",
+      subtitle: null,
+      privacy: "private",
+      properties: { x: 0, y: 0, deceased: false },
+      createdBy: "user-1",
+      rank: 0,
+    }));
+    // owner
+    let body = await (await GET(mreq("karalis"))).json();
+    expect(body.results[0].label).toBe("Nikos Karalis");
+
+    mocks.sessionUid.mockResolvedValue("admin");
+    mocks.isAdminUid.mockResolvedValue(true);
+    seedRows(row({
+      id: "p4",
+      type: "person",
+      label: "Eleni Douka",
+      subtitle: null,
+      privacy: "private",
+      properties: { x: 0, y: 0, deceased: false },
+      createdBy: "someone-else",
+      rank: 0,
+    }));
+    body = await (await GET(mreq("douka"))).json();
+    expect(body.results[0].label).toBe("Eleni Douka");
+  });
+});
