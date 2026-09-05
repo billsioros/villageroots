@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { type NextRequest } from "next/server";
+import type { SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
+
+const pgDialect = new PgDialect();
+const toSql = (sql: SQL) => pgDialect.sqlToQuery(sql).sql;
 
 const mocks = vi.hoisted(() => ({
   sessionUid: vi.fn(),
@@ -61,5 +66,74 @@ describe("GET /api/graph/search — validation & limits", () => {
   it("does not call the db when the query is too short", async () => {
     await GET(mreq("a"));
     expect(mocks.select).not.toHaveBeenCalled();
+  });
+});
+
+const row = (over: Partial<Record<string, unknown>> = {}) => ({
+  id: "n1",
+  label: "The Old Mill",
+  subtitle: null,
+  type: "landmark",
+  privacy: "public",
+  properties: { x: 1, y: 2 },
+  createdBy: "user-1",
+  rank: 0,
+  ...over,
+});
+
+const seedRows = (...rowsList: Array<Record<string, unknown>>) => {
+  mocks.rows = rowsList;
+  mocks.limit.mockResolvedValue(rowsList);
+};
+
+describe("GET /api/graph/search — matching & ranking", () => {
+  it("filters with one case-insensitive ILIKE substring predicate per query word", async () => {
+    seedRows(row());
+    const res = await GET(mreq("old mill"));
+    expect(res.status).toBe(200);
+
+    const whereSql = toSql(mocks.where.mock.calls[0][0] as SQL);
+    expect(whereSql.toUpperCase()).toContain("ILIKE");
+    expect(whereSql.toUpperCase()).toContain("ILIKE $1");
+    expect(whereSql.toUpperCase()).toContain("ILIKE $2");
+  });
+
+  it("orders by the exact->prefix->substring rank ladder", async () => {
+    seedRows(row());
+    await GET(mreq("Mill"));
+    const orderSql = toSql(mocks.orderBy.mock.calls[0][0] as SQL);
+    expect(orderSql).toContain("CASE");
+    expect(orderSql).toContain("THEN 0");
+    expect(orderSql).toContain("lower(");
+    expect((orderSql.match(/THEN \d|ELSE \d/g) ?? []).map((m) => m.replace(/(THEN|ELSE) /, "")))
+      .toEqual(["0", "1", "2", "3", "4", "5"]);
+  });
+
+  it("returns rows mapped to the response shape, preserving the db order", async () => {
+    seedRows(
+      row({ id: "n2", label: "The Old Mill", rank: 1 }),
+      row({ id: "n3", label: "Mill", rank: 0 }),
+    );
+    const res = await GET(mreq("mill"));
+    const body = await res.json();
+    expect(body.results).toEqual([
+      { id: "n2", label: "The Old Mill", subtitle: null, type: "landmark", rank: 1 },
+      { id: "n3", label: "Mill", subtitle: null, type: "landmark", rank: 0 },
+    ]);
+  });
+
+  it("never emits duplicate ids (one row per node)", async () => {
+    seedRows(row({ id: "n1", label: "St George's church" }));
+    const res = await GET(mreq("urch"));
+    const body = await res.json();
+    expect(body.results).toHaveLength(1);
+    expect(body.results[0].id).toBe("n1");
+  });
+
+  it("returns 500 with a fixed error message when the db query rejects", async () => {
+    mocks.limit.mockRejectedValue(new Error("db exploded"));
+    const res = await GET(mreq("mill"));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "Search failed" });
   });
 });
