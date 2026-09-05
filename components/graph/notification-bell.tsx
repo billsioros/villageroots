@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useGraphStore } from "@/store/graphStore";
 
 interface Notification {
   id: string;
@@ -32,6 +33,7 @@ function timeAgo(dateStr: string): string {
 }
 
 export function NotificationBell() {
+  const pushToast = useGraphStore((s) => s.pushToast);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
@@ -81,17 +83,19 @@ export function NotificationBell() {
     const before = notifications;
     // Optimistic removal of read notifications
     setNotifications((prev) => prev.filter((n) => !n.read));
-    setUnreadCount((prev) => Math.max(0, prev));
 
     try {
       const res = await fetch("/api/notifications", { method: "DELETE" });
       if (!res.ok) {
         setNotifications(before);
-        throw new Error(`Clear failed: ${res.status}`);
+        pushToast({ tone: "error", message: "Couldn't clear notifications. Try again." });
+        return;
       }
       await fetchNotifications();
+      pushToast({ tone: "success", message: "Cleared read notifications" });
     } catch {
       setNotifications(before);
+      pushToast({ tone: "error", message: "Couldn't clear notifications. Try again." });
     }
   };
 
