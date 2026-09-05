@@ -21,6 +21,9 @@ import {
 const CULL_THRESHOLD = 200;
 const CULL_BUFFER = 200;
 
+const GRID_MINOR = 16;
+const GRID_MAJOR = 80;
+
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   ssr: false,
 });
@@ -58,7 +61,6 @@ export function GraphCanvas() {
   const selectNode = useGraphStore((s) => s.selectNode);
   const clearSelection = useGraphStore((s) => s.clearSelection);
   const setZoomPct = useGraphStore((s) => s.setZoomPct);
-  const setZoomScale = useGraphStore((s) => s.setZoomScale);
   const setZoomIntent = useGraphStore((s) => s.setZoomIntent);
   const setPanIntent = useGraphStore((s) => s.setPanIntent);
   const setCanvasCenter = useGraphStore((s) => s.setCanvasCenter);
@@ -453,6 +455,32 @@ export function GraphCanvas() {
     return () => cancelAnimationFrame(raf);
   }, [activeView, treeResult, displayData, nodes]);
 
+  const paintGrid = useCallback(
+    (ctx: CanvasRenderingContext2D, globalScale: number) => {
+      const { x1, y1, x2, y2 } = viewportBounds;
+      const lineW = 1 / globalScale;
+
+      const drawLines = (step: number, color: string) => {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineW;
+        ctx.beginPath();
+        for (let x = Math.floor(x1 / step) * step; x <= x2; x += step) {
+          ctx.moveTo(x, y1);
+          ctx.lineTo(x, y2);
+        }
+        for (let y = Math.floor(y1 / step) * step; y <= y2; y += step) {
+          ctx.moveTo(x1, y);
+          ctx.lineTo(x2, y);
+        }
+        ctx.stroke();
+      };
+
+      drawLines(GRID_MAJOR, "rgba(34,34,34,0.13)");
+      drawLines(GRID_MINOR, "rgba(34,34,34,0.06)");
+    },
+    [viewportBounds],
+  );
+
   const paintClanHalos = useCallback(
     (ctx: CanvasRenderingContext2D, globalScale: number) => {
       const padScreen = 18 / globalScale;
@@ -650,7 +678,10 @@ export function GraphCanvas() {
           height={size.h}
           backgroundColor="transparent"
           autoPauseRedraw={false}
-          onRenderFramePre={activeView === "TREE" ? paintClanHalos : undefined}
+          onRenderFramePre={(ctx, globalScale) => {
+            paintGrid(ctx, globalScale);
+            if (activeView === "TREE") paintClanHalos(ctx, globalScale);
+          }}
           nodeCanvasObject={(node: any, ctx, globalScale) => paintNode(node, ctx, globalScale)}
           nodePointerAreaPaint={(node: any, color: string, ctx: CanvasRenderingContext2D, globalScale: number) => {
             const { w, h } = nodePill(node, ctx);
@@ -675,10 +706,7 @@ export function GraphCanvas() {
           linkDirectionalParticles={(l: any) => (litEdgeIds.includes(l.id) ? 2 : 0)}
           linkDirectionalParticleSpeed={0.008}
           linkCanvasObject={activeView === "TREE" ? treeLinkPaint : undefined}
-          onZoom={({ k }) => {
-            setZoomScale(k);
-            setZoomPct(Math.round(k * 100));
-          }}
+          onZoom={({ k }) => setZoomPct(Math.round(k * 100))}
           onNodeClick={(node: any) => {
             selectNode(node.id);
             setCanvasCenter({ x: node.x ?? 0, y: node.y ?? 0 });

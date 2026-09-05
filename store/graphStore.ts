@@ -64,7 +64,6 @@ export interface GraphStore {
   focalPersonId: string | null;
   toast: Toast | null;
   zoomPct: number;
-  zoomScale: number;
   zoomIntent: ZoomIntent;
   panIntent: PanIntent | null;
   canvasCenter: { x: number; y: number };
@@ -106,7 +105,6 @@ export interface GraphStore {
   pushToast: (t: Toast) => void;
   clearToast: () => void;
   setZoomPct: (pct: number) => void;
-  setZoomScale: (scale: number) => void;
   zoomIn: () => void;
   zoomOut: () => void;
   setZoomIntent: (z: ZoomIntent) => void;
@@ -322,7 +320,6 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
   focalPersonId: null,
   toast: null,
   zoomPct: 100,
-  zoomScale: 1,
   zoomIntent: null,
   panIntent: null,
   canvasCenter: { x: 0, y: 0 },
@@ -404,7 +401,6 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
     set({ toast: null });
   },
   setZoomPct: (pct) => set({ zoomPct: pct }),
-  setZoomScale: (scale) => set({ zoomScale: scale }),
   zoomIn: () => set({ zoomIntent: "in" }),
   zoomOut: () => set({ zoomIntent: "out" }),
   setZoomIntent: (z) => set({ zoomIntent: z }),
