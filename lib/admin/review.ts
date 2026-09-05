@@ -111,12 +111,12 @@ type EdgeReviewRow = {
   status: "pending" | "approved" | "rejected";
   properties: Record<string, unknown>;
   email: string | null;
-  sourceSlug: string;
-  targetSlug: string;
+  sourceLabel: string;
+  targetLabel: string;
 };
 
-export function buildEdgeSubtitle(sourceSlug: string, type: string, targetSlug: string): string {
-  return `${sourceSlug} — ${type} — ${targetSlug}`;
+export function buildEdgeSubtitle(sourceLabel: string, type: string, targetLabel: string): string {
+  return `${sourceLabel} — ${type} — ${targetLabel}`;
 }
 
 export async function fetchEdgeReview(): Promise<ReviewPayload> {
@@ -129,8 +129,8 @@ export async function fetchEdgeReview(): Promise<ReviewPayload> {
       type: edges.type,
       status: edges.status,
       properties: edges.properties,
-      sourceSlug: sourceNodes.slug,
-      targetSlug: targetNodes.slug,
+      sourceLabel: sourceNodes.label,
+      targetLabel: targetNodes.label,
       email: authUsers.email,
     })
     .from(edges)
@@ -144,8 +144,8 @@ export async function fetchEdgeReview(): Promise<ReviewPayload> {
       id: row.id,
       kind: "edge",
       title: String(row.type),
-      subtitle: buildEdgeSubtitle(row.sourceSlug, row.type, row.targetSlug),
-      body: JSON.stringify(row.properties),
+      subtitle: buildEdgeSubtitle(row.sourceLabel, row.type, row.targetLabel),
+      body: JSON.stringify(row.properties) === "{}" ? "" : JSON.stringify(row.properties),
       status: row.status,
       submitter: row.email,
       properties: row.properties,
