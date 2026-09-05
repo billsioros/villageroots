@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { type NextRequest } from "next/server";
-import { GET } from "@/app/api/notifications/route";
+import { GET, DELETE } from "@/app/api/notifications/route";
 import { PATCH } from "@/app/api/notifications/[id]/route";
 
 const mocks = vi.hoisted(() => ({
   sessionUid: vi.fn(),
   select: vi.fn(),
   update: vi.fn(),
+  delete: vi.fn(),
 }));
 
 vi.mock("@/lib/graph/session", () => ({ sessionUid: mocks.sessionUid }));
@@ -14,6 +15,7 @@ vi.mock("@/lib/graph/db", () => ({
   db: {
     select: mocks.select,
     update: mocks.update,
+    delete: mocks.delete,
   },
 }));
 
@@ -109,5 +111,25 @@ describe("PATCH /api/notifications/[id]", () => {
     const req = { json: async () => ({}) } as unknown as NextRequest;
     const res = await PATCH(req, { params: Promise.resolve({ id: "n1" }) });
     expect(res.status).toBe(404);
+  });
+});
+
+describe("DELETE /api/notifications", () => {
+  it("returns 401 when not logged in", async () => {
+    mocks.sessionUid.mockResolvedValue(null);
+    const res = await DELETE();
+    expect(res.status).toBe(401);
+  });
+
+  it("deletes only read notifications and returns the count", async () => {
+    mocks.sessionUid.mockResolvedValue("user-1");
+    mocks.delete.mockReturnValue({
+      where: () => ({ returning: () => [{ id: "n1" }, { id: "n2" }] }),
+    });
+    const res = await DELETE();
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.deleted).toBe(2);
   });
 });

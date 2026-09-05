@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Bell, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Bell, CheckCircle2, XCircle, Clock, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useGraphStore } from "@/store/graphStore";
 
 interface Notification {
   id: string;
@@ -30,6 +33,7 @@ function timeAgo(dateStr: string): string {
 }
 
 export function NotificationBell() {
+  const pushToast = useGraphStore((s) => s.pushToast);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
@@ -73,6 +77,28 @@ export function NotificationBell() {
     }
   };
 
+  const hasRead = notifications.some((n) => n.read);
+
+  const clearRead = async () => {
+    const before = notifications;
+    // Optimistic removal of read notifications
+    setNotifications((prev) => prev.filter((n) => !n.read));
+
+    try {
+      const res = await fetch("/api/notifications", { method: "DELETE" });
+      if (!res.ok) {
+        setNotifications(before);
+        pushToast({ tone: "error", message: "Couldn't clear notifications. Try again." });
+        return;
+      }
+      await fetchNotifications();
+      pushToast({ tone: "success", message: "Cleared read notifications" });
+    } catch {
+      setNotifications(before);
+      pushToast({ tone: "error", message: "Couldn't clear notifications. Try again." });
+    }
+  };
+
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
@@ -89,6 +115,23 @@ export function NotificationBell() {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[320px] max-h-[400px] overflow-y-auto">
+        {hasRead && (
+          <>
+            <DropdownMenuLabel className="flex items-center justify-between gap-2 py-2">
+              <span className="text-xs font-medium text-muted-foreground">Notifications</span>
+              <button
+                type="button"
+                onClick={clearRead}
+                className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label="Clear read notifications"
+              >
+                <Trash2 size={13} />
+                Clear read
+              </button>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+          </>
+        )}
         {notifications.length === 0 ? (
           <div className="px-4 py-6 text-center text-[13px] text-muted-foreground">
             No notifications yet

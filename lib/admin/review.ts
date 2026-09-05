@@ -1,4 +1,5 @@
 import { eq, count } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import type { AnyPgTable, AnyPgColumn } from "drizzle-orm/pg-core";
 import { db } from "@/lib/graph/db";
 import { nodes, edges, scanUploads, authUsers } from "@/drizzle/schema";
@@ -106,25 +107,36 @@ export async function fetchNodeReview(): Promise<ReviewPayload> {
 
 type EdgeReviewRow = {
   id: string;
-  slug: string;
   type: string;
   status: "pending" | "approved" | "rejected";
   properties: Record<string, unknown>;
   email: string | null;
+  sourceSlug: string;
+  targetSlug: string;
 };
 
+export function buildEdgeSubtitle(sourceSlug: string, type: string, targetSlug: string): string {
+  return `${sourceSlug} — ${type} — ${targetSlug}`;
+}
+
 export async function fetchEdgeReview(): Promise<ReviewPayload> {
+  const sourceNodes = alias(nodes, "source_nodes");
+  const targetNodes = alias(nodes, "target_nodes");
+
   const rows = await db
     .select({
       id: edges.id,
-      slug: edges.slug,
       type: edges.type,
       status: edges.status,
       properties: edges.properties,
+      sourceSlug: sourceNodes.slug,
+      targetSlug: targetNodes.slug,
       email: authUsers.email,
     })
     .from(edges)
     .innerJoin(authUsers, eq(authUsers.id, edges.createdBy))
+    .innerJoin(sourceNodes, eq(sourceNodes.id, edges.sourceId))
+    .innerJoin(targetNodes, eq(targetNodes.id, edges.targetId))
     .where(eq(edges.status, "pending"))
     .orderBy(edges.createdAt);
   return {
@@ -132,7 +144,7 @@ export async function fetchEdgeReview(): Promise<ReviewPayload> {
       id: row.id,
       kind: "edge",
       title: String(row.type),
-      subtitle: row.slug,
+      subtitle: buildEdgeSubtitle(row.sourceSlug, row.type, row.targetSlug),
       body: JSON.stringify(row.properties),
       status: row.status,
       submitter: row.email,

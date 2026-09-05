@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ModerationHistory } from "@/components/admin/moderation-history";
 import { invalidationKeys } from "@/lib/graph/queries";
+import { useGraphStore } from "@/store/graphStore";
 
 type ApiType = "nodes" | "edges" | "scan_uploads";
 
@@ -62,6 +63,7 @@ async function fetchQueue(type: ApiType): Promise<ReviewQueueResponse> {
 
 export function ReviewQueueTab() {
   const queryClient = useQueryClient();
+  const pushToast = useGraphStore((s) => s.pushToast);
   const [tab, setTab] = useState<Tab>("nodes");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [active, setActive] = useState<{ type: string; id: string } | null>(
@@ -70,13 +72,37 @@ export function ReviewQueueTab() {
   const [rejectFor, setRejectFor] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
 
-  const apiKey = API_KEY_BY_TAB[tab];
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["admin-review", tab],
-    queryFn: () => fetchQueue(apiKey),
+  const nodesQuery = useQuery({
+    queryKey: ["admin-review", "nodes"],
+    queryFn: () => fetchQueue("nodes"),
+  });
+  const edgesQuery = useQuery({
+    queryKey: ["admin-review", "edges"],
+    queryFn: () => fetchQueue("edges"),
+  });
+  const mediaQuery = useQuery({
+    queryKey: ["admin-review", "scan_uploads"],
+    queryFn: () => fetchQueue("scan_uploads"),
   });
 
+  const queriesByTab = useMemo<Record<Tab, typeof nodesQuery>>(
+    () => ({ nodes: nodesQuery, edges: edgesQuery, media: mediaQuery }),
+    [nodesQuery, edgesQuery, mediaQuery],
+  );
+
+  const activeQuery = queriesByTab[tab];
+  const data = activeQuery.data;
+  const isLoading = activeQuery.isLoading;
+  const isError = activeQuery.isError;
+  const refetch = activeQuery.refetch;
+  const apiKey = API_KEY_BY_TAB[tab];
+
   const selectedIds = Array.from(selected);
+
+  const itemLabel = (item: ReviewItem): string => {
+    if (item.kind === "edge" && item.subtitle) return item.subtitle;
+    return item.title;
+  };
 
   const toggleSelect = (id: string) => {
     setSelected((prev) => {
@@ -110,10 +136,12 @@ export function ReviewQueueTab() {
   };
 
   const approve = async (id: string) => {
+    const item = data?.items.find((i) => i.id === id);
     try {
       await moderate(id, "approve");
+      pushToast({ tone: "success", message: `Approved: ${item ? itemLabel(item) : "item"}` });
     } catch {
-      // ignore individual failures
+      pushToast({ tone: "error", message: `Couldn't approve${item ? ` ${itemLabel(item)}` : ""}. Try again.` });
     }
   };
 
@@ -123,11 +151,13 @@ export function ReviewQueueTab() {
   };
 
   const confirmReject = async (id: string) => {
+    const item = data?.items.find((i) => i.id === id);
+    const reason = rejectReason.trim() || undefined;
     try {
-      const reason = rejectReason.trim() || undefined;
       await moderate(id, "reject", reason);
+      pushToast({ tone: "success", message: `Rejected: ${item ? itemLabel(item) : "item"}` });
     } catch {
-      // ignore individual failures
+      pushToast({ tone: "error", message: `Couldn't reject${item ? ` ${itemLabel(item)}` : ""}. Try again.` });
     } finally {
       setRejectFor(null);
       setRejectReason("");
@@ -140,14 +170,26 @@ export function ReviewQueueTab() {
   };
 
   const moderateSelected = async (action: "approve" | "reject") => {
-    for (const id of selectedIds) {
-      try {
-        await moderate(id, action);
-      } catch {
-        // ignore individual failures
-      }
-    }
+    let ok = 0;
+    let failed = 0;
+    await Promise.all(
+      selectedIds.map(async (id) => {
+        try {
+          await moderate(id, action);
+          ok++;
+        } catch {
+          failed++;
+        }
+      }),
+    );
     setSelected(new Set());
+    const verb = action === "approve" ? "Approved" : "Rejected";
+    if (ok > 0) {
+      pushToast({ tone: "success", message: `${verb} ${ok} item${ok === 1 ? "" : "s"}` });
+    }
+    if (failed > 0) {
+      pushToast({ tone: "error", message: `Couldn't ${action} ${failed} item${failed === 1 ? "" : "s"}` });
+    }
   };
 
   const clearSelection = () => {
@@ -158,6 +200,11 @@ export function ReviewQueueTab() {
     setTab(t);
     setSelected(new Set());
   };
+
+  useEffect(() => {
+    const q = queriesByTab[tab];
+    if (q.data === undefined && !q.isLoading) q.refetch();
+  }, [tab, queriesByTab]);
 
   return (
     <div className="flex h-full flex-col gap-4">
@@ -178,7 +225,7 @@ export function ReviewQueueTab() {
           >
             {TAB_LABELS[t]}
             <Badge variant="secondary">
-              {data?.counts?.[API_KEY_BY_TAB[t]] ?? 0}
+              {queriesByTab[t].data?.counts?.[API_KEY_BY_TAB[t]] ?? 0}
             </Badge>
           </Button>
         ))}
