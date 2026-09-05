@@ -136,8 +136,8 @@ describe("submissionPayloadFromDrafts", () => {
   });
   it("dedupes duplicate draft edges by source|target|verb", () => {
     const drafts: DraftNode[] = [
-      { id: "draft-a", type: "person", label: "Yiayia", draft: true },
-      { id: "draft-b", type: "person", label: "Papou", draft: true },
+      { id: "draft-a", type: "person", label: "Yiayia", x: 1, y: 2, draft: true },
+      { id: "draft-b", type: "person", label: "Papou", x: 3, y: 4, draft: true },
     ];
     const edges: DraftEdge[] = [
       { id: "draft-edge-1", source: "draft-a", target: "draft-b", verb: "child_of", kind: "social", draft: true },
@@ -148,8 +148,8 @@ describe("submissionPayloadFromDrafts", () => {
   });
   it("keeps distinct edges with different source, target, or verb", () => {
     const drafts: DraftNode[] = [
-      { id: "draft-a", type: "person", label: "A", draft: true },
-      { id: "draft-b", type: "person", label: "B", draft: true },
+      { id: "draft-a", type: "person", label: "A", x: 1, y: 2, draft: true },
+      { id: "draft-b", type: "person", label: "B", x: 3, y: 4, draft: true },
     ];
     const edges: DraftEdge[] = [
       { id: "e1", source: "draft-a", target: "draft-b", verb: "child_of", kind: "social", draft: true },
@@ -161,8 +161,8 @@ describe("submissionPayloadFromDrafts", () => {
   });
   it("drops orphan draft edges whose endpoints are not in the submitted nodes", () => {
     const drafts: DraftNode[] = [
-      { id: "draft-a", type: "person", label: "A", draft: true },
-      { id: "draft-b", type: "person", label: "B", draft: true },
+      { id: "draft-a", type: "person", label: "A", x: 1, y: 2, draft: true },
+      { id: "draft-b", type: "person", label: "B", x: 3, y: 4, draft: true },
     ];
     const edges: DraftEdge[] = [
       { id: "orphan", source: "draft-x", target: "draft-y", verb: "related_to", kind: "social", draft: true },
