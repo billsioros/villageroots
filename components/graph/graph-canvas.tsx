@@ -457,7 +457,21 @@ export function GraphCanvas() {
 
   const paintGrid = useCallback(
     (ctx: CanvasRenderingContext2D, globalScale: number) => {
-      const { x1, y1, x2, y2 } = viewportBounds;
+      const fg = graphRef.current;
+      const zoom = fg?.zoom?.() ?? globalScale;
+      const center = fg?.centerAt?.();
+
+      let { x1, y1, x2, y2 } = viewportBounds;
+      if (center && zoom > 0) {
+        const dpr = window.devicePixelRatio || 1;
+        const w = ctx.canvas.width / dpr / zoom;
+        const h = ctx.canvas.height / dpr / zoom;
+        x1 = center.x - w / 2;
+        x2 = center.x + w / 2;
+        y1 = center.y - h / 2;
+        y2 = center.y + h / 2;
+      }
+
       const lineW = 1 / globalScale;
 
       const drawLines = (step: number, color: string) => {
