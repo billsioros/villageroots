@@ -10,6 +10,7 @@ import { TYPE_META } from "@/lib/graph/helpers";
 export function SearchPop() {
   const selectNode = useGraphStore((s) => s.selectNode);
   const flashNodes = useGraphStore((s) => s.flashNodes);
+  const setPanIntent = useGraphStore((s) => s.setPanIntent);
   const pushToast = useGraphStore((s) => s.pushToast);
   const setSearchOpen = useGraphStore((s) => s.setSearchOpen);
   const [q, setQ] = useState("");
@@ -32,6 +33,7 @@ export function SearchPop() {
   const run = (ids: string[]) => {
     if (ids.length === 1) {
       selectNode(ids[0]);
+      setPanIntent({ nodeId: ids[0] });
       setSearchOpen(false);
       setQ("");
     } else if (ids.length > 1) {
