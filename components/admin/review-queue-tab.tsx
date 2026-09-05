@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -83,11 +83,10 @@ export function ReviewQueueTab() {
     queryFn: () => fetchQueue("scan_uploads"),
   });
 
-  const queriesByTab: Record<Tab, typeof nodesQuery> = {
-    nodes: nodesQuery,
-    edges: edgesQuery,
-    media: mediaQuery,
-  };
+  const queriesByTab = useMemo<Record<Tab, typeof nodesQuery>>(
+    () => ({ nodes: nodesQuery, edges: edgesQuery, media: mediaQuery }),
+    [nodesQuery, edgesQuery, mediaQuery],
+  );
 
   const activeQuery = queriesByTab[tab];
   const data = activeQuery.data;
