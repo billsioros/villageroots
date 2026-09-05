@@ -1,3 +1,10 @@
+# [1.20.0](https://github.com/billsioros/villageroots/compare/v1.19.0...v1.20.0) (2026-09-05)
+
+
+### Features
+
+* PTDN-57 add logout action to avatar menu ([4fc46a8](https://github.com/billsioros/villageroots/commit/4fc46a89bcdc4e310761b37d0bf2de843b37d17e))
+
 # [1.19.0](https://github.com/billsioros/villageroots/compare/v1.18.0...v1.19.0) (2026-09-05)
 
 
