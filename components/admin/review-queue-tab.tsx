@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,11 +70,31 @@ export function ReviewQueueTab() {
   const [rejectFor, setRejectFor] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
 
-  const apiKey = API_KEY_BY_TAB[tab];
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["admin-review", tab],
-    queryFn: () => fetchQueue(apiKey),
+  const nodesQuery = useQuery({
+    queryKey: ["admin-review", "nodes"],
+    queryFn: () => fetchQueue("nodes"),
   });
+  const edgesQuery = useQuery({
+    queryKey: ["admin-review", "edges"],
+    queryFn: () => fetchQueue("edges"),
+  });
+  const mediaQuery = useQuery({
+    queryKey: ["admin-review", "scan_uploads"],
+    queryFn: () => fetchQueue("scan_uploads"),
+  });
+
+  const queriesByTab: Record<Tab, typeof nodesQuery> = {
+    nodes: nodesQuery,
+    edges: edgesQuery,
+    media: mediaQuery,
+  };
+
+  const activeQuery = queriesByTab[tab];
+  const data = activeQuery.data;
+  const isLoading = activeQuery.isLoading;
+  const isError = activeQuery.isError;
+  const refetch = activeQuery.refetch;
+  const apiKey = API_KEY_BY_TAB[tab];
 
   const selectedIds = Array.from(selected);
 
@@ -159,6 +179,11 @@ export function ReviewQueueTab() {
     setSelected(new Set());
   };
 
+  useEffect(() => {
+    const q = queriesByTab[tab];
+    if (q.data === undefined && !q.isLoading) q.refetch();
+  }, [tab, queriesByTab]);
+
   return (
     <div className="flex h-full flex-col gap-4">
       <div>
@@ -178,7 +203,7 @@ export function ReviewQueueTab() {
           >
             {TAB_LABELS[t]}
             <Badge variant="secondary">
-              {data?.counts?.[API_KEY_BY_TAB[t]] ?? 0}
+              {queriesByTab[t].data?.counts?.[API_KEY_BY_TAB[t]] ?? 0}
             </Badge>
           </Button>
         ))}
