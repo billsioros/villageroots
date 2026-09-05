@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import { Topbar } from "./topbar";
 import { GraphCanvas } from "./graph-canvas";
-import { GraphGrid } from "./graph-grid";
 
 import { StageUi } from "./stage-ui";
 import { Dock } from "./dock";
@@ -62,7 +61,6 @@ export function GraphApp() {
       <div className="relative flex h-full flex-1 flex-col overflow-hidden">
         <Topbar />
         <div className="relative min-h-0 flex-1">
-          <GraphGrid />
           <GraphCanvas />
 
           <StageUi />

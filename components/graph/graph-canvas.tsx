@@ -21,6 +21,14 @@ import {
 const CULL_THRESHOLD = 200;
 const CULL_BUFFER = 200;
 
+const GRID_MIN_SCREEN_PX = 8;
+const GRID_LEVELS: { step: number; color: string }[] = [
+  { step: 16, color: "rgba(34,34,34,0.06)" },
+  { step: 80, color: "rgba(34,34,34,0.13)" },
+  { step: 400, color: "rgba(34,34,34,0.13)" },
+  { step: 2000, color: "rgba(34,34,34,0.13)" },
+];
+
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   ssr: false,
 });
@@ -452,6 +460,47 @@ export function GraphCanvas() {
     return () => cancelAnimationFrame(raf);
   }, [activeView, treeResult, displayData, nodes]);
 
+  const paintGrid = useCallback(
+    (ctx: CanvasRenderingContext2D, globalScale: number) => {
+      const fg = graphRef.current;
+      const zoom = fg?.zoom?.() ?? globalScale;
+      const center = fg?.centerAt?.();
+
+      let { x1, y1, x2, y2 } = viewportBounds;
+      if (center && zoom > 0) {
+        const dpr = window.devicePixelRatio || 1;
+        const w = ctx.canvas.width / dpr / zoom;
+        const h = ctx.canvas.height / dpr / zoom;
+        x1 = center.x - w / 2;
+        x2 = center.x + w / 2;
+        y1 = center.y - h / 2;
+        y2 = center.y + h / 2;
+      }
+
+      const lineW = 1 / globalScale;
+
+      const drawLines = (step: number, color: string) => {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineW;
+        ctx.beginPath();
+        for (let x = Math.floor(x1 / step) * step; x <= x2; x += step) {
+          ctx.moveTo(x, y1);
+          ctx.lineTo(x, y2);
+        }
+        for (let y = Math.floor(y1 / step) * step; y <= y2; y += step) {
+          ctx.moveTo(x1, y);
+          ctx.lineTo(x2, y);
+        }
+        ctx.stroke();
+      };
+
+      for (const { step, color } of GRID_LEVELS) {
+        if (step * globalScale >= GRID_MIN_SCREEN_PX) drawLines(step, color);
+      }
+    },
+    [viewportBounds],
+  );
+
   const paintClanHalos = useCallback(
     (ctx: CanvasRenderingContext2D, globalScale: number) => {
       const padScreen = 18 / globalScale;
@@ -649,7 +698,10 @@ export function GraphCanvas() {
           height={size.h}
           backgroundColor="transparent"
           autoPauseRedraw={false}
-          onRenderFramePre={activeView === "TREE" ? paintClanHalos : undefined}
+          onRenderFramePre={(ctx, globalScale) => {
+            paintGrid(ctx, globalScale);
+            if (activeView === "TREE") paintClanHalos(ctx, globalScale);
+          }}
           nodeCanvasObject={(node: any, ctx, globalScale) => paintNode(node, ctx, globalScale)}
           nodePointerAreaPaint={(node: any, color: string, ctx: CanvasRenderingContext2D, globalScale: number) => {
             const { w, h } = nodePill(node, ctx);
