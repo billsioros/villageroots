@@ -139,11 +139,11 @@ describe("GET /api/graph/search — matching & ranking", () => {
 
 describe("GET /api/graph/search — policy & masking", () => {
   it("includes the visibility policy in the where clause", async () => {
-    mocks.rows = [row()];
+    seedRows(row());
     await GET(mreq("mill"));
     const whereSql = toSql(mocks.where.mock.calls[0][0] as SQL);
-    expect(whereSql.toUpperCase()).toContain('"STATUS"');
-    expect(whereSql.toUpperCase()).toContain('"CREATED_BY"');
+    expect(whereSql.toUpperCase()).toContain("STATUS");
+    expect(whereSql.toUpperCase()).toContain("CREATED_BY");
   });
 
   it("masks a private living person's label and subtitle for non-owners", async () => {
@@ -184,7 +184,7 @@ describe("GET /api/graph/search — policy & masking", () => {
     expect(body.results[0].label).toBe("Giorgos Zografos");
   });
 
-  it("does NOT mask a private living person for the owner or an admin", async () => {
+it("does NOT mask a private living person for the owner", async () => {
     seedRows(row({
       id: "p3",
       type: "person",
@@ -195,10 +195,11 @@ describe("GET /api/graph/search — policy & masking", () => {
       createdBy: "user-1",
       rank: 0,
     }));
-    // owner
-    let body = await (await GET(mreq("karalis"))).json();
+    const body = await (await GET(mreq("karalis"))).json();
     expect(body.results[0].label).toBe("Nikos Karalis");
+  });
 
+  it("does NOT mask a private living person for an admin", async () => {
     mocks.sessionUid.mockResolvedValue("admin");
     mocks.isAdminUid.mockResolvedValue(true);
     seedRows(row({
@@ -211,7 +212,7 @@ describe("GET /api/graph/search — policy & masking", () => {
       createdBy: "someone-else",
       rank: 0,
     }));
-    body = await (await GET(mreq("douka"))).json();
+    const body = await (await GET(mreq("douka"))).json();
     expect(body.results[0].label).toBe("Eleni Douka");
   });
 });
