@@ -3,7 +3,6 @@ import { alias } from "drizzle-orm/pg-core";
 import type { AnyPgTable, AnyPgColumn } from "drizzle-orm/pg-core";
 import { db } from "@/lib/graph/db";
 import { nodes, edges, scanUploads, authUsers } from "@/drizzle/schema";
-import { maskLivingPerson, isLivingPerson } from "@/lib/graph/policy";
 
 export type ReviewKind = "node" | "edge" | "media";
 export interface ReviewItem {
@@ -45,27 +44,6 @@ type NodeReviewRow = {
 };
 
 function nodeToItem(row: NodeReviewRow): ReviewItem {
-  if (isLivingPerson(row)) {
-    const masked = maskLivingPerson({
-      id: row.id,
-      slug: row.slug,
-      status: row.status,
-      label: row.label,
-      subtitle: row.subtitle ?? "",
-      description: row.description ?? "",
-      properties: row.properties,
-    });
-    return {
-      id: masked.id,
-      kind: "node",
-      title: masked.label,
-      subtitle: masked.subtitle,
-      body: masked.description,
-      status: masked.status,
-      submitter: row.email,
-      properties: masked.properties,
-    };
-  }
   return {
     id: row.id,
     kind: "node",

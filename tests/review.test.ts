@@ -60,7 +60,7 @@ describe("fetchNodeReview", () => {
     expect(out.counts.nodes).toBe(1);
   });
 
-  it("masks a living person node with generic label", async () => {
+  it("shows a living person node's name in the review queue", async () => {
     mocks.rows = [
       {
         id: "n2",
@@ -75,9 +75,10 @@ describe("fetchNodeReview", () => {
       },
     ];
     const out = await fetchNodeReview();
-    expect(out.items[0].title).toBe("Living Person");
-    expect(out.items[0].properties).toEqual({ x: 1, y: 2 });
-    expect(out.items[0].body).toBe("");
+    expect(out.items[0].title).toBe("Real Name");
+    expect(out.items[0].subtitle).toBe("s");
+    expect(out.items[0].body).toBe("bio");
+    expect(out.items[0].properties).toEqual({ deceased: false, x: 1, y: 2 });
   });
 
   it("counts only pending rows, excluding approved/rejected", async () => {
