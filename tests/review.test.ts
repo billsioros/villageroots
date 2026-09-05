@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fetchNodeReview } from "@/lib/admin/review";
+import { buildEdgeSubtitle, fetchNodeReview } from "@/lib/admin/review";
 
 const mocks = vi.hoisted(() => ({
   rows: [] as unknown[],
@@ -116,5 +116,11 @@ describe("fetchNodeReview", () => {
     ];
     const out = await fetchNodeReview();
     expect(out.counts.nodes).toBe(2);
+  });
+});
+
+describe("buildEdgeSubtitle", () => {
+  it("produces a readable connected-node label", () => {
+    expect(buildEdgeSubtitle("Anna", "married_to", "Petros")).toBe("Anna — married_to — Petros");
   });
 });
