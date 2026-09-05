@@ -22,3 +22,15 @@ export async function GET() {
 
   return NextResponse.json({ notifications: rows, unreadCount });
 }
+
+export async function DELETE() {
+  const uid = await sessionUid();
+  if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const rows = await db
+    .delete(notifications)
+    .where(and(eq(notifications.userId, uid), eq(notifications.read, true)))
+    .returning({ id: notifications.id });
+
+  return NextResponse.json({ ok: true, deleted: rows.length });
+}
