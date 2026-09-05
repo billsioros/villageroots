@@ -21,8 +21,13 @@ import {
 const CULL_THRESHOLD = 200;
 const CULL_BUFFER = 200;
 
-const GRID_MINOR = 16;
-const GRID_MAJOR = 80;
+const GRID_MIN_SCREEN_PX = 8;
+const GRID_LEVELS: { step: number; color: string }[] = [
+  { step: 16, color: "rgba(34,34,34,0.06)" },
+  { step: 80, color: "rgba(34,34,34,0.13)" },
+  { step: 400, color: "rgba(34,34,34,0.13)" },
+  { step: 2000, color: "rgba(34,34,34,0.13)" },
+];
 
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   ssr: false,
@@ -489,8 +494,9 @@ export function GraphCanvas() {
         ctx.stroke();
       };
 
-      drawLines(GRID_MAJOR, "rgba(34,34,34,0.13)");
-      drawLines(GRID_MINOR, "rgba(34,34,34,0.06)");
+      for (const { step, color } of GRID_LEVELS) {
+        if (step * globalScale >= GRID_MIN_SCREEN_PX) drawLines(step, color);
+      }
     },
     [viewportBounds],
   );
