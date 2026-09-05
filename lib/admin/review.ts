@@ -107,7 +107,6 @@ export async function fetchNodeReview(): Promise<ReviewPayload> {
 
 type EdgeReviewRow = {
   id: string;
-  slug: string;
   type: string;
   status: "pending" | "approved" | "rejected";
   properties: Record<string, unknown>;
@@ -127,7 +126,6 @@ export async function fetchEdgeReview(): Promise<ReviewPayload> {
   const rows = await db
     .select({
       id: edges.id,
-      slug: edges.slug,
       type: edges.type,
       status: edges.status,
       properties: edges.properties,
