@@ -34,3 +34,16 @@ export async function DELETE() {
 
   return NextResponse.json({ ok: true, deleted: rows.length });
 }
+
+export async function PATCH() {
+  const uid = await sessionUid();
+  if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const rows = await db
+    .update(notifications)
+    .set({ read: true })
+    .where(and(eq(notifications.userId, uid), eq(notifications.read, false)))
+    .returning({ id: notifications.id });
+
+  return NextResponse.json({ ok: true, updated: rows.length });
+}

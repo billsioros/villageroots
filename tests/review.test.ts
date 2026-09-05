@@ -1,36 +1,38 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { buildEdgeSubtitle, fetchNodeReview } from "@/lib/admin/review";
+import { buildEdgeSubtitle, fetchNodeReview, fetchEdgeReview } from "@/lib/admin/review";
 
 const mocks = vi.hoisted(() => ({
   rows: [] as unknown[],
   count: vi.fn(),
 }));
 
-vi.mock("@/lib/graph/db", () => ({
-  db: {
-    select: (cols?: Record<string, unknown>) => {
-      const isCount = !!cols && Object.keys(cols).length === 1 && "value" in cols;
-      return {
-        from: () =>
-          isCount
-            ? {
-                where: () => {
-                  const pending = (mocks.rows as Array<Record<string, unknown>>).filter(
-                    (r) => r.status === "pending",
-                  );
-                  return [{ value: pending.length }];
-                },
-              }
-            : {
-                innerJoin: () => ({
-                  where: () => ({ orderBy: () => mocks.rows }),
-                }),
-              },
-      };
+vi.mock("@/lib/graph/db", () => {
+  const chain = () => ({
+    innerJoin: () => chain(),
+    where: () => ({ orderBy: () => mocks.rows }),
+  });
+  return {
+    db: {
+      select: (cols?: Record<string, unknown>) => {
+        const isCount = !!cols && Object.keys(cols).length === 1 && "value" in cols;
+        return {
+          from: () =>
+            isCount
+              ? {
+                  where: () => {
+                    const pending = (mocks.rows as Array<Record<string, unknown>>).filter(
+                      (r) => r.status === "pending",
+                    );
+                    return [{ value: pending.length }];
+                  },
+                }
+              : chain(),
+        };
+      },
+      count: mocks.count,
     },
-    count: mocks.count,
-  },
-}));
+  };
+});
 
 beforeEach(() => {
   mocks.rows = [];
@@ -122,5 +124,53 @@ describe("fetchNodeReview", () => {
 describe("buildEdgeSubtitle", () => {
   it("produces a readable connected-node label", () => {
     expect(buildEdgeSubtitle("Anna", "married_to", "Petros")).toBe("Anna — married_to — Petros");
+  });
+
+  it("uses node display labels, not draft slugs", () => {
+    expect(buildEdgeSubtitle("Test Notification 3", "related_to", "Test Notification 5")).toBe(
+      "Test Notification 3 — related_to — Test Notification 5",
+    );
+  });
+});
+
+describe("fetchEdgeReview", () => {
+  it("maps a pending edge with connected-node labels and no empty body", async () => {
+    mocks.rows = [
+      {
+        id: "e1",
+        type: "related_to",
+        status: "pending",
+        properties: {},
+        sourceLabel: "Test Notification 3",
+        targetLabel: "Test Notification 5",
+        createdAt: new Date(),
+        email: "e@x",
+      },
+    ];
+    const out = await fetchEdgeReview();
+    expect(out.items).toHaveLength(1);
+    expect(out.items[0].kind).toBe("edge");
+    expect(out.items[0].title).toBe("related_to");
+    expect(out.items[0].subtitle).toBe("Test Notification 3 — related_to — Test Notification 5");
+    expect(out.items[0].body).toBe("");
+    expect(out.items[0].submitter).toBe("e@x");
+    expect(out.counts.edges).toBe(1);
+  });
+
+  it("keeps non-empty edge properties in the body", async () => {
+    mocks.rows = [
+      {
+        id: "e1",
+        type: "related_to",
+        status: "pending",
+        properties: { note: "shared history" },
+        sourceLabel: "A",
+        targetLabel: "B",
+        createdAt: new Date(),
+        email: "e@x",
+      },
+    ];
+    const out = await fetchEdgeReview();
+    expect(out.items[0].body).toBe('{"note":"shared history"}');
   });
 });

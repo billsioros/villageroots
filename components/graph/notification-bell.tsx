@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Bell, CheckCircle2, XCircle, Clock, Trash2 } from "lucide-react";
+import { Bell, CheckCircle2, XCircle, Clock, Trash2, CheckCheck, Check } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -78,6 +78,7 @@ export function NotificationBell() {
   };
 
   const hasRead = notifications.some((n) => n.read);
+  const hasUnread = notifications.some((n) => !n.read);
 
   const clearRead = async () => {
     const before = notifications;
@@ -99,6 +100,30 @@ export function NotificationBell() {
     }
   };
 
+  const markAllRead = async () => {
+    const before = notifications;
+    const beforeUnread = unreadCount;
+    // Optimistic: mark everything read
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setUnreadCount(0);
+
+    try {
+      const res = await fetch("/api/notifications", { method: "PATCH" });
+      if (!res.ok) {
+        setNotifications(before);
+        setUnreadCount(beforeUnread);
+        pushToast({ tone: "error", message: "Couldn't mark as read. Try again." });
+        return;
+      }
+      await fetchNotifications();
+      pushToast({ tone: "success", message: "Marked all as read" });
+    } catch {
+      setNotifications(before);
+      setUnreadCount(beforeUnread);
+      pushToast({ tone: "error", message: "Couldn't mark as read. Try again." });
+    }
+  };
+
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
@@ -114,20 +139,35 @@ export function NotificationBell() {
           )}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[320px] max-h-[400px] overflow-y-auto">
-        {hasRead && (
+      <DropdownMenuContent align="end" className="w-[92vw] max-w-[420px] sm:w-[400px] max-h-[70vh] sm:max-h-[560px] overflow-y-auto">
+        {(hasRead || hasUnread) && (
           <>
             <DropdownMenuLabel className="flex items-center justify-between gap-2 py-2">
               <span className="text-xs font-medium text-muted-foreground">Notifications</span>
-              <button
-                type="button"
-                onClick={clearRead}
-                className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label="Clear read notifications"
-              >
-                <Trash2 size={13} />
-                Clear read
-              </button>
+              <div className="flex items-center gap-1">
+                {hasUnread && (
+                  <button
+                    type="button"
+                    onClick={markAllRead}
+                    className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label="Mark all as read"
+                  >
+                    <CheckCheck size={13} />
+                    Mark all as read
+                  </button>
+                )}
+                {hasRead && (
+                  <button
+                    type="button"
+                    onClick={clearRead}
+                    className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label="Clear read notifications"
+                  >
+                    <Trash2 size={13} />
+                    Clear read
+                  </button>
+                )}
+              </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
           </>
@@ -159,7 +199,20 @@ export function NotificationBell() {
                 <p className="mt-1 text-[11px] text-muted-foreground">{timeAgo(n.createdAt)}</p>
               </div>
               {!n.read && (
-                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                <span className="flex shrink-0 items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      markAsRead(n.id);
+                    }}
+                    className="rounded p-0.5 text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={`Mark "${n.message}" as read`}
+                  >
+                    <Check size={13} />
+                  </button>
+                  <span className="mt-1 h-2 w-2 rounded-full bg-primary" />
+                </span>
               )}
             </DropdownMenuItem>
           ))

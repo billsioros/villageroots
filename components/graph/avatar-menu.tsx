@@ -24,6 +24,7 @@ export function AvatarMenu() {
   const pushToast = useGraphStore((s) => s.pushToast);
   const [email, setEmail] = useState<string>("");
   const [initials, setInitials] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   useEffect(() => {
@@ -35,9 +36,9 @@ export function AvatarMenu() {
     });
   }, []);
 
-  const handleLogout = async (event: Event) => {
-    event.preventDefault();
+  const handleLogout = async () => {
     if (isSigningOut) return;
+    setOpen(false);
     setIsSigningOut(true);
     const supabase = createClient();
     try {
@@ -62,7 +63,7 @@ export function AvatarMenu() {
   }
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <button
           className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-[11px] font-semibold text-background transition-colors hover:opacity-90"
