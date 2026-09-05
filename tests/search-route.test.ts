@@ -93,7 +93,6 @@ describe("GET /api/graph/search — matching & ranking", () => {
     expect(res.status).toBe(200);
 
     const whereSql = toSql(mocks.where.mock.calls[0][0] as SQL);
-    expect(whereSql.toUpperCase()).toContain("ILIKE");
     expect(whereSql.toUpperCase()).toContain("ILIKE $1");
     expect(whereSql.toUpperCase()).toContain("ILIKE $2");
   });
@@ -122,7 +121,7 @@ describe("GET /api/graph/search — matching & ranking", () => {
     ]);
   });
 
-  it("never emits duplicate ids (one row per node)", async () => {
+  it("returns a single result for a node matching a substring fragment", async () => {
     seedRows(row({ id: "n1", label: "St George's church" }));
     const res = await GET(mreq("urch"));
     const body = await res.json();
