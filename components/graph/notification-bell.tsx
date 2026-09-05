@@ -102,6 +102,7 @@ export function NotificationBell() {
 
   const markAllRead = async () => {
     const before = notifications;
+    const beforeUnread = unreadCount;
     // Optimistic: mark everything read
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     setUnreadCount(0);
@@ -110,6 +111,7 @@ export function NotificationBell() {
       const res = await fetch("/api/notifications", { method: "PATCH" });
       if (!res.ok) {
         setNotifications(before);
+        setUnreadCount(beforeUnread);
         pushToast({ tone: "error", message: "Couldn't mark as read. Try again." });
         return;
       }
@@ -117,6 +119,7 @@ export function NotificationBell() {
       pushToast({ tone: "success", message: "Marked all as read" });
     } catch {
       setNotifications(before);
+      setUnreadCount(beforeUnread);
       pushToast({ tone: "error", message: "Couldn't mark as read. Try again." });
     }
   };
