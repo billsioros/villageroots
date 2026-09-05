@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ModerationHistory } from "@/components/admin/moderation-history";
 import { invalidationKeys } from "@/lib/graph/queries";
+import { useGraphStore } from "@/store/graphStore";
 
 type ApiType = "nodes" | "edges" | "scan_uploads";
 
@@ -62,6 +63,7 @@ async function fetchQueue(type: ApiType): Promise<ReviewQueueResponse> {
 
 export function ReviewQueueTab() {
   const queryClient = useQueryClient();
+  const pushToast = useGraphStore((s) => s.pushToast);
   const [tab, setTab] = useState<Tab>("nodes");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [active, setActive] = useState<{ type: string; id: string } | null>(
@@ -97,6 +99,11 @@ export function ReviewQueueTab() {
 
   const selectedIds = Array.from(selected);
 
+  const itemLabel = (item: ReviewItem): string => {
+    if (item.kind === "edge" && item.subtitle) return item.subtitle;
+    return item.title;
+  };
+
   const toggleSelect = (id: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -129,10 +136,12 @@ export function ReviewQueueTab() {
   };
 
   const approve = async (id: string) => {
+    const item = data?.items.find((i) => i.id === id);
     try {
       await moderate(id, "approve");
+      pushToast({ tone: "success", message: `Approved: ${item ? itemLabel(item) : "item"}` });
     } catch {
-      // ignore individual failures
+      pushToast({ tone: "error", message: `Couldn't approve${item ? ` ${item.title}` : ""}. Try again.` });
     }
   };
 
@@ -142,11 +151,13 @@ export function ReviewQueueTab() {
   };
 
   const confirmReject = async (id: string) => {
+    const item = data?.items.find((i) => i.id === id);
+    const reason = rejectReason.trim() || undefined;
     try {
-      const reason = rejectReason.trim() || undefined;
       await moderate(id, "reject", reason);
+      pushToast({ tone: "success", message: `Rejected: ${item ? itemLabel(item) : "item"}` });
     } catch {
-      // ignore individual failures
+      pushToast({ tone: "error", message: `Couldn't reject${item ? ` ${item.title}` : ""}. Try again.` });
     } finally {
       setRejectFor(null);
       setRejectReason("");
@@ -159,14 +170,26 @@ export function ReviewQueueTab() {
   };
 
   const moderateSelected = async (action: "approve" | "reject") => {
-    for (const id of selectedIds) {
-      try {
-        await moderate(id, action);
-      } catch {
-        // ignore individual failures
-      }
-    }
+    let ok = 0;
+    let failed = 0;
+    await Promise.all(
+      selectedIds.map(async (id) => {
+        try {
+          await moderate(id, action);
+          ok++;
+        } catch {
+          failed++;
+        }
+      }),
+    );
     setSelected(new Set());
+    const verb = action === "approve" ? "Approved" : "Rejected";
+    if (ok > 0) {
+      pushToast({ tone: "success", message: `${verb} ${ok} item${ok === 1 ? "" : "s"}` });
+    }
+    if (failed > 0) {
+      pushToast({ tone: "error", message: `Couldn't ${action} ${failed} item${failed === 1 ? "" : "s"}` });
+    }
   };
 
   const clearSelection = () => {
