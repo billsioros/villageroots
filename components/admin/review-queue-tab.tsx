@@ -141,7 +141,7 @@ export function ReviewQueueTab() {
       await moderate(id, "approve");
       pushToast({ tone: "success", message: `Approved: ${item ? itemLabel(item) : "item"}` });
     } catch {
-      pushToast({ tone: "error", message: `Couldn't approve${item ? ` ${item.title}` : ""}. Try again.` });
+      pushToast({ tone: "error", message: `Couldn't approve${item ? ` ${itemLabel(item)}` : ""}. Try again.` });
     }
   };
 
@@ -157,7 +157,7 @@ export function ReviewQueueTab() {
       await moderate(id, "reject", reason);
       pushToast({ tone: "success", message: `Rejected: ${item ? itemLabel(item) : "item"}` });
     } catch {
-      pushToast({ tone: "error", message: `Couldn't reject${item ? ` ${item.title}` : ""}. Try again.` });
+      pushToast({ tone: "error", message: `Couldn't reject${item ? ` ${itemLabel(item)}` : ""}. Try again.` });
     } finally {
       setRejectFor(null);
       setRejectReason("");
