@@ -1,3 +1,10 @@
+# [1.24.0](https://github.com/billsioros/villageroots/compare/v1.23.0...v1.24.0) (2026-09-05)
+
+
+### Features
+
+* PTDN-60 scale canvas background grid when zooming ([#43](https://github.com/billsioros/villageroots/issues/43)) ([f6736eb](https://github.com/billsioros/villageroots/commit/f6736eb9c6e82cdc2aa3f3cf7892073127cf8817))
+
 # [1.23.0](https://github.com/billsioros/villageroots/compare/v1.22.0...v1.23.0) (2026-09-05)
 
 
