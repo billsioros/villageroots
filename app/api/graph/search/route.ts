@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sql } from "drizzle-orm";
+import { and, sql } from "drizzle-orm";
 import { db } from "@/lib/graph/db";
 import { nodes } from "@/drizzle/schema";
 import { graphPolicy, shouldMaskLivingOnRead } from "@/lib/graph/policy";
@@ -27,9 +27,25 @@ export async function GET(request: NextRequest) {
   const uid = await sessionUid();
   const isAdmin = uid ? await isAdminUid(uid) : false;
 
-  const tsquery = sql`plainto_tsquery('simple', ${q})`;
-  const searchCol = sql.raw('"search_vector"');
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+  const query = q.toLowerCase();
+  // Must match the 0012 migration index expression byte-for-byte.
+  const searchable = sql`(coalesce(${nodes.label}, '') || ' ' || coalesce(${nodes.subtitle}, '') || ' ' || coalesce(${nodes.description}, ''))`;
   const policy = graphPolicy(uid, { status: nodes.status, createdBy: nodes.createdBy });
+  const whereClause = and(
+    ...words.map((word) => sql`${searchable} ILIKE ${`%${word}%`}`),
+    policy,
+  );
+  const rankExpr = sql<number>`
+    CASE
+      WHEN lower(${nodes.label}) = ${query} THEN 0
+      WHEN lower(${nodes.label}) LIKE ${query + '%'} THEN 1
+      WHEN lower(${nodes.subtitle}) = ${query} THEN 2
+      WHEN lower(${nodes.subtitle}) LIKE ${query + '%'} THEN 3
+      WHEN strpos(lower(${nodes.label}), ${query}) > 0 THEN 4
+      ELSE 5
+    END
+  `;
 
   try {
     const rows = await db
@@ -41,11 +57,11 @@ export async function GET(request: NextRequest) {
         privacy: nodes.privacy,
         properties: nodes.properties,
         createdBy: nodes.createdBy,
-        rank: sql<number>`ts_rank(COALESCE(${searchCol}, ''::tsvector), ${tsquery})`,
+        rank: rankExpr,
       })
       .from(nodes)
-      .where(sql`${searchCol} @@ ${tsquery} AND ${policy}`)
-      .orderBy(sql`ts_rank(COALESCE(${searchCol}, ''::tsvector), ${tsquery}) DESC`)
+      .where(whereClause)
+      .orderBy(sql`${rankExpr} ASC, lower(${nodes.label}) ASC`)
       .limit(limit);
 
     const output = rows.map((row) => {
