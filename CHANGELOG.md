@@ -1,3 +1,10 @@
+# [1.23.0](https://github.com/billsioros/villageroots/compare/v1.22.0...v1.23.0) (2026-09-05)
+
+
+### Features
+
+* PTDN-61 show node names in admin review queue ([#42](https://github.com/billsioros/villageroots/issues/42)) ([a8faf64](https://github.com/billsioros/villageroots/commit/a8faf647482533d828b6e90437c7f61369d89ed5))
+
 # [1.22.0](https://github.com/billsioros/villageroots/compare/v1.21.0...v1.22.0) (2026-09-05)
 
 
