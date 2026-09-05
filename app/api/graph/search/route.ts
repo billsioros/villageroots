@@ -50,7 +50,10 @@ export async function GET(request: NextRequest) {
   try {
     const rows = await db
       .select({
-        id: nodes.id,
+        // The client keys its graph by slug (see lib/graph/mappers.ts), and
+        // selectNode/flashNodes expect slug ids — a uuid here would silently
+        // fail to resolve the node when a search result is clicked.
+        id: nodes.slug,
         label: nodes.label,
         subtitle: nodes.subtitle,
         type: nodes.type,

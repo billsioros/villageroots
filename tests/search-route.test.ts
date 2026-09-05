@@ -129,6 +129,14 @@ describe("GET /api/graph/search — matching & ranking", () => {
     expect(body.results[0].id).toBe("n1");
   });
 
+  it("selects the node slug as the result id so the client can resolve nodesMap entries", async () => {
+    seedRows(row({ id: "uuid-1", slug: "the-old-mill" }));
+    await GET(mreq("mill"));
+    const selectArgs = mocks.select.mock.calls[0][0] as Record<string, { name: string }>;
+    expect(selectArgs.id.name).toBe("slug");
+    expect(selectArgs.label.name).toBe("label");
+  });
+
   it("returns 500 with a fixed error message when the db query rejects", async () => {
     mocks.limit.mockRejectedValue(new Error("db exploded"));
     const res = await GET(mreq("mill"));
