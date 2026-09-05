@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { type NextRequest } from "next/server";
-import { GET, DELETE } from "@/app/api/notifications/route";
-import { PATCH } from "@/app/api/notifications/[id]/route";
+import { GET, DELETE, PATCH } from "@/app/api/notifications/route";
+import { PATCH as patchNotificationById } from "@/app/api/notifications/[id]/route";
 
 const mocks = vi.hoisted(() => ({
   sessionUid: vi.fn(),
@@ -85,7 +85,7 @@ describe("PATCH /api/notifications/[id]", () => {
   it("returns 401 when not logged in", async () => {
     mocks.sessionUid.mockResolvedValue(null);
     const req = { json: async () => ({}) } as unknown as NextRequest;
-    const res = await PATCH(req, { params: Promise.resolve({ id: "n1" }) });
+    const res = await patchNotificationById(req, { params: Promise.resolve({ id: "n1" }) });
     expect(res.status).toBe(401);
   });
 
@@ -97,7 +97,7 @@ describe("PATCH /api/notifications/[id]", () => {
       }),
     });
     const req = { json: async () => ({}) } as unknown as NextRequest;
-    const res = await PATCH(req, { params: Promise.resolve({ id: "n1" }) });
+    const res = await patchNotificationById(req, { params: Promise.resolve({ id: "n1" }) });
     expect(res.status).toBe(200);
   });
 
@@ -109,7 +109,7 @@ describe("PATCH /api/notifications/[id]", () => {
       }),
     });
     const req = { json: async () => ({}) } as unknown as NextRequest;
-    const res = await PATCH(req, { params: Promise.resolve({ id: "n1" }) });
+    const res = await patchNotificationById(req, { params: Promise.resolve({ id: "n1" }) });
     expect(res.status).toBe(404);
   });
 });
@@ -131,5 +131,27 @@ describe("DELETE /api/notifications", () => {
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.deleted).toBe(2);
+  });
+});
+
+describe("PATCH /api/notifications (mark all as read)", () => {
+  it("returns 401 when not logged in", async () => {
+    mocks.sessionUid.mockResolvedValue(null);
+    const res = await PATCH();
+    expect(res.status).toBe(401);
+  });
+
+  it("marks all unread notifications as read and returns the count", async () => {
+    mocks.sessionUid.mockResolvedValue("user-1");
+    mocks.update.mockReturnValue({
+      set: () => ({
+        where: () => ({ returning: () => [{ id: "n1" }, { id: "n2" }] }),
+      }),
+    });
+    const res = await PATCH();
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.updated).toBe(2);
   });
 });
