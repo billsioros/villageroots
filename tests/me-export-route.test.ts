@@ -26,18 +26,25 @@ vi.mock("drizzle-orm/pg-core", async (importOriginal) => {
   const actual = await importOriginal<typeof import("drizzle-orm/pg-core")>();
   return { ...actual, alias: vi.fn((_table: unknown, name: string) => ({ name })) };
 });
-vi.mock("exceljs", () => ({
-  default: {
-    Workbook: class {
-      constructor() {
-        this.creator = "";
-        this.created = null;
-        this.addWorksheet = (name: string) => mocks.makeWorksheet(name);
-        this.xlsx = { writeBuffer: vi.fn(async () => Buffer.from("mock-xlsx")) };
-      }
-    },
-  },
-}));
+vi.mock("exceljs", () => {
+  class Workbook {
+    creator: string;
+    created: Date;
+    xlsx: { writeBuffer: () => Promise<Buffer> };
+    addWorksheet: (name: string) => {
+      name: string;
+      columns: unknown[];
+      addRow: (row: Record<string, unknown>) => void;
+    };
+    constructor() {
+      this.creator = "";
+      this.created = new Date(0);
+      this.xlsx = { writeBuffer: vi.fn(async () => Buffer.from("mock-xlsx")) };
+      this.addWorksheet = (name: string) => mocks.makeWorksheet(name);
+    }
+  }
+  return { default: { Workbook } } as unknown as typeof import("exceljs");
+});
 
 beforeEach(() => {
   vi.resetAllMocks();
