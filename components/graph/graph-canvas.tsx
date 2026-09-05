@@ -58,6 +58,7 @@ export function GraphCanvas() {
   const selectNode = useGraphStore((s) => s.selectNode);
   const clearSelection = useGraphStore((s) => s.clearSelection);
   const setZoomPct = useGraphStore((s) => s.setZoomPct);
+  const setZoomScale = useGraphStore((s) => s.setZoomScale);
   const setZoomIntent = useGraphStore((s) => s.setZoomIntent);
   const setPanIntent = useGraphStore((s) => s.setPanIntent);
   const setCanvasCenter = useGraphStore((s) => s.setCanvasCenter);
@@ -674,7 +675,10 @@ export function GraphCanvas() {
           linkDirectionalParticles={(l: any) => (litEdgeIds.includes(l.id) ? 2 : 0)}
           linkDirectionalParticleSpeed={0.008}
           linkCanvasObject={activeView === "TREE" ? treeLinkPaint : undefined}
-          onZoom={({ k }) => setZoomPct(Math.round(k * 100))}
+          onZoom={({ k }) => {
+            setZoomScale(k);
+            setZoomPct(Math.round(k * 100));
+          }}
           onNodeClick={(node: any) => {
             selectNode(node.id);
             setCanvasCenter({ x: node.x ?? 0, y: node.y ?? 0 });
