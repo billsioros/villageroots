@@ -1,3 +1,10 @@
+# [1.19.0](https://github.com/billsioros/villageroots/compare/v1.18.0...v1.19.0) (2026-09-05)
+
+
+### Features
+
+* PTDN-56 upgrade search with partial matching ([#39](https://github.com/billsioros/villageroots/issues/39)) ([d77ff7e](https://github.com/billsioros/villageroots/commit/d77ff7e46a856f1c74b361388c4e39872ecddb9e))
+
 # [1.18.0](https://github.com/billsioros/villageroots/compare/v1.17.1...v1.18.0) (2026-09-04)
 
 
