@@ -1,3 +1,10 @@
+# [1.21.0](https://github.com/billsioros/villageroots/compare/v1.20.0...v1.21.0) (2026-09-05)
+
+
+### Features
+
+* PTDN-58 improve notification clearing and review queue edge feedback ([#40](https://github.com/billsioros/villageroots/issues/40)) ([9ee9522](https://github.com/billsioros/villageroots/commit/9ee95229532ff183aad6732b6d6c3c3f6f24b710))
+
 # [1.20.0](https://github.com/billsioros/villageroots/compare/v1.19.0...v1.20.0) (2026-09-05)
 
 
