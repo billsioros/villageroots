@@ -1,3 +1,10 @@
+# [1.22.0](https://github.com/billsioros/villageroots/compare/v1.21.0...v1.22.0) (2026-09-05)
+
+
+### Features
+
+* notification mark-as-read (bulk + per-item), admin review labels, avatar/audit fixes ([#41](https://github.com/billsioros/villageroots/issues/41)) ([25d0ec6](https://github.com/billsioros/villageroots/commit/25d0ec6b0a830df442b7a9b3051b7e31b145115f))
+
 # [1.21.0](https://github.com/billsioros/villageroots/compare/v1.20.0...v1.21.0) (2026-09-05)
 
 
