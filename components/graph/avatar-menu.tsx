@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { KeyRound, LoaderCircle, LogOut, User } from "lucide-react";
+import { Download, KeyRound, LoaderCircle, LogOut, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useGraphStore } from "@/store/graphStore";
 import { getInitials, getDisplayName } from "@/lib/utils/user-profile";
@@ -24,6 +24,7 @@ export function AvatarMenu() {
   const [initials, setInitials] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const loadUser = useCallback(() => {
     const supabase = createClient();
@@ -65,6 +66,29 @@ export function AvatarMenu() {
     }
   };
 
+  const handleExport = async () => {
+    setOpen(false);
+    setIsExporting(true);
+    try {
+      const res = await fetch("/api/me/export");
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const disposition = res.headers.get("Content-Disposition") ?? "";
+      const match = disposition.match(/filename="?(.+?)"?$/);
+      const filename = match?.[1] ?? "village-roots-data.xlsx";
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // Silently fail — could add toast notification here
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   if (!initials) {
     return (
       <div className="grid h-9 w-9 place-items-center rounded-full bg-secondary text-[11px] font-semibold text-secondary-foreground">
@@ -95,6 +119,14 @@ export function AvatarMenu() {
         <DropdownMenuItem onSelect={() => router.push("/auth/update-password")}>
           <KeyRound />
           Change Password
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled={isExporting} onSelect={handleExport}>
+          {isExporting ? (
+            <LoaderCircle className="animate-spin" />
+          ) : (
+            <Download />
+          )}
+          {isExporting ? "Exporting…" : "Export Data"}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
