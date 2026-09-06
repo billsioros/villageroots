@@ -14,9 +14,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  let body: { email?: unknown };
+  let body: { email?: unknown; name?: unknown; surname?: unknown };
   try {
-    body = (await request.json()) as { email?: unknown };
+    body = (await request.json()) as { email?: unknown; name?: unknown; surname?: unknown };
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
@@ -24,6 +24,15 @@ export async function POST(request: NextRequest) {
   const email = typeof body.email === "string" ? body.email.trim() : "";
   if (validateEmail(email)) {
     return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
+  }
+
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  const surname = typeof body.surname === "string" ? body.surname.trim() : "";
+  if (!name) {
+    return NextResponse.json({ error: "Name is required." }, { status: 400 });
+  }
+  if (!surname) {
+    return NextResponse.json({ error: "Surname is required." }, { status: 400 });
   }
 
   const admin = createAdminClient();
@@ -59,6 +68,7 @@ export async function POST(request: NextRequest) {
   const { error: updateError } = await admin.auth.admin.updateUserById(newUser.id, {
     password,
     email_confirm: true,
+    user_metadata: { name, surname },
   });
   if (updateError) {
     return NextResponse.json({ error: "Invite sent but could not set password. Please try again." }, { status: 500 });

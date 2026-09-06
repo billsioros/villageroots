@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { KeyRound, LoaderCircle, LogOut, User } from "lucide-react";
+import { Download, KeyRound, LoaderCircle, LogOut, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useGraphStore } from "@/store/graphStore";
+import { getInitials, getDisplayName } from "@/lib/utils/user-profile";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,27 +15,38 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-function getInitials(email: string): string {
-  return email.charAt(0).toUpperCase();
-}
-
 export function AvatarMenu() {
   const router = useRouter();
   const setProfileOpen = useGraphStore((s) => s.setProfileOpen);
   const pushToast = useGraphStore((s) => s.pushToast);
   const [email, setEmail] = useState<string>("");
+  const [displayName, setDisplayName] = useState<string>("");
   const [initials, setInitials] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
-  useEffect(() => {
+  const loadUser = useCallback(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => {
       const userEmail = data.user?.email ?? "";
+      const meta = data.user?.user_metadata ?? {};
+      const name = typeof meta.name === "string" ? meta.name : "";
+      const surname = typeof meta.surname === "string" ? meta.surname : "";
       setEmail(userEmail);
-      setInitials(getInitials(userEmail));
+      setDisplayName(getDisplayName(name, surname));
+      setInitials(getInitials(name, surname) || (userEmail ? userEmail.charAt(0).toUpperCase() : ""));
     });
   }, []);
+
+  useEffect(() => {
+    loadUser();
+  }, [loadUser]);
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (next) loadUser();
+  };
 
   const handleLogout = async () => {
     if (isSigningOut) return;
@@ -54,6 +66,29 @@ export function AvatarMenu() {
     }
   };
 
+  const handleExport = async () => {
+    setOpen(false);
+    setIsExporting(true);
+    try {
+      const res = await fetch("/api/me/export");
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const disposition = res.headers.get("Content-Disposition") ?? "";
+      const match = disposition.match(/filename="?(.+?)"?$/);
+      const filename = match?.[1] ?? "village-roots-data.xlsx";
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // Silently fail — could add toast notification here
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   if (!initials) {
     return (
       <div className="grid h-9 w-9 place-items-center rounded-full bg-secondary text-[11px] font-semibold text-secondary-foreground">
@@ -63,7 +98,7 @@ export function AvatarMenu() {
   }
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
+    <DropdownMenu open={open} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
         <button
           className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-[11px] font-semibold text-background transition-colors hover:opacity-90"
@@ -73,7 +108,9 @@ export function AvatarMenu() {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="truncate">{email || "Account"}</DropdownMenuLabel>
+        <DropdownMenuLabel className="truncate">
+          {displayName || email || "Account"}
+        </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => setProfileOpen(true)}>
           <User />
@@ -82,6 +119,14 @@ export function AvatarMenu() {
         <DropdownMenuItem onSelect={() => router.push("/auth/update-password")}>
           <KeyRound />
           Change Password
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled={isExporting} onSelect={handleExport}>
+          {isExporting ? (
+            <LoaderCircle className="animate-spin" />
+          ) : (
+            <Download />
+          )}
+          {isExporting ? "Exporting…" : "Export Data"}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem

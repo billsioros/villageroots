@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { validatePassword } from "@/lib/auth/validation";
-import { Lock } from "lucide-react";
+import { Lock, UserRound } from "lucide-react";
 import { IconInput } from "@/components/auth/icon-input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/auth/submit-button";
@@ -13,6 +13,8 @@ import { PasswordStrength } from "@/components/auth/password-strength";
 
 export function SetPasswordForm() {
   const [sessionReady, setSessionReady] = useState<boolean | null>(null);
+  const [name, setName] = useState("");
+  const [surname, setSurname] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [fieldError, setFieldError] = useState<string | null>(null);
@@ -24,6 +26,11 @@ export function SetPasswordForm() {
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getSession().then(({ data }) => setSessionReady(Boolean(data.session)));
+    supabase.auth.getUser().then(({ data }) => {
+      const meta = data.user?.user_metadata ?? {};
+      if (typeof meta.name === "string") setName(meta.name);
+      if (typeof meta.surname === "string") setSurname(meta.surname);
+    });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) =>
       setSessionReady(Boolean(session)),
     );
@@ -57,6 +64,14 @@ export function SetPasswordForm() {
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setFormError(null);
+    if (!name.trim()) {
+      setFormError("Name is required.");
+      return;
+    }
+    if (!surname.trim()) {
+      setFormError("Surname is required.");
+      return;
+    }
     const passError = validatePassword(password);
     const matchError = confirm !== password ? "Passwords do not match." : null;
     setFieldError(passError);
@@ -66,7 +81,10 @@ export function SetPasswordForm() {
     setIsLoading(true);
     const supabase = createClient();
     try {
-      const { error } = await supabase.auth.updateUser({ password });
+      const { error } = await supabase.auth.updateUser({
+        password,
+        data: { name: name.trim(), surname: surname.trim() },
+      });
       if (error) {
         setFormError("We couldn't set your password — please try again.");
         return;
@@ -87,6 +105,33 @@ export function SetPasswordForm() {
       </div>
 
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-2">
+            <Label htmlFor="name">First name</Label>
+            <IconInput
+              id="name"
+              type="text"
+              autoComplete="given-name"
+              icon={<UserRound className="h-4 w-4" />}
+              value={name}
+              disabled={isLoading}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="surname">Surname</Label>
+            <IconInput
+              id="surname"
+              type="text"
+              autoComplete="family-name"
+              icon={<UserRound className="h-4 w-4" />}
+              value={surname}
+              disabled={isLoading}
+              onChange={(e) => setSurname(e.target.value)}
+            />
+          </div>
+        </div>
+
         <div className="grid gap-2">
           <Label htmlFor="password">Password</Label>
           <IconInput
