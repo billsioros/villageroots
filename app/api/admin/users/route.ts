@@ -27,7 +27,8 @@ export async function GET() {
     listData.users.map(async (u) => ({
       id: u.id,
       email: u.email ?? "",
-      full_name: u.user_metadata?.full_name ?? null,
+      name: u.user_metadata?.name ?? null,
+      surname: u.user_metadata?.surname ?? null,
       role: await getRoleForUser(u.id),
       is_active: !u.banned_until,
       last_sign_in_at: u.last_sign_in_at ?? null,
@@ -47,22 +48,48 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  let body: { userId?: unknown; isActive?: unknown };
+  let body: { userId?: unknown; isActive?: unknown; name?: unknown; surname?: unknown };
   try {
-    body = (await request.json()) as { userId?: unknown; isActive?: unknown };
+    body = (await request.json()) as {
+      userId?: unknown;
+      isActive?: unknown;
+      name?: unknown;
+      surname?: unknown;
+    };
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
   const userId = typeof body.userId === "string" ? body.userId : "";
-  const isActive = typeof body.isActive === "boolean" ? body.isActive : null;
-  if (!userId || isActive === null) {
+  if (!userId) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
+
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  const surname = typeof body.surname === "string" ? body.surname.trim() : "";
+  const hasEdit = body.name !== undefined || body.surname !== undefined;
 
   const admin = createAdminClient();
   if (!admin) {
     return NextResponse.json({ error: "Server is not configured." }, { status: 500 });
+  }
+
+  if (hasEdit) {
+    if (!name || !surname) {
+      return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+    }
+    const { error } = await admin.auth.admin.updateUserById(userId, {
+      user_metadata: { name, surname },
+    });
+    if (error) {
+      return NextResponse.json({ error: "Failed to update user." }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  const isActive = typeof body.isActive === "boolean" ? body.isActive : null;
+  if (isActive === null) {
+    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
   const { error } = await admin.auth.admin.updateUserById(userId, {
