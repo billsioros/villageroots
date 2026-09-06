@@ -60,7 +60,7 @@ describe("POST /api/admin/invite", () => {
   it("returns 400 for an invalid email", async () => {
     mocks.sessionUid.mockResolvedValue("user-1");
     mocks.isAdminUid.mockResolvedValue(true);
-    const res = await POST(req({ email: "not-an-email" }));
+    const res = await POST(req({ email: "not-an-email", name: "Eleni", surname: "Katsari" }));
     expect(res.status).toBe(400);
   });
 
@@ -68,14 +68,14 @@ describe("POST /api/admin/invite", () => {
     mocks.sessionUid.mockResolvedValue("user-1");
     mocks.isAdminUid.mockResolvedValue(true);
     mocks.createAdminClient.mockReturnValue(null as never);
-    const res = await POST(req({ email: "a@b.example" }));
+    const res = await POST(req({ email: "a@b.example", name: "Eleni", surname: "Katsari" }));
     expect(res.status).toBe(500);
   });
 
   it("sends the invite and returns 200 with a password for a valid email", async () => {
     mocks.sessionUid.mockResolvedValue("user-1");
     mocks.isAdminUid.mockResolvedValue(true);
-    const res = await POST(req({ email: "  ana@potidaneia.gr  " }));
+    const res = await POST(req({ email: "  ana@potidaneia.gr  ", name: "Eleni", surname: "Katsari" }));
     const body = await res.json();
     expect(res.status).toBe(200);
     expect(body.ok).toBe(true);
@@ -88,10 +88,11 @@ describe("POST /api/admin/invite", () => {
   it("sets the generated password and confirms the email on the new user", async () => {
     mocks.sessionUid.mockResolvedValue("user-1");
     mocks.isAdminUid.mockResolvedValue(true);
-    await POST(req({ email: "  ana@potidaneia.gr  " }));
+    await POST(req({ email: "  ana@potidaneia.gr  ", name: "Eleni", surname: "Katsari" }));
     expect(mocks.updateUserById).toHaveBeenCalledWith("new-user-id", {
       password: "Test!Pass1234",
       email_confirm: true,
+      user_metadata: { name: "Eleni", surname: "Katsari" },
     });
   });
 
@@ -102,7 +103,7 @@ describe("POST /api/admin/invite", () => {
       data: { users: [] },
       error: { message: "db error" },
     } as never);
-    const res = await POST(req({ email: "a@b.example" }));
+    const res = await POST(req({ email: "a@b.example", name: "Eleni", surname: "Katsari" }));
     expect(res.status).toBe(500);
   });
 
@@ -113,7 +114,7 @@ describe("POST /api/admin/invite", () => {
       data: { user: null },
       error: { message: "update failed" },
     } as never);
-    const res = await POST(req({ email: "a@b.example" }));
+    const res = await POST(req({ email: "a@b.example", name: "Eleni", surname: "Katsari" }));
     expect(res.status).toBe(500);
   });
 
@@ -124,7 +125,7 @@ describe("POST /api/admin/invite", () => {
       data: { user: null },
       error: { status: 422, message: "A user with this email address has already been registered" },
     } as never);
-    const res = await POST(req({ email: "a@b.example" }));
+    const res = await POST(req({ email: "a@b.example", name: "Eleni", surname: "Katsari" }));
     expect(res.status).toBe(400);
   });
 
@@ -135,7 +136,47 @@ describe("POST /api/admin/invite", () => {
       data: { user: null },
       error: { message: "boom" },
     } as never);
-    const res = await POST(req({ email: "a@b.example" }));
+    const res = await POST(req({ email: "a@b.example", name: "Eleni", surname: "Katsari" }));
     expect(res.status).toBe(500);
+  });
+
+  it("returns 400 when name is missing", async () => {
+    mocks.sessionUid.mockResolvedValue("user-1");
+    mocks.isAdminUid.mockResolvedValue(true);
+    const res = await POST(req({ email: "a@b.example", surname: "Katsari" }));
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/name/i);
+  });
+
+  it("returns 400 when surname is missing", async () => {
+    mocks.sessionUid.mockResolvedValue("user-1");
+    mocks.isAdminUid.mockResolvedValue(true);
+    const res = await POST(req({ email: "a@b.example", name: "Eleni" }));
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/surname/i);
+  });
+
+  it("passes name and surname as user_metadata to updateUserById", async () => {
+    mocks.sessionUid.mockResolvedValue("user-1");
+    mocks.isAdminUid.mockResolvedValue(true);
+    await POST(req({ email: "ana@potidaneia.gr", name: "Eleni", surname: "Katsari" }));
+    expect(mocks.updateUserById).toHaveBeenCalledWith("new-user-id", {
+      password: "Test!Pass1234",
+      email_confirm: true,
+      user_metadata: { name: "Eleni", surname: "Katsari" },
+    });
+  });
+
+  it("trims whitespace from name and surname", async () => {
+    mocks.sessionUid.mockResolvedValue("user-1");
+    mocks.isAdminUid.mockResolvedValue(true);
+    await POST(req({ email: "ana@potidaneia.gr", name: "  Eleni  ", surname: "  Katsari  " }));
+    expect(mocks.updateUserById).toHaveBeenCalledWith("new-user-id", {
+      password: "Test!Pass1234",
+      email_confirm: true,
+      user_metadata: { name: "Eleni", surname: "Katsari" },
+    });
   });
 });
