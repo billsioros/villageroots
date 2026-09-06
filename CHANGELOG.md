@@ -1,3 +1,10 @@
+# [1.25.0](https://github.com/billsioros/villageroots/compare/v1.24.0...v1.25.0) (2026-09-06)
+
+
+### Features
+
+* PTDN-59 add name and surname to user profiles ([#44](https://github.com/billsioros/villageroots/issues/44)) ([a15c741](https://github.com/billsioros/villageroots/commit/a15c741401b43bea48ea7e4e9e4692600be3369f))
+
 # [1.24.0](https://github.com/billsioros/villageroots/compare/v1.23.0...v1.24.0) (2026-09-05)
 
 
