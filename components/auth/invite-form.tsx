@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 
 export function InviteForm() {
   const [visible, setVisible] = useState<boolean | null>(null);
+  const [name, setName] = useState("");
+  const [surname, setSurname] = useState("");
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -34,6 +36,14 @@ export function InviteForm() {
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMessage(null);
+    if (!name.trim()) {
+      setError("Name is required.");
+      return;
+    }
+    if (!surname.trim()) {
+      setError("Surname is required.");
+      return;
+    }
     const emailError = validateEmail(email);
     if (emailError) {
       setError(emailError);
@@ -45,10 +55,12 @@ export function InviteForm() {
       const res = await fetch("/api/admin/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, name: name.trim(), surname: surname.trim() }),
       });
       const body = (await res.json().catch(() => ({}))) as { error?: string; password?: string };
       if (res.ok) {
+        setName("");
+        setSurname("");
         setEmail("");
         setMessage(`Invitation sent to ${email}.`);
         setPassword(body.password ?? null);
@@ -64,6 +76,32 @@ export function InviteForm() {
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-3">
+      <div className="grid grid-cols-2 gap-2">
+        <div className="grid gap-1.5">
+          <Label htmlFor="invite-name">First name</Label>
+          <Input
+            id="invite-name"
+            type="text"
+            autoComplete="given-name"
+            placeholder="Eleni"
+            value={name}
+            disabled={isLoading}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="invite-surname">Surname</Label>
+          <Input
+            id="invite-surname"
+            type="text"
+            autoComplete="family-name"
+            placeholder="Katsari"
+            value={surname}
+            disabled={isLoading}
+            onChange={(e) => setSurname(e.target.value)}
+          />
+        </div>
+      </div>
       <div className="flex items-end gap-2">
         <div className="grid flex-1 gap-1.5">
           <Label htmlFor="invite-email">Invite a contributor</Label>

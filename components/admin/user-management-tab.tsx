@@ -1,15 +1,19 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { InviteForm } from "@/components/auth/invite-form";
-import { ShieldCheck } from "lucide-react";
+import { getInitials, getDisplayName } from "@/lib/utils/user-profile";
+import { Check, Pencil, ShieldCheck, X } from "lucide-react";
 
 interface User {
   id: string;
   email: string;
-  full_name: string | null;
+  name: string | null;
+  surname: string | null;
   role: string;
   is_active: boolean;
   last_sign_in_at: string | null;
@@ -40,13 +44,63 @@ function SkeletonRow() {
 function UserCard({
   user,
   onToggle,
+  onSaveNames,
   isPending,
+  isSavingNames,
 }: {
   user: User;
   onToggle: (userId: string, isActive: boolean) => void;
+  onSaveNames: (userId: string, name: string, surname: string) => void;
   isPending: boolean;
+  isSavingNames: boolean;
 }) {
-  const initials = (user.full_name ?? user.email).slice(0, 2).toUpperCase();
+  const [editing, setEditing] = useState(false);
+  const [draftName, setDraftName] = useState(user.name ?? "");
+  const [draftSurname, setDraftSurname] = useState(user.surname ?? "");
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const saveAttemptedRef = useRef(false);
+
+  const displayName = getDisplayName(user.name ?? "", user.surname ?? "");
+  const initials = getInitials(user.name ?? "", user.surname ?? "") || user.email.slice(0, 2).toUpperCase();
+
+  const savedFullName = getDisplayName(user.name ?? "", user.surname ?? "");
+  const draftFullName = getDisplayName(draftName, draftSurname);
+
+  useEffect(() => {
+    if (editing && saveAttemptedRef.current && savedFullName !== "" && savedFullName === draftFullName) {
+      setEditing(false);
+      setSaveError(null);
+      saveAttemptedRef.current = false;
+    }
+  }, [editing, savedFullName, draftFullName]);
+
+  const startEdit = () => {
+    setDraftName(user.name ?? "");
+    setDraftSurname(user.surname ?? "");
+    setSaveError(null);
+    saveAttemptedRef.current = false;
+    setEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setSaveError(null);
+    saveAttemptedRef.current = false;
+    setEditing(false);
+  };
+
+  const saveEdit = () => {
+    setSaveError(null);
+    saveAttemptedRef.current = true;
+    if (!draftName.trim()) {
+      setSaveError("Name is required.");
+      return;
+    }
+    if (!draftSurname.trim()) {
+      setSaveError("Surname is required.");
+      return;
+    }
+    onSaveNames(user.id, draftName.trim(), draftSurname.trim());
+  };
 
   return (
     <div className="flex items-center gap-4 rounded-lg border bg-card p-4">
@@ -54,12 +108,30 @@ function UserCard({
         {initials}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">
-          {user.full_name ?? "No name"}
-        </p>
-        <p className="truncate text-[13px] text-muted-foreground">
-          {user.email}
-        </p>
+        {editing ? (
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <Input
+                value={draftName}
+                placeholder="First name"
+                aria-label="First name"
+                onChange={(e) => setDraftName(e.target.value)}
+              />
+              <Input
+                value={draftSurname}
+                placeholder="Surname"
+                aria-label="Surname"
+                onChange={(e) => setDraftSurname(e.target.value)}
+              />
+            </div>
+            {saveError && <p className="text-[13px] text-destructive">{saveError}</p>}
+          </div>
+        ) : (
+          <>
+            <p className="truncate text-sm font-medium">{displayName || "No name"}</p>
+            <p className="truncate text-[13px] text-muted-foreground">{user.email}</p>
+          </>
+        )}
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <Badge variant={user.role === "admin" ? "default" : "secondary"}>
@@ -70,15 +142,31 @@ function UserCard({
           {user.is_active ? "Active" : "Inactive"}
         </Badge>
       </div>
-      <Button
-        size="sm"
-        variant={user.is_active ? "destructive" : "outline"}
-        onClick={() => onToggle(user.id, !user.is_active)}
-        disabled={isPending}
-        aria-label={user.is_active ? `Deactivate ${user.email}` : `Activate ${user.email}`}
-      >
-        {user.is_active ? "Deactivate" : "Activate"}
-      </Button>
+      {editing ? (
+        <div className="flex shrink-0 items-center gap-1">
+          <Button size="icon" variant="ghost" onClick={saveEdit} disabled={isSavingNames} aria-label="Save name">
+            {isSavingNames ? <span className="animate-spin text-sm">…</span> : <Check size={16} />}
+          </Button>
+          <Button size="icon" variant="ghost" onClick={cancelEdit} disabled={isSavingNames} aria-label="Cancel edit">
+            <X size={16} />
+          </Button>
+        </div>
+      ) : (
+        <>
+          <Button size="icon" variant="ghost" onClick={startEdit} disabled={isPending} aria-label={`Edit ${user.email}`}>
+            <Pencil size={16} />
+          </Button>
+          <Button
+            size="sm"
+            variant={user.is_active ? "destructive" : "outline"}
+            onClick={() => onToggle(user.id, !user.is_active)}
+            disabled={isPending}
+            aria-label={user.is_active ? `Deactivate ${user.email}` : `Activate ${user.email}`}
+          >
+            {user.is_active ? "Deactivate" : "Activate"}
+          </Button>
+        </>
+      )}
     </div>
   );
 }
@@ -125,6 +213,21 @@ export function UserManagementTab() {
     },
   });
 
+  const namesMutation = useMutation({
+    mutationFn: async ({ userId, name, surname }: { userId: string; name: string; surname: string }) => {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, name, surname }),
+      });
+      if (!res.ok) throw new Error("Failed to update user");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
+
   return (
     <div className="flex h-full flex-col gap-4">
       <div>
@@ -160,7 +263,9 @@ export function UserManagementTab() {
                 key={u.id}
                 user={u}
                 onToggle={(id, active) => mutation.mutate({ userId: id, isActive: active })}
+                onSaveNames={(id, name, surname) => namesMutation.mutate({ userId: id, name, surname })}
                 isPending={mutation.isPending}
+                isSavingNames={namesMutation.isPending}
               />
             ))}
           </div>
