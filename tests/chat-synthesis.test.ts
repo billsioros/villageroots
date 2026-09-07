@@ -17,6 +17,11 @@ describe("buildChatContext", () => {
     expect(ctx).toContain("married_to");
   });
 
+  it("includes the nodeId in each retrieved node line", () => {
+    const ctx = buildChatContext("Who was Yiannis?", matches, hops);
+    expect(ctx).toContain(`- ${matches[0].label} [${matches[0].nodeId}]`);
+  });
+
   it("instructs inline citation format with nodeId", () => {
     const ctx = buildChatContext("Who was Yiannis?", matches, hops);
     expect(ctx).toContain("[Label](nodeId)");
