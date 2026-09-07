@@ -32,6 +32,32 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...   # accepts legacy anon key value
 
 Without these set, `hasEnvVars` in `lib/utils.ts` makes the proxy skip the auth check (dev convenience).
 
+Additional env used by GraphRAG / data tooling:
+- `DATABASE_URL` — `postgresql://postgres:postgres@127.0.0.1:54322/postgres` (local Supabase Postgres; used directly by the `postgres` driver in `lib/graph/db.ts`).
+- `OPENROUTER_API_KEY` — used for embeddings and chat (see `lib/graph/embeddings.ts`).
+- `SUPABASE_SERVICE_ROLE_KEY` — service-role key, used by server-side tooling.
+
+## Supabase database interaction (learned the hard way)
+
+The app talks to Postgres two ways — know which one you need:
+
+- **ORM/Drizzle**: `lib/graph/db.ts` exports `db = drizzle({ client, schema })` over a raw `postgres()` connection from `DATABASE_URL` (`max: 1`). This bypasses RLS entirely (direct connection, not the Supabase HTTP/gateway layer). Use this for data migrations, backfills, and admin/CLI-style scripts. `drizzle/schema.ts` is the single source of truth for table shapes (`nodes`, `edges`, `nodeEmbeddings`, …).
+- **Supabase clients**: `lib/supabase/*` go through the anon/publishable key + RLS. Use these for user-scoped reads/writes inside route handlers.
+
+**Talk to the DB without `psql`** — `psql` is NOT on PATH in this environment. Use a one-off node script with the `postgres` driver (reads `DATABASE_URL`), e.g. `node -e "..."` or a temporary `.mjs` file. `DATABASE_URL` always points at the local Supabase instance `postgres:postgres@127.0.0.1:54322/postgres`.
+
+**`supabase` CLI is not on PATH** — it's at `node_modules/.bin/supabase` (v2.116.0). Run it as `./node_modules/.bin/supabase ...`. Local stack: `suapabase start`, `supabase status`; the DB runs in the `supabase_db_villageroots` container on port `54322`.
+
+**Apply a migration to the local DB**: `./node_modules/.bin/supabase db push --local --include-all`. The local DB only picks up migrations when you push them — committing a `supabase/migrations/NNNN_*.sql` file is NOT enough; you must run `db push` (or `db reset`) for the schema to exist locally.
+
+**pgvector constraints (matters for embedding columns)**:
+- The vector extension is installed as 0.8.2 in the local Docker build, which **caps HNSW (and ivfflat) index dimensions at 2000**.
+- `node_embeddings.embedding` is therefore `vector(1024)` — nemotron-3-embed-1b supports Matryoshka slicing; `embedText()` slices to `EMBEDDING_DIMENSIONS = 1024` so ingestion and query stay consistent. Do NOT raise the dimension above 1024 without first confirming the remote Postgres pgvector build supports larger HNSW indexes.
+
+**GraphRAG embedding lifecycle**:
+- `node_embeddings` is populated by `ingestEmbedding()` (`lib/graph/ingest.ts`), auto-triggered on node approval by the moderation route, and manually via `runBackfill()` (`lib/graph/backfill.ts`) / `runRetry()` (`lib/graph/retry-failed.ts`) — also exposed as admin routes `POST /api/admin/embeddings/backfill` and `/retry`.
+- If chat returns no results, existing nodes likely have no embeddings yet — run a backfill (see Workflow below for the manual/local approach).
+
 ## Auth guard gotcha
 
 The session/auth guard lives in **`proxy.ts` at the repo root** (NOT `middleware.ts`), calling `updateSession` in `lib/supabase/proxy.ts`. It redirects unauthenticated users to `/auth/login` unless the path is `/login` or `/auth*`. **When adding routes to the whitelist, add them in `proxy.ts`** or users will be silently redirected.

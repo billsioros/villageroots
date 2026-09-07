@@ -14,6 +14,7 @@ import type {
   NodeType,
   EdgeKind,
   ChatMessage,
+  ChatSource,
   Toast,
   ZoomIntent,
   PanIntent,
@@ -123,7 +124,7 @@ export interface GraphStore {
   chatInput: string;
   chatMessages: ChatMessage[];
   setChatInput: (text: string) => void;
-  sendChat: (text: string) => void;
+  sendChat: (text: string) => Promise<void>;
 
   // flash / lit
   flashIds: string[];
@@ -137,64 +138,9 @@ export interface GraphStore {
   countByType: () => Record<NodeType, number>;
 }
 
-const MILL_PATH = {
-  nodeIds: ["l-mill", "p-nikolas", "p-yiannis"],
-  edgeIds: ["e-mill-nikolas", "e-yiannis-nik"],
-};
+const SOURCES_MARKER = "\n---SOURCES---\n";
 
-const CHURCH_PATH = {
-  nodeIds: ["l-church", "p-yiannis", "p-maria"],
-  edgeIds: ["e-yiannis-church", "e-maria-church"],
-};
-
-function cannedAnswer(text: string): {
-  answer: string;
-  path?: { nodeIds: string[]; edgeIds: string[] };
-} {
-  const q = text.toLowerCase();
-
-  const KNOWN_QUERIES: { match: RegExp; nodeId: string; path?: typeof MILL_PATH }[] = [
-    { match: /mill|kalyvia/, nodeId: "l-mill", path: MILL_PATH },
-    { match: /church|ioannis/, nodeId: "l-church", path: CHURCH_PATH },
-    { match: /bridge|kamares/, nodeId: "l-bridge" },
-    { match: /plane|tree|gathering/, nodeId: "l-plane" },
-    { match: /petra|rock/, nodeId: "t-petra" },
-    { match: /lakka|hollow/, nodeId: "t-lakka" },
-    { match: /school/, nodeId: "e-school" },
-    { match: /feast|harvest/, nodeId: "e-feast" },
-    { match: /charter|founding/, nodeId: "e-charter" },
-    { match: /emigrat/, nodeId: "e-emigrate" },
-    { match: /drakia|mule|track/, nodeId: "d-drakia" },
-  ];
-
-  const store = useGraphStore.getState();
-
-  for (const { match, nodeId, path } of KNOWN_QUERIES) {
-    if (match.test(q)) {
-      const node = store.nodesMap[nodeId];
-      if (node) {
-        const desc = node.description || node.subtitle || "";
-        return { answer: `${node.label} — ${desc}`, path };
-      }
-    }
-  }
-
-  const nodeValues = Object.values(store.nodesMap);
-  const match = nodeValues.find(
-    (n) =>
-      n.label.toLowerCase().includes(q) ||
-      n.subtitle.toLowerCase().includes(q)
-  );
-  if (match) {
-    const desc = match.description || match.subtitle || "";
-    return { answer: `${match.label} — ${desc}` };
-  }
-
-  return {
-    answer:
-      "I don't know the answer yet — the knowledge graph is still growing. Try asking about the mill, Kalyvia, or Agios Ioannis.",
-  };
-}
+const CHAT_FALLBACK = "Sorry — I couldn't reach the graph right now. Please try again.";
 
 export const useGraphStore = create<GraphStore>()((set, get) => ({
   // graph
@@ -364,7 +310,12 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
     })),
   selectDraft: (id) =>
     set({ selectedId: id, sidepanelOpen: id !== null, searchOpen: false, layersOpen: false }),
-  toggleChat: () => set((s) => ({ chatOpen: !s.chatOpen, chatCollapsed: false })),
+  toggleChat: () =>
+    set((s) => ({
+      chatOpen: !s.chatOpen,
+      chatCollapsed: false,
+      ...(s.chatOpen ? { chatMessages: [], chatInput: "" } : {}),
+    })),
   toggleCollapsed: () => set((s) => ({ chatCollapsed: !s.chatCollapsed })),
   setSearchOpen: (open) => set({ searchOpen: open }),
   setLayersOpen: (open) => set({ layersOpen: open }),
@@ -424,29 +375,84 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
 
   // chat
   chatInput: "",
-  chatMessages: [
-    {
-      id: "greet",
-      role: "assistant",
-      content: "Welcome! Ask me about people, places and stories of Potidaneia.",
-    },
-  ],
+  chatMessages: [],
   setChatInput: (text) => set({ chatInput: text }),
-  sendChat: (text) => {
+  sendChat: async (text) => {
     const content = text.trim();
     if (!content) return;
+    const assistantId = uid();
     set((s) => ({
       chatInput: "",
       chatOpen: true,
       chatCollapsed: false,
-      chatMessages: [...s.chatMessages, { id: uid(), role: "user", content }],
+      chatMessages: [
+        ...s.chatMessages,
+        { id: uid(), role: "user", content },
+        { id: assistantId, role: "assistant", content: "", loading: true },
+      ],
     }));
-    const { answer, path } = cannedAnswer(content);
-    setTimeout(() => {
+
+    const patchAssistant = (patch: Partial<ChatMessage>) =>
       set((s) => ({
-        chatMessages: [...s.chatMessages, { id: uid(), role: "assistant", content: answer, path }],
+        chatMessages: s.chatMessages.map((m) => (m.id === assistantId ? { ...m, ...patch } : m)),
       }));
-    }, 700);
+
+    try {
+      const res = await fetch("/api/graph/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: content }),
+      });
+      if (!res.ok) {
+        const error = new Error(`Chat request failed (${res.status})`) as Error & { status?: number };
+        error.status = res.status;
+        throw error;
+      }
+
+      const contentType = res.headers.get("content-type") ?? "";
+      if (contentType.includes("application/json")) {
+        const data = (await res.json()) as { answer?: string; sources?: ChatSource[] };
+        patchAssistant({ content: data.answer ?? "", sources: data.sources ?? [], loading: false });
+        return;
+      }
+
+      if (!res.body) throw new Error("Empty response body");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        patchAssistant({ content: buffer.split(SOURCES_MARKER)[0] });
+      }
+      const markerIdx = buffer.indexOf(SOURCES_MARKER);
+      let sources: ChatSource[] = [];
+      if (markerIdx !== -1) {
+        try {
+          const parsed = JSON.parse(buffer.slice(markerIdx + SOURCES_MARKER.length)) as unknown;
+          sources = Array.isArray(parsed) ? (parsed as ChatSource[]) : [];
+        } catch {
+          sources = [];
+        }
+      }
+      patchAssistant({
+        content: markerIdx === -1 ? buffer : buffer.slice(0, markerIdx),
+        sources,
+        loading: false,
+      });
+    } catch (err) {
+      console.error("[chat] failed", err);
+      patchAssistant({ content: CHAT_FALLBACK, sources: [], loading: false });
+      const status = err instanceof Error ? (err as Error & { status?: number }).status : undefined;
+      get().pushToast({
+        tone: "error",
+        message:
+          status === 429
+            ? "Too many requests — try again in a moment."
+            : "Chat is busy right now — try again shortly.",
+      });
+    }
   },
 
   // flash / lit

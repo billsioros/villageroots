@@ -11,6 +11,8 @@ import {
   index,
   check,
   uniqueIndex,
+  integer,
+  vector,
 } from "drizzle-orm/pg-core";
 
 export const nodeTypeEnum = pgEnum("node_type", [
@@ -239,3 +241,29 @@ export const auditLogs = pgTable(
 );
 
 export type AuditLogRow = typeof auditLogs.$inferSelect;
+
+export const nodeEmbeddings = pgTable(
+  "node_embeddings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    nodeId: uuid("node_id")
+      .notNull()
+      .references(() => nodes.id, { onDelete: "cascade" }),
+    contentHash: text("content_hash").notNull(),
+    model: text("model").notNull(),
+    embedding: vector("embedding", { dimensions: 1024 }).notNull(),
+    dimensions: integer("dimensions").notNull().default(1024),
+    nodeType: text("node_type"),
+    label: text("label"),
+    status: text("status").notNull().default("pending"),
+    error: text("error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("idx_node_embeddings_node_id").on(t.nodeId),
+    index("idx_node_embeddings_status").on(t.status),
+  ],
+);
+
+export type NodeEmbeddingRow = typeof nodeEmbeddings.$inferSelect;
