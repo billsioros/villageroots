@@ -310,7 +310,12 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
     })),
   selectDraft: (id) =>
     set({ selectedId: id, sidepanelOpen: id !== null, searchOpen: false, layersOpen: false }),
-  toggleChat: () => set((s) => ({ chatOpen: !s.chatOpen, chatCollapsed: false })),
+  toggleChat: () =>
+    set((s) => ({
+      chatOpen: !s.chatOpen,
+      chatCollapsed: false,
+      ...(s.chatOpen ? { chatMessages: [], chatInput: "" } : {}),
+    })),
   toggleCollapsed: () => set((s) => ({ chatCollapsed: !s.chatCollapsed })),
   setSearchOpen: (open) => set({ searchOpen: open }),
   setLayersOpen: (open) => set({ layersOpen: open }),
@@ -370,13 +375,7 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
 
   // chat
   chatInput: "",
-  chatMessages: [
-    {
-      id: "greet",
-      role: "assistant",
-      content: "Welcome! Ask me about people, places and stories of Potidaneia.",
-    },
-  ],
+  chatMessages: [],
   setChatInput: (text) => set({ chatInput: text }),
   sendChat: async (text) => {
     const content = text.trim();
@@ -405,7 +404,9 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
         body: JSON.stringify({ question: content }),
       });
       if (!res.ok) {
-        throw new Error(`Chat request failed (${res.status})`);
+        const error = new Error(`Chat request failed (${res.status})`) as Error & { status?: number };
+        error.status = res.status;
+        throw error;
       }
 
       const contentType = res.headers.get("content-type") ?? "";
@@ -443,6 +444,14 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
     } catch (err) {
       console.error("[chat] failed", err);
       patchAssistant({ content: CHAT_FALLBACK, sources: [], loading: false });
+      const status = err instanceof Error ? (err as Error & { status?: number }).status : undefined;
+      get().pushToast({
+        tone: "error",
+        message:
+          status === 429
+            ? "Too many requests — try again in a moment."
+            : "Chat is busy right now — try again shortly.",
+      });
     }
   },
 

@@ -96,6 +96,27 @@ describe("sendChat GraphRAG", () => {
     expect(messages[1].content).toContain("I couldn't reach the graph");
     expect(messages[1].sources).toEqual([]);
     expect(messages[1].loading).toBe(false);
+    expect(useGraphStore.getState().toast?.tone).toBe("error");
+  });
+
+  it("shows an error toast when a rate limit response arrives", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ error: "Rate limited" }, 429)));
+
+    await useGraphStore.getState().sendChat("anything");
+
+    const state = useGraphStore.getState();
+    expect(state.chatMessages[1].content).toContain("I couldn't reach the graph");
+    expect(state.toast?.tone).toBe("error");
+  });
+
+  it("shows an error toast when the network request throws", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("fetch failed")));
+
+    await useGraphStore.getState().sendChat("anything");
+
+    const state = useGraphStore.getState();
+    expect(state.chatMessages[1].content).toContain("I couldn't reach the graph");
+    expect(state.toast?.tone).toBe("error");
   });
 
   it("ignores empty input", async () => {
@@ -105,6 +126,33 @@ describe("sendChat GraphRAG", () => {
     await useGraphStore.getState().sendChat("   ");
 
     expect(fetchMock).not.toHaveBeenCalled();
+    expect(useGraphStore.getState().chatMessages).toHaveLength(0);
+  });
+
+  it("clears messages and input when closing the chat", () => {
+    useGraphStore.setState({
+      chatOpen: true,
+      chatInput: "draft",
+      chatMessages: [
+        { id: "u1", role: "user", content: "hi" },
+        { id: "a1", role: "assistant", content: "hello there" },
+      ],
+    });
+
+    useGraphStore.getState().toggleChat();
+
+    const state = useGraphStore.getState();
+    expect(state.chatOpen).toBe(false);
+    expect(state.chatMessages).toHaveLength(0);
+    expect(state.chatInput).toBe("");
+  });
+
+  it("avoids clearing messages when opening the chat", () => {
+    useGraphStore.setState({ chatOpen: false, chatMessages: [], chatInput: "" });
+
+    useGraphStore.getState().toggleChat();
+
+    expect(useGraphStore.getState().chatOpen).toBe(true);
     expect(useGraphStore.getState().chatMessages).toHaveLength(0);
   });
 });
