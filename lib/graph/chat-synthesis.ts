@@ -32,7 +32,8 @@ export function buildChatContext(
     question,
     "",
     "Answer using only the retrieved content. If the content is insufficient, say so. ",
-    "Cite sources by node label in parentheses.",
+    "Cite each claim with an inline reference of the form [Label](nodeId), where Label is the exact ",
+    "node label and nodeId is the exact retrieved node id from the Relevant nodes list.",
   ].join("\n");
 }
 
