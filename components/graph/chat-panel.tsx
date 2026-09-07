@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Sparkles, Send } from "lucide-react";
+import { Loader2, Sparkles, Send } from "lucide-react";
 import { useGraphStore } from "@/store/graphStore";
 import { ModalShell } from "./modals";
 
@@ -12,7 +12,7 @@ export function ChatPanel() {
   const input = useGraphStore((s) => s.chatInput);
   const setChatInput = useGraphStore((s) => s.setChatInput);
   const sendChat = useGraphStore((s) => s.sendChat);
-  const litPath = useGraphStore((s) => s.litPath);
+  const flashNodes = useGraphStore((s) => s.flashNodes);
   const setPanIntent = useGraphStore((s) => s.setPanIntent);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -55,11 +55,16 @@ export function ChatPanel() {
             }`}
           >
             {m.content}
-            {m.role === "assistant" && m.path && (
+            {m.loading && (
+              <span className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Loader2 size={12} className="animate-spin" /> Searching the graph…
+              </span>
+            )}
+            {m.role === "assistant" && m.sources && m.sources.length > 0 && (
               <button
                 onClick={() => {
-                  litPath(m.path!);
-                  setPanIntent({ nodeId: m.path!.nodeIds[0] });
+                  flashNodes(m.sources!.map((s) => s.nodeId));
+                  setPanIntent({ nodeId: m.sources![0].nodeId });
                 }}
                 className="mt-2 flex items-center gap-1 rounded-full bg-foreground px-3 py-1.5 text-[11px] font-medium text-background"
               >

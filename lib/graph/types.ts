@@ -69,11 +69,18 @@ export interface SuggestedEdge extends GraphEdge {
 
 export type ChatRole = "user" | "assistant";
 
+export interface ChatSource {
+  label: string;
+  nodeId: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: ChatRole;
   content: string;
   path?: { nodeIds: string[]; edgeIds: string[] };
+  sources?: ChatSource[];
+  loading?: boolean;
 }
 
 export type ToastTone = "info" | "error" | "success";
