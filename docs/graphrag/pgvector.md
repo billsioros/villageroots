@@ -3,7 +3,7 @@
 ## Setup
 
 Migration `supabase/migrations/0013_pgvector.sql` enables the `vector`
-extension in the `extensions` schema, creates `node_embeddings` (vector(2048)),
+extension in the `extensions` schema, creates `node_embeddings` (vector(1024)),
 a unique index on `node_id`, an HNSW cosine index, a status index, and the
 `match_nodes()` SECURITY DEFINER RPC.
 
@@ -29,7 +29,7 @@ parameters). Do not grant SELECT to end-user roles on this table.
 
 `node_embeddings` follows the standard Supabase Postgres backup policy (the
 table is plain relational data — HNSW indexes rebuild on restore). Estimate:
-~2048 float32 values ≈ 8 KB payload per row plus index overhead. At the
+~1024 float32 values ≈ 4 KB payload per row plus index overhead. At the
 current graph scale (hundreds of nodes) storage is negligible; budget ~1 MB
 per ~100 nodes. The HNSW index rebuilds automatically on `db reset`/restore
 and does not require a separate backup step. Monitor `node_embeddings.status`
@@ -45,4 +45,4 @@ distribution (`embedded` vs `failed`) to gauge ingestion health; a rise in
 - **Query (PTDN-32):** `matchNodesByVector(embedding, { matchCount, threshold,
   filterType })` calls `match_nodes()`; the route then fetches 1-hop approved
   neighbors and synthesizes an answer. Both sides treat the embedding model
-  (`nvidia/nemotron-3-embed-1b:free`, 2048-dim) as a shared contract.
+  (`nvidia/nemotron-3-embed-1b:free`, 1024-dim) as a shared contract.

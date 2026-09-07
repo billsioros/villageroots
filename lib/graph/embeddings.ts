@@ -3,6 +3,7 @@ import { richTextToText } from "./rich-text-to-text";
 import type { NodeRow } from "@/drizzle/schema";
 
 export const EMBEDDING_MODEL = "nvidia/nemotron-3-embed-1b:free";
+export const EMBEDDING_DIMENSIONS = 1024;
 const EMBEDDINGS_URL = "https://openrouter.ai/api/v1/embeddings";
 
 export function computeContentHash(text: string): string {
@@ -38,5 +39,5 @@ export async function embedText(
   const payload = (await res.json()) as { data?: { embedding?: number[] }[] };
   const embedding = payload.data?.[0]?.embedding;
   if (!embedding || embedding.length === 0) throw new Error("OpenRouter returned no embedding");
-  return embedding;
+  return embedding.slice(0, EMBEDDING_DIMENSIONS);
 }

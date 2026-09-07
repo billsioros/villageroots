@@ -40,7 +40,7 @@ describe("POST /api/graph/chat", () => {
 
   it("streams a synthesis with sources when matches exist", async () => {
     mocks.sessionUid.mockResolvedValue("u");
-    mocks.embedText.mockResolvedValue(Array(2048).fill(0.1));
+    mocks.embedText.mockResolvedValue(Array(1024).fill(0.1));
     mocks.matchNodesByVector.mockResolvedValue([
       { nodeId: "n1", label: "Yiannis", nodeType: "person", similarity: 0.9, contentHash: "h" },
     ]);
@@ -55,7 +55,7 @@ describe("POST /api/graph/chat", () => {
 
   it("returns a graceful empty answer when no match meets the threshold", async () => {
     mocks.sessionUid.mockResolvedValue("u");
-    mocks.embedText.mockResolvedValue(Array(2048).fill(0.1));
+    mocks.embedText.mockResolvedValue(Array(1024).fill(0.1));
     mocks.matchNodesByVector.mockResolvedValue([]);
     const res = await POST(mreq({ question: "Something obscure" }));
     expect(res.status).toBe(200);

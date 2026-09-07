@@ -11,8 +11,8 @@ CREATE TABLE public.node_embeddings (
   node_id       uuid NOT NULL REFERENCES public.nodes(id) ON DELETE CASCADE,
   content_hash  text NOT NULL,
   model         text NOT NULL,
-  embedding     extensions.vector(2048) NOT NULL,
-  dimensions    integer NOT NULL DEFAULT 2048,
+  embedding     extensions.vector(1024) NOT NULL,
+  dimensions    integer NOT NULL DEFAULT 1024,
   node_type     text,
   label         text,
   status        text NOT NULL DEFAULT 'pending',
@@ -29,7 +29,7 @@ CREATE INDEX idx_node_embeddings_hnsw ON public.node_embeddings
 CREATE INDEX idx_node_embeddings_status ON public.node_embeddings(status);--> statement-breakpoint
 
 CREATE OR REPLACE FUNCTION public.match_nodes(
-  query_embedding extensions.vector(2048),
+  query_embedding extensions.vector(1024),
   match_count integer DEFAULT 5,
   similarity_threshold double precision DEFAULT 0.3,
   filter_type text DEFAULT NULL

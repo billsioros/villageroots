@@ -64,7 +64,7 @@ describe("ingestEmbedding", () => {
     mocks.dbSelect.mockReturnValue({ from: () => ({ where: () => ({ limit: async () => [] }) }) });
     mocks.buildEmbeddableText.mockReturnValue("Yiannis\nMason");
     mocks.computeContentHash.mockReturnValue("hash1");
-    mocks.embedText.mockResolvedValue(Array(2048).fill(0.5));
+    mocks.embedText.mockResolvedValue(Array(1024).fill(0.5));
     mocks.dbInsert.mockReturnValue({
       values: () => ({
         onConflictDoUpdate: () => ({ returning: async () => [{ id: "e1" }] }),

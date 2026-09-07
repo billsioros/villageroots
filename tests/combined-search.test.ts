@@ -15,7 +15,7 @@ beforeEach(() => {
   mocks.dbSelect.mockClear();
 });
 
-const vector = Array(2048).fill(0.1);
+const vector = Array(1024).fill(0.1);
 
 describe("matchNodesByVector", () => {
   const sqlText = (arg: unknown): string =>

@@ -12,9 +12,9 @@ describe("0013_pgvector.sql", () => {
     expect(migration).toMatch(/SCHEMA extensions/);
   });
 
-  it("creates the node_embeddings table with a vector(2048) column", () => {
+  it("creates the node_embeddings table with a vector(1024) column", () => {
     expect(migration).toContain("CREATE TABLE public.node_embeddings");
-    expect(migration).toContain("vector(2048)");
+    expect(migration).toContain("vector(1024)");
   });
 
   it("adds a unique index on node_id for idempotent upserts", () => {
@@ -29,7 +29,7 @@ describe("0013_pgvector.sql", () => {
 
   it("defines the match_nodes function with the correct signature", () => {
     expect(migration).toContain("CREATE OR REPLACE FUNCTION public.match_nodes");
-    expect(migration).toContain("vector(2048)");
+    expect(migration).toContain("vector(1024)");
     expect(migration).toContain("SECURITY DEFINER");
   });
 });

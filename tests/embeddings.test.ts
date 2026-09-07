@@ -58,16 +58,17 @@ describe("embeddings helpers", () => {
     const prev = process.env.OPENROUTER_API_KEY;
     process.env.OPENROUTER_API_KEY = "test-key";
     try {
-      const vector = Array.from({ length: 2048 }, (_, i) => i / 2048);
+      const fullVector = Array.from({ length: 2048 }, (_, i) => i / 2048);
+      const expected = fullVector.slice(0, 1024);
       const fetchMock = vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
         json: async () => ({
-          data: [{ embedding: vector }],
+          data: [{ embedding: fullVector }],
         }),
       });
       const out = await embedText("some text", { fetchImpl: fetchMock as unknown as typeof fetch });
-      expect(out).toEqual(vector);
+      expect(out).toEqual(expected);
       const [url, init] = fetchMock.mock.calls[0];
       expect(url).toBe("https://openrouter.ai/api/v1/embeddings");
       expect(JSON.parse((init.body as string) ?? "{}").model).toBe(EMBEDDING_MODEL);
