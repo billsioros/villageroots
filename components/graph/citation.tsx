@@ -40,9 +40,10 @@ export function renderAnswerWithCitations(content: string, citations: Citation[]
   return segments.map((seg) => {
     if (seg.type !== "citation") return seg;
     const citation = citations[seg.index - 1];
+    if (!citation) return { ...seg, label: "", lowRelevance: false };
     const lowRelevance =
       citation.origin === "retrieved" && citation.similarity < LOW_RELEVANCE_THRESHOLD;
-    return { ...seg, label: citation?.label ?? "", lowRelevance };
+    return { ...seg, label: citation.label, lowRelevance };
   });
 }
 
