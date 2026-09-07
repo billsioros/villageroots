@@ -41,10 +41,16 @@ describe("sendChat GraphRAG", () => {
     vi.unstubAllGlobals();
   });
 
-  it("opens chat and streams the answer from the graph endpoint", async () => {
+  it("opens chat and parses citations and subgraph from the stream", async () => {
+    const payload = {
+      citations: [
+        { label: "The Mill", nodeId: "l-mill", nodeType: "landmark", slug: "l-mill", similarity: 0.9, origin: "retrieved" as const },
+      ],
+      subgraph: { nodeIds: ["l-mill", "n-adjacent"], edgeIds: ["e1"], citedNodeIds: ["l-mill"] },
+    };
     const fetchMock = vi.fn().mockResolvedValue(
       streamResponse(
-        'The mill was built in 1850.\n---SOURCES---\n[{"label":"The mill","nodeId":"l-mill"}]',
+        "The mill was built in 1850.\n---SOURCES---\n" + JSON.stringify(payload),
       ),
     );
     vi.stubGlobal("fetch", fetchMock);
@@ -64,7 +70,8 @@ describe("sendChat GraphRAG", () => {
     expect(state.chatMessages).toHaveLength(2);
     expect(state.chatMessages[0]).toMatchObject({ role: "user", content: "Tell me about the mill" });
     expect(state.chatMessages[1].content).toBe("The mill was built in 1850.");
-    expect(state.chatMessages[1].sources).toEqual([{ label: "The mill", nodeId: "l-mill" }]);
+    expect(state.chatMessages[1].citations).toEqual(payload.citations);
+    expect(state.chatMessages[1].path).toEqual({ nodeIds: payload.subgraph.nodeIds, edgeIds: payload.subgraph.edgeIds });
     expect(state.chatMessages[1].loading).toBe(false);
   });
 
@@ -74,7 +81,7 @@ describe("sendChat GraphRAG", () => {
       vi.fn().mockResolvedValue(
         jsonResponse({
           answer: "I couldn't find relevant content in the graph for that question.",
-          sources: [],
+          citations: [],
         }),
       ),
     );
@@ -83,7 +90,7 @@ describe("sendChat GraphRAG", () => {
 
     const messages = useGraphStore.getState().chatMessages;
     expect(messages[1].content).toContain("couldn't find relevant content");
-    expect(messages[1].sources).toEqual([]);
+    expect(messages[1].citations).toEqual([]);
     expect(messages[1].loading).toBe(false);
   });
 
@@ -94,7 +101,7 @@ describe("sendChat GraphRAG", () => {
 
     const messages = useGraphStore.getState().chatMessages;
     expect(messages[1].content).toContain("I couldn't reach the graph");
-    expect(messages[1].sources).toEqual([]);
+    expect(messages[1].citations).toEqual([]);
     expect(messages[1].loading).toBe(false);
     expect(useGraphStore.getState().toast?.tone).toBe("error");
   });

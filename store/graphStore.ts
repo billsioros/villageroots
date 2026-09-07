@@ -14,7 +14,7 @@ import type {
   NodeType,
   EdgeKind,
   ChatMessage,
-  ChatSource,
+  Citation,
   Toast,
   ZoomIntent,
   PanIntent,
@@ -139,6 +139,11 @@ export interface GraphStore {
 }
 
 const SOURCES_MARKER = "\n---SOURCES---\n";
+
+function subgraphFromCitations(citations: Citation[]): { nodeIds: string[]; edgeIds: string[] } {
+  const nodeIds = Array.from(new Set(citations.map((c) => c.nodeId)));
+  return { nodeIds, edgeIds: [] };
+}
 
 const CHAT_FALLBACK = "Sorry — I couldn't reach the graph right now. Please try again.";
 
@@ -411,8 +416,8 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
 
       const contentType = res.headers.get("content-type") ?? "";
       if (contentType.includes("application/json")) {
-        const data = (await res.json()) as { answer?: string; sources?: ChatSource[] };
-        patchAssistant({ content: data.answer ?? "", sources: data.sources ?? [], loading: false });
+        const data = (await res.json()) as { answer?: string; citations?: Citation[] };
+        patchAssistant({ content: data.answer ?? "", citations: data.citations ?? [], loading: false });
         return;
       }
 
@@ -427,23 +432,40 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
         patchAssistant({ content: buffer.split(SOURCES_MARKER)[0] });
       }
       const markerIdx = buffer.indexOf(SOURCES_MARKER);
-      let sources: ChatSource[] = [];
+      let citations: Citation[] = [];
+      let path: { nodeIds: string[]; edgeIds: string[] } | undefined;
       if (markerIdx !== -1) {
         try {
-          const parsed = JSON.parse(buffer.slice(markerIdx + SOURCES_MARKER.length)) as unknown;
-          sources = Array.isArray(parsed) ? (parsed as ChatSource[]) : [];
+          const parsed = JSON.parse(
+            buffer.slice(markerIdx + SOURCES_MARKER.length),
+          ) as {
+            citations?: Citation[];
+            subgraph?: { nodeIds: string[]; edgeIds: string[]; citedNodeIds: string[] };
+          };
+          citations = Array.isArray(parsed.citations) ? parsed.citations : [];
+          if (
+            parsed.subgraph &&
+            Array.isArray(parsed.subgraph.nodeIds) &&
+            Array.isArray(parsed.subgraph.edgeIds)
+          ) {
+            path = { nodeIds: parsed.subgraph.nodeIds, edgeIds: parsed.subgraph.edgeIds };
+          } else {
+            const derived = subgraphFromCitations(citations);
+            if (derived.nodeIds.length) path = derived;
+          }
         } catch {
-          sources = [];
+          citations = [];
         }
       }
       patchAssistant({
         content: markerIdx === -1 ? buffer : buffer.slice(0, markerIdx),
-        sources,
+        citations,
+        ...(path ? { path } : {}),
         loading: false,
       });
     } catch (err) {
       console.error("[chat] failed", err);
-      patchAssistant({ content: CHAT_FALLBACK, sources: [], loading: false });
+      patchAssistant({ content: CHAT_FALLBACK, citations: [], loading: false });
       const status = err instanceof Error ? (err as Error & { status?: number }).status : undefined;
       get().pushToast({
         tone: "error",
