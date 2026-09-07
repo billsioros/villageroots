@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { drizzle } from "drizzle-orm/postgres-js";
+import { edges } from "@/drizzle/schema";
 import { matchNodesByVector, fetchOneHopNeighbors } from "@/lib/graph/combined-search";
 
 const mocks = vi.hoisted(() => ({
@@ -46,11 +48,14 @@ describe("matchNodesByVector", () => {
 });
 
 describe("fetchOneHopNeighbors", () => {
-  it("returns neighbor rows for a set of node ids", async () => {
-    const edgeSelect = {
-      from: () => ({
-        innerJoin: () => ({
-          where: () => ({
+  let capturedWhere: unknown;
+
+  const edgeSelect = {
+    from: () => ({
+      innerJoin: () => ({
+        where: (whereArg: unknown) => {
+          capturedWhere = whereArg;
+          return {
             limit: async () => [
               {
                 edgeId: "e1",
@@ -61,23 +66,39 @@ describe("fetchOneHopNeighbors", () => {
                 sourceType: null,
               },
             ],
-          }),
-        }),
+          };
+        },
       }),
-    };
-    const nodeSelect = {
-      from: () => ({
-        where: () => ({
-          then: async (cb: (rows: unknown[]) => unknown) =>
-            cb([{ id: "n2", label: "Marika", type: "person" }]),
-        }),
+    }),
+  };
+  const nodeSelect = {
+    from: () => ({
+      where: () => ({
+        then: async (cb: (rows: unknown[]) => unknown) =>
+          cb([{ id: "n2", label: "Marika", type: "person" }]),
       }),
-    };
+    }),
+  };
+
+  it("returns neighbor rows for a set of node ids", async () => {
     mocks.dbSelect.mockReturnValueOnce(edgeSelect);
     mocks.dbSelect.mockReturnValueOnce(nodeSelect);
     const out = await fetchOneHopNeighbors(["n1"]);
     expect(out[0].neighborLabel).toBe("Marika");
     expect(out[0].verb).toBe("related_to");
     expect(out[0].neighborType).toBe("person");
+  });
+
+  it("filters edges by source or target in the node list using parametrized inArray, not a raw array literal", async () => {
+    mocks.dbSelect.mockReturnValueOnce(edgeSelect);
+    mocks.dbSelect.mockReturnValueOnce(nodeSelect);
+    await fetchOneHopNeighbors(["n1", "n2"]);
+
+    const realDb = drizzle({ connection: { host: "x", port: 1, user: "x", password: "x", database: "x" } });
+    const generated = (realDb.select().from(edges).where(capturedWhere as never).toSQL()).sql;
+    expect(generated).toContain("in (");
+    expect(generated).toContain("$2, $3");
+    expect(generated).not.toContain("::uuid[]");
+    expect(generated).not.toContain("ANY(");
   });
 });

@@ -1,4 +1,4 @@
-import { and, or, eq, sql } from "drizzle-orm";
+import { and, or, eq, sql, inArray } from "drizzle-orm";
 import { db } from "./db";
 import { edges, nodes } from "@/drizzle/schema";
 
@@ -81,10 +81,7 @@ export async function fetchOneHopNeighbors(nodeIds: string[]): Promise<OneHop[]>
     .where(
       and(
         eq(edges.status, "approved"),
-        or(
-          sql`${edges.sourceId} = ANY(${nodeIds}::uuid[])`,
-          sql`${edges.targetId} = ANY(${nodeIds}::uuid[])`,
-        ),
+        or(inArray(edges.sourceId, nodeIds), inArray(edges.targetId, nodeIds)),
       ),
     )
     .limit(100)) as unknown as OneHopRow[];
@@ -92,7 +89,7 @@ export async function fetchOneHopNeighbors(nodeIds: string[]): Promise<OneHop[]>
   const neighbors = await db
     .select({ id: nodes.id, label: nodes.label, type: nodes.type })
     .from(nodes)
-    .where(sql`${nodes.id} = ANY(${nodeIds}::uuid[])`)
+    .where(inArray(nodes.id, nodeIds))
     .then((rows) => new Map(rows.map((r) => [r.id, r])));
 
   const out: OneHop[] = [];
