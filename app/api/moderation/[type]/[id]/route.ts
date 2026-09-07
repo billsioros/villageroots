@@ -6,6 +6,7 @@ import { sessionUid } from "@/lib/graph/session";
 import { isAdminUid } from "@/lib/graph/admin";
 import { applyModeration, type ModerationAction } from "@/lib/graph/moderation";
 import { logAudit } from "@/lib/graph/audit";
+import { ingestEmbedding } from "@/lib/graph/ingest";
 import type { Status } from "@/lib/graph/types";
 
 const TABLE = {
@@ -85,6 +86,13 @@ export async function POST(
     await logAudit("status_change", entityType, id, {
       statusBefore: current[0].status,
       statusAfter: status,
+    });
+  }
+
+  // Embed approved nodes into the vector store (fire-and-forget, never blocks moderation)
+  if (type === "nodes" && action === "approve" && changed) {
+    void ingestEmbedding(id).catch((err) => {
+      console.error("[ingest] embedding failed for node", id, err);
     });
   }
 
