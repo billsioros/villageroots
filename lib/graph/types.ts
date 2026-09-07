@@ -67,19 +67,31 @@ export interface SuggestedEdge extends GraphEdge {
   confidence: number;
 }
 
-export type ChatRole = "user" | "assistant";
+export type CitationOrigin = "retrieved" | "neighbor";
 
-export interface ChatSource {
+export interface Citation {
   label: string;
   nodeId: string;
+  nodeType: string | null;
+  slug: string;
+  similarity: number;
+  origin: CitationOrigin;
 }
+
+export interface Subgraph {
+  nodeIds: string[];
+  edgeIds: string[];
+  citedNodeIds: string[];
+}
+
+export type ChatRole = "user" | "assistant";
 
 export interface ChatMessage {
   id: string;
   role: ChatRole;
   content: string;
   path?: { nodeIds: string[]; edgeIds: string[] };
-  sources?: ChatSource[];
+  citations?: Citation[];
   loading?: boolean;
 }
 
