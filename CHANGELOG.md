@@ -1,3 +1,10 @@
+# [1.26.0](https://github.com/billsioros/villageroots/compare/v1.25.0...v1.26.0) (2026-09-07)
+
+
+### Features
+
+* PTDN-55 PTDN-31 PTDN-32 GraphRAG embedding pipeline ([#45](https://github.com/billsioros/villageroots/issues/45)) ([80a5097](https://github.com/billsioros/villageroots/commit/80a50976e9fedb79fe303e42571d19b4951b993b))
+
 # [1.25.0](https://github.com/billsioros/villageroots/compare/v1.24.0...v1.25.0) (2026-09-06)
 
 
