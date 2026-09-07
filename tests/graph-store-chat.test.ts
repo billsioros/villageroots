@@ -75,6 +75,28 @@ describe("sendChat GraphRAG", () => {
     expect(state.chatMessages[1].loading).toBe(false);
   });
 
+  it("derives the path from citations when the stream payload omits subgraph", async () => {
+    const citations = [
+      { label: "The Mill", nodeId: "l-mill", nodeType: "landmark", slug: "l-mill", similarity: 0.9, origin: "retrieved" as const },
+      { label: "Adjacent House", nodeId: "n-adjacent", nodeType: "person", slug: "n-adjacent", similarity: 0.8, origin: "neighbor" as const },
+      { label: "The Mill (again)", nodeId: "l-mill", nodeType: "landmark", slug: "l-mill", similarity: 0.7, origin: "retrieved" as const },
+    ];
+    const fetchMock = vi.fn().mockResolvedValue(
+      streamResponse(
+        "The mill was built in 1850.\n---SOURCES---\n" + JSON.stringify({ citations }),
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await useGraphStore.getState().sendChat("Tell me about the mill");
+
+    const message = useGraphStore.getState().chatMessages[1];
+    expect(message.content).toBe("The mill was built in 1850.");
+    expect(message.citations).toEqual(citations);
+    expect(message.path).toEqual({ nodeIds: ["l-mill", "n-adjacent"], edgeIds: [] });
+    expect(message.loading).toBe(false);
+  });
+
   it("handles a JSON no-match response from the endpoint", async () => {
     vi.stubGlobal(
       "fetch",
@@ -92,6 +114,28 @@ describe("sendChat GraphRAG", () => {
     expect(messages[1].content).toContain("couldn't find relevant content");
     expect(messages[1].citations).toEqual([]);
     expect(messages[1].loading).toBe(false);
+  });
+
+  it("parses citations from a JSON response", async () => {
+    const citations = [
+      { label: "The Mill", nodeId: "l-mill", nodeType: "landmark", slug: "l-mill", similarity: 0.9, origin: "retrieved" as const },
+    ];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          answer: "I found the mill in the graph.",
+          citations,
+        }),
+      ),
+    );
+
+    await useGraphStore.getState().sendChat("something");
+
+    const message = useGraphStore.getState().chatMessages[1];
+    expect(message.content).toBe("I found the mill in the graph.");
+    expect(message.citations).toEqual(citations);
+    expect(message.loading).toBe(false);
   });
 
   it("shows a fallback message when the endpoint fails", async () => {
