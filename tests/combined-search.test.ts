@@ -19,11 +19,11 @@ const vector = Array(2048).fill(0.1);
 
 describe("matchNodesByVector", () => {
   const sqlText = (arg: unknown): string =>
-    (arg as any).queryChunks
-      .map((c: any) => (c && typeof c === "object" && c.value !== undefined ? c.value : ""))
+    (arg as { queryChunks: { value?: unknown }[] }).queryChunks
+      .map((c) => (c && typeof c === "object" && c.value !== undefined ? String(c.value) : ""))
       .join("");
   const sqlValues = (arg: unknown): unknown[] =>
-    (arg as any).queryChunks.filter((c: unknown) => c === null || typeof c !== "object");
+    (arg as { queryChunks: unknown[] }).queryChunks.filter((c: unknown) => c === null || typeof c !== "object");
 
   it("passes the query vector with defaults", async () => {
     mocks.dbExecute.mockResolvedValue([

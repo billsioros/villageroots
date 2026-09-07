@@ -99,11 +99,10 @@ export async function fetchOneHopNeighbors(nodeIds: string[]): Promise<OneHop[]>
   for (const r of rows) {
     const sourceIn = wanted.has(r.sourceId);
     const targetIn = wanted.has(r.targetId);
-    let neighborId: string;
     if (sourceIn && targetIn) {
       continue;
     }
-    neighborId = sourceIn ? r.targetId : r.sourceId;
+    const neighborId = sourceIn ? r.targetId : r.sourceId;
     const neighbor = neighbors.get(neighborId);
     out.push({
       edgeId: r.edgeId,
