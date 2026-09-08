@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { edges } from "@/drizzle/schema";
-import { matchNodesByVector, fetchOneHopNeighbors } from "@/lib/graph/combined-search";
+import { matchNodesByVector, fetchOneHopNeighbors, fetchNodeBodies } from "@/lib/graph/combined-search";
 
 const mocks = vi.hoisted(() => ({
   dbExecute: vi.fn(),
@@ -100,5 +100,40 @@ describe("fetchOneHopNeighbors", () => {
     expect(generated).toContain("$2, $3");
     expect(generated).not.toContain("::uuid[]");
     expect(generated).not.toContain("ANY(");
+  });
+});
+
+describe("fetchNodeBodies", () => {
+  const bodySelect = {
+    from: () => ({
+      where: () => ({
+        then: async (cb: (rows: unknown[]) => unknown) =>
+          cb([
+            {
+              id: "n1",
+              description: "Second-generation miller.",
+              documentContent: {
+                type: "doc",
+                content: [
+                  { type: "heading", content: [{ type: "text", text: "Test information" }] },
+                ],
+              },
+            },
+            { id: "n2", description: null, documentContent: null },
+          ]),
+      }),
+    }),
+  };
+
+  it("builds plain text from description and rich text content", async () => {
+    mocks.dbSelect.mockReturnValueOnce(bodySelect);
+    const out = await fetchNodeBodies(["n1", "n2"]);
+    expect(out.n1).toContain("Second-generation miller.");
+    expect(out.n1).toContain("Test information");
+    expect(out.n2).toBeUndefined();
+  });
+
+  it("returns an empty map when no ids are given", async () => {
+    await expect(fetchNodeBodies([])).resolves.toEqual({});
   });
 });

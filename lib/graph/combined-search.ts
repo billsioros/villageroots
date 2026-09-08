@@ -1,6 +1,7 @@
 import { and, or, eq, sql, inArray } from "drizzle-orm";
 import { db } from "./db";
 import { edges, nodes } from "@/drizzle/schema";
+import { richTextToText } from "./rich-text-to-text";
 
 export interface MatchNode {
   nodeId: string;
@@ -62,6 +63,21 @@ export async function matchNodesByVector(
     similarity: r.similarity,
     contentHash: r.content_hash,
   }));
+}
+
+export async function fetchNodeBodies(nodeIds: string[]): Promise<Record<string, string>> {
+  if (nodeIds.length === 0) return {};
+  const rows = await db
+    .select({ id: nodes.id, description: nodes.description, documentContent: nodes.documentContent })
+    .from(nodes)
+    .where(inArray(nodes.id, nodeIds));
+  const out: Record<string, string> = {};
+  for (const r of rows) {
+    const docText = r.documentContent ? richTextToText(r.documentContent) : "";
+    const text = [r.description, docText].filter((p) => p?.trim()).join("\n").trim();
+    if (text) out[r.id] = text;
+  }
+  return out;
 }
 
 export async function fetchOneHopNeighbors(nodeIds: string[]): Promise<OneHop[]> {

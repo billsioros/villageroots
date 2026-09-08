@@ -68,6 +68,9 @@ export function GraphCanvas() {
   const setZoomPct = useGraphStore((s) => s.setZoomPct);
   const setZoomIntent = useGraphStore((s) => s.setZoomIntent);
   const setPanIntent = useGraphStore((s) => s.setPanIntent);
+  const focusNodeIds = useGraphStore((s) => s.focusNodeIds);
+  const focusNonce = useGraphStore((s) => s.focusNonce);
+  const clearFocus = useGraphStore((s) => s.clearFocus);
   const setCanvasCenter = useGraphStore((s) => s.setCanvasCenter);
   const forceConfig = useGraphStore((s) => s.forceConfig);
   const activeView = useGraphStore((s) => s.activeView);
@@ -284,6 +287,13 @@ export function GraphCanvas() {
     }
     setPanIntent(null);
   }, [panIntent, setPanIntent, nodes]);
+
+  useEffect(() => {
+    const fg = graphRef.current;
+    if (!fg || focusNodeIds.length === 0) return;
+    fg.zoomToFit(600, 60, (node: { id?: string }) => focusNodeIds.includes(node.id ?? ""));
+    clearFocus();
+  }, [focusNodeIds, focusNonce, clearFocus]);
 
   // --- custom forces, engine stop, initial fit ---
   useEffect(() => {
