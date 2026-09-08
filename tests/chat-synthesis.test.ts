@@ -57,4 +57,45 @@ describe("synthesizeChat", () => {
       synthesizeChat({ question: "q", matches, hops, fetchImpl: fetchImpl as unknown as typeof fetch }),
     ).rejects.toThrow();
   });
+
+  it("retries once when the first completion has no content", async () => {
+    const contentless = {
+      ok: true,
+      status: 200,
+      json: async () => ({ choices: [{ message: { content: null } }] }),
+    };
+    const good = {
+      ok: true,
+      status: 200,
+      json: async () => ({ choices: [{ message: { content: "Yiannis was a mason." } }] }),
+    };
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(contentless)
+      .mockResolvedValueOnce(good);
+    const out = await synthesizeChat({
+      question: "q",
+      matches,
+      hops,
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+    expect(out).toBe("Yiannis was a mason.");
+    expect(fetchImpl.mock.calls.length).toBe(2);
+  });
+
+  it("throws with the routed model when both attempts return no content", async () => {
+    const contentless = {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        model: "deepseek/deepseek-v4-flash-0731",
+        choices: [{ message: { content: null, reasoning: "..." } }],
+      }),
+    };
+    const fetchImpl = vi.fn().mockResolvedValue(contentless);
+    await expect(
+      synthesizeChat({ question: "q", matches, hops, fetchImpl: fetchImpl as unknown as typeof fetch }),
+    ).rejects.toThrow(/no completion.*deepseek\/deepseek-v4-flash-0731/);
+    expect(fetchImpl.mock.calls.length).toBe(2);
+  });
 });

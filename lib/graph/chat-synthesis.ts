@@ -47,26 +47,40 @@ export async function synthesizeChat(params: {
   if (!apiKey) throw new Error("OPENROUTER_API_KEY is not set");
 
   const content = buildChatContext(params.question, params.matches, params.hops);
-  const res = await fetchImpl(CHAT_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: CHAT_MODEL,
-      messages: [
-        { role: "system", content },
-      ],
-    }),
-  });
-  if (!res.ok) {
-    throw new Error(`OpenRouter chat failed: ${res.status} ${(await res.text()).slice(0, 200)}`);
-  }
-  const payload = (await res.json()) as {
-    choices?: { message?: { content?: string } }[];
+  const body = {
+    model: CHAT_MODEL,
+    messages: [
+      { role: "system", content },
+    ],
   };
-  const text = payload.choices?.[0]?.message?.content;
-  if (text == null) throw new Error("OpenRouter returned no completion");
-  return text;
+
+  const requestCompletion = async (): Promise<{
+    text: string | null;
+    model?: string;
+  }> => {
+    const res = await fetchImpl(CHAT_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      throw new Error(`OpenRouter chat failed: ${res.status} ${(await res.text()).slice(0, 200)}`);
+    }
+    const payload = (await res.json()) as {
+      model?: string;
+      choices?: { message?: { content?: string } }[];
+    };
+    return { text: payload.choices?.[0]?.message?.content ?? null, model: payload.model };
+  };
+
+  const first = await requestCompletion();
+  const second = first.text != null ? first : await requestCompletion();
+  if (second.text == null) {
+    const model = second.model ?? CHAT_MODEL;
+    throw new Error(`OpenRouter returned no completion (model=${model})`);
+  }
+  return second.text;
 }
