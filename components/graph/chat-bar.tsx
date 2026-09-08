@@ -1,7 +1,9 @@
 "use client";
 
+import { useRef } from "react";
 import { Send, Trash2 } from "lucide-react";
 import { useGraphStore } from "@/store/graphStore";
+import type { ChatMessage } from "@/lib/graph/types";
 import { MarkdownAnswer } from "./markdown-answer";
 import { CitationGraphButton } from "./citation";
 
@@ -20,6 +22,10 @@ export function ChatBar() {
   const question = previous?.role === "user" ? previous.content : "";
   const expanded = Boolean(latest);
 
+  const heldRef = useRef<{ latest: ChatMessage; question: string }>(undefined);
+  if (expanded) heldRef.current = { latest, question };
+  const display = expanded ? { latest, question } : heldRef.current;
+
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-5 z-40 flex justify-center px-4">
       <div
@@ -30,10 +36,12 @@ export function ChatBar() {
         }`}
       >
         <div className="min-h-0 overflow-y-auto">
-          {expanded && (
+          {display && (
             <div className="mb-3 flex flex-col items-start gap-2">
-              {question && <p className="text-sm font-medium text-muted-foreground">{question}</p>}
-              {latest.loading ? (
+              {display.question && (
+                <p className="text-sm font-medium text-muted-foreground">{display.question}</p>
+              )}
+              {display.latest.loading ? (
                 <div className="flex h-6 items-center gap-1.5" aria-label="Searching the graph">
                   {[0, 1, 2].map((i) => (
                     <span
@@ -45,19 +53,22 @@ export function ChatBar() {
                 </div>
               ) : (
                 <>
-                  <MarkdownAnswer content={latest.content} citations={latest.citations ?? []} />
+                  <MarkdownAnswer
+                    content={display.latest.content}
+                    citations={display.latest.citations ?? []}
+                  />
                   <CitationGraphButton
-                    hasCitations={(latest.citations?.length ?? 0) > 0}
+                    hasCitations={(display.latest.citations?.length ?? 0) > 0}
                     onClick={() => {
-                      const path = latest.path ?? {
-                        nodeIds: (latest.citations ?? []).map((c) => c.nodeId),
+                      const path = display.latest.path ?? {
+                        nodeIds: (display.latest.citations ?? []).map((c) => c.nodeId),
                         edgeIds: [],
                       };
                       if (path.nodeIds.length > 0) {
                         litPath(path);
                         focusSubgraph(path.nodeIds);
-                      } else if (latest.citations?.length) {
-                        flashNodes(latest.citations.map((c) => c.nodeId));
+                      } else if (display.latest.citations?.length) {
+                        flashNodes(display.latest.citations.map((c) => c.nodeId));
                       }
                     }}
                   />
