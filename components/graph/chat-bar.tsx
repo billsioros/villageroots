@@ -26,17 +26,24 @@ export function ChatBar() {
   if (expanded) heldRef.current = { latest, question };
   const display = expanded ? { latest, question } : heldRef.current;
 
-  const [contentVisible, setContentVisible] = useState(false);
+  const [boxOpen, setBoxOpen] = useState(false);
+  const [textVisible, setTextVisible] = useState(false);
   useEffect(() => {
-    const id = requestAnimationFrame(() => setContentVisible(expanded));
-    return () => cancelAnimationFrame(id);
+    if (expanded) {
+      setBoxOpen(true);
+      const t = setTimeout(() => setTextVisible(true), 300);
+      return () => clearTimeout(t);
+    }
+    setTextVisible(false);
+    const t = setTimeout(() => setBoxOpen(false), 200);
+    return () => clearTimeout(t);
   }, [expanded]);
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-5 z-40 flex justify-center px-4">
       <div
         className={`pointer-events-auto grid transition-[grid-template-rows,border-radius] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          expanded
+          boxOpen
             ? "w-[42rem] max-w-[92vw] max-h-[60vh] grid-rows-[1fr] rounded-2xl border bg-card/90 p-3 shadow-elev-raised backdrop-blur"
             : "grid-rows-[0fr] w-[42rem] max-w-[92vw] rounded-full border bg-card/90 px-3 py-2 shadow-elev-raised backdrop-blur"
         }`}
@@ -45,7 +52,7 @@ export function ChatBar() {
           {display && (
             <div
               className={`mb-3 flex flex-col items-start gap-2 transition-opacity duration-200 ${
-                contentVisible ? "opacity-100" : "opacity-0"
+                textVisible ? "opacity-100" : "opacity-0"
               }`}
             >
               {display.question && (
