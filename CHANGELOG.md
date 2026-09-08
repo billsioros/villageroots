@@ -1,3 +1,10 @@
+# [1.27.0](https://github.com/billsioros/villageroots/compare/v1.26.0...v1.27.0) (2026-09-08)
+
+
+### Features
+
+* PTDN-62 GraphRAG citations, subgraph highlighting, and chat polish ([#46](https://github.com/billsioros/villageroots/issues/46)) ([58a5024](https://github.com/billsioros/villageroots/commit/58a5024ac5888f443b1fff08738e7138eaf72b74))
+
 # [1.26.0](https://github.com/billsioros/villageroots/compare/v1.25.0...v1.26.0) (2026-09-07)
 
 
