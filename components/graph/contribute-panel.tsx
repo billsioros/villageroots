@@ -254,7 +254,7 @@ export default function ContributePanel() {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-[680px]">
+      <DialogContent className="w-full max-w-5xl">
         <DialogHeader>
           <DialogTitle>Add to the map</DialogTitle>
           <DialogDescription>Add entries and link each one to the map.</DialogDescription>

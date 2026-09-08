@@ -54,7 +54,7 @@ export function SearchPop() {
   };
 
   return (
-    <ModalShell title="Search" onClose={() => setSearchOpen(false)} className="w-full max-w-5xl">
+    <ModalShell title="Search" onClose={() => setSearchOpen(false)} className="w-full max-w-3xl">
       <div>
         <div className="flex items-center gap-3 rounded-xl border bg-surface-warm px-4 py-3">
           <Search size={16} className="text-muted-foreground" />
