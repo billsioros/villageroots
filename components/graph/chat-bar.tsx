@@ -23,7 +23,7 @@ export function ChatBar() {
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-5 z-40 flex justify-center px-4">
       <div
-        className={`pointer-events-auto grid transition-all duration-300 ease-vrr ${
+        className={`pointer-events-auto grid transition-[grid-template-rows] duration-300 ease-vrr ${
           expanded
             ? "w-[42rem] max-w-[92vw] max-h-[60vh] grid-rows-[1fr] rounded-2xl border bg-card/90 p-3 shadow-elev-raised backdrop-blur"
             : "grid-rows-[0fr] w-full max-w-xl rounded-full border bg-card/90 px-3 py-2 shadow-elev-raised backdrop-blur"
