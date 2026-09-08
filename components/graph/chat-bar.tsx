@@ -45,7 +45,7 @@ export function ChatBar() {
         className={`pointer-events-auto grid transition-[grid-template-rows,border-radius] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
           boxOpen
             ? "w-[42rem] max-w-[92vw] max-h-[60vh] grid-rows-[1fr] rounded-2xl border bg-card/90 p-3 shadow-elev-raised backdrop-blur"
-            : "grid-rows-[0fr] w-[42rem] max-w-[92vw] rounded-[1.8rem] border bg-card/90 px-3 py-2 shadow-elev-raised backdrop-blur"
+            : "grid-rows-[0fr] w-[42rem] max-w-[92vw] rounded-[1.8rem] border bg-card/90 p-3 shadow-elev-raised backdrop-blur"
         }`}
       >
         <div className="min-h-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
