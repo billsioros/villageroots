@@ -32,13 +32,13 @@ export function ChatBar() {
         className={`pointer-events-auto grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
           expanded
             ? "w-[42rem] max-w-[92vw] max-h-[60vh] grid-rows-[1fr] rounded-2xl border bg-card/90 p-3 shadow-elev-raised backdrop-blur"
-            : "grid-rows-[0fr] w-full max-w-xl rounded-full border bg-card/90 px-3 py-2 shadow-elev-raised backdrop-blur"
+            : "grid-rows-[0fr] w-[42rem] max-w-[92vw] rounded-full border bg-card/90 px-3 py-2 shadow-elev-raised backdrop-blur"
         }`}
       >
-        <div className="min-h-0 overflow-y-auto">
+        <div className="min-h-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {display && (
             <div
-              className={`mb-3 flex flex-col items-start gap-2 transition-opacity duration-300 ${
+              className={`mb-3 flex flex-col items-start gap-2 transition-opacity duration-100 ${
                 expanded ? "opacity-100" : "opacity-0"
               }`}
             >
