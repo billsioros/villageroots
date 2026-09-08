@@ -28,6 +28,20 @@ describe("buildChatContext", () => {
     expect(ctx).toMatch(/Do not include node IDs or UUIDs/);
   });
 
+  it("includes the node body text in numbered Node details", () => {
+    const ctx = buildChatContext("What does Yiannis do?", matches, hops, undefined, {
+      n1: "Second-generation miller.\nTest information",
+    });
+    expect(ctx).toContain("Node details:");
+    expect(ctx).toContain("### 1. Yiannis");
+    expect(ctx).toContain("Test information");
+  });
+
+  it("omits the Node details block when no body text is available", () => {
+    const ctx = buildChatContext("Who was Yiannis?", matches, hops);
+    expect(ctx).not.toContain("Node details:");
+  });
+
   it("embeds previous conversation after the evidence and before the question", () => {
     const context = buildChatContext("And his brother?", matches, hops, [
       { question: "Who was Yiannis?", answer: "A poet." },

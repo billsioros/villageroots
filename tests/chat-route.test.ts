@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   embedText: vi.fn(),
   matchNodesByVector: vi.fn(),
   fetchOneHopNeighbors: vi.fn(),
+  fetchNodeBodies: vi.fn(),
   synthesizeChat: vi.fn(),
   parseCitations: vi.fn(),
 }));
@@ -17,6 +18,7 @@ vi.mock("@/lib/graph/embeddings", () => ({ embedText: mocks.embedText }));
 vi.mock("@/lib/graph/combined-search", () => ({
   matchNodesByVector: mocks.matchNodesByVector,
   fetchOneHopNeighbors: mocks.fetchOneHopNeighbors,
+  fetchNodeBodies: mocks.fetchNodeBodies,
 }));
 vi.mock("@/lib/graph/chat-synthesis", () => ({ synthesizeChat: mocks.synthesizeChat }));
 vi.mock("@/lib/graph/citations", () => ({
@@ -33,6 +35,7 @@ const mreq = (body: unknown) =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.fetchNodeBodies.mockResolvedValue({});
   mocks.parseCitations.mockImplementation((answer: string) => ({
     text: answer,
     citations: [],

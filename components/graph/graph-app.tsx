@@ -34,6 +34,7 @@ export function GraphApp() {
   const clearSelection = useGraphStore((s) => s.clearSelection);
   const setSearchOpen = useGraphStore((s) => s.setSearchOpen);
   const setNewNodeOpen = useGraphStore((s) => s.setNewNodeOpen);
+  const clearChat = useGraphStore((s) => s.clearChat);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -49,11 +50,12 @@ export function GraphApp() {
         if (ocrOpen) return;
         clearSelection();
         setSearchOpen(false);
+        clearChat();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [aboutOpen, adminDialogOpen, profileOpen, newNodeOpen, ocrOpen, clearSelection, setSearchOpen, setNewNodeOpen]);
+  }, [aboutOpen, adminDialogOpen, profileOpen, newNodeOpen, ocrOpen, clearSelection, setSearchOpen, setNewNodeOpen, clearChat]);
 
   return (
     <GraphLoader>

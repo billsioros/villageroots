@@ -9,10 +9,15 @@ export function buildChatContext(
   matches: MatchNode[],
   hops: OneHop[],
   history?: ChatHistoryItem[],
+  nodeBodies: Record<string, string> = {},
 ): string {
   const nodeLines = matches.map(
     (m, i) => `${i + 1}. ${m.label} [${m.nodeId}] (${m.nodeType ?? "unknown"}, relevance ${m.similarity.toFixed(2)})`,
   );
+  const detailsBlock = matches
+    .map((m, i) => ({ index: i, body: nodeBodies[m.nodeId]?.trim() ?? "" }))
+    .filter((d) => d.body.length > 0)
+    .map((d) => `### ${d.index + 1}. ${matches[d.index].label}\n${d.body}`);
   const hopLines = hops.map(
     (h) => `- ${h.sourceId} ${h.verb} ${h.targetId} (${h.neighborLabel})`,
   );
@@ -37,6 +42,7 @@ export function buildChatContext(
     "",
     "Observed relationships:",
     hopLines.length ? hopLines.join("\n") : "(none)",
+    ...(detailsBlock.length ? ["", "Node details:", ...detailsBlock] : []),
     "",
     ...historyBlock,
     "",
@@ -53,13 +59,20 @@ export async function synthesizeChat(params: {
   matches: MatchNode[];
   hops: OneHop[];
   history?: ChatHistoryItem[];
+  nodeBodies?: Record<string, string>;
   fetchImpl?: typeof fetch;
 }): Promise<string> {
   const fetchImpl = params.fetchImpl ?? fetch;
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error("OPENROUTER_API_KEY is not set");
 
-  const content = buildChatContext(params.question, params.matches, params.hops, params.history);
+  const content = buildChatContext(
+    params.question,
+    params.matches,
+    params.hops,
+    params.history,
+    params.nodeBodies,
+  );
   const body = {
     model: CHAT_MODEL,
     messages: [

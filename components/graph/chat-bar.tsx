@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Send, Trash2 } from "lucide-react";
 import { useGraphStore } from "@/store/graphStore";
 import { MarkdownAnswer } from "./markdown-answer";
@@ -8,13 +7,13 @@ import { CitationGraphButton } from "./citation";
 
 export function ChatBar() {
   const messages = useGraphStore((s) => s.chatMessages);
+  const chatInput = useGraphStore((s) => s.chatInput);
   const setChatInput = useGraphStore((s) => s.setChatInput);
   const sendChat = useGraphStore((s) => s.sendChat);
   const clearChat = useGraphStore((s) => s.clearChat);
   const litPath = useGraphStore((s) => s.litPath);
   const flashNodes = useGraphStore((s) => s.flashNodes);
   const focusSubgraph = useGraphStore((s) => s.focusSubgraph);
-  const [value, setValue] = useState("");
 
   const latest = messages[messages.length - 1];
   const previous = messages[messages.length - 2];
@@ -78,20 +77,17 @@ export function ChatBar() {
             <Trash2 size={15} />
           </button>
           <input
-            value={value}
-            onChange={(e) => {
-              setValue(e.target.value);
-              setChatInput(e.target.value);
-            }}
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && value.trim()) submit();
+              if (e.key === "Enter" && chatInput.trim()) submit();
             }}
             placeholder="Ask about people, places, stories…"
             className="h-10 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
           <button
             type="button"
-            disabled={!value.trim()}
+            disabled={!chatInput.trim()}
             onClick={() => submit()}
             aria-label="Send"
             className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground transition-opacity disabled:opacity-40"
@@ -104,9 +100,9 @@ export function ChatBar() {
   );
 
   function submit() {
-    const text = value.trim();
+    const text = chatInput.trim();
     if (!text) return;
     sendChat(text);
-    setValue("");
+    setChatInput("");
   }
 }

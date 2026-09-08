@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sessionUid } from "@/lib/graph/session";
 import { embedText } from "@/lib/graph/embeddings";
-import { matchNodesByVector, fetchOneHopNeighbors } from "@/lib/graph/combined-search";
+import { matchNodesByVector, fetchOneHopNeighbors, fetchNodeBodies } from "@/lib/graph/combined-search";
 import { synthesizeChat } from "@/lib/graph/chat-synthesis";
 import { normalizeHistory } from "@/lib/graph/chat-history";
 import { parseCitations, buildSubgraphFromPath } from "@/lib/graph/citations";
@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
 
     const nodeIds = matches.map((m) => m.nodeId);
     const hops = await fetchOneHopNeighbors(nodeIds);
+    const nodeBodies = await fetchNodeBodies(nodeIds);
 
     const retrieved: Citation[] = matches.map((m) => ({
       label: m.label,
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const answer = await synthesizeChat({ question, matches, hops, history });
+    const answer = await synthesizeChat({ question, matches, hops, history, nodeBodies });
     const { text, citations } = parseCitations(answer, { retrieved, neighbors });
     const subgraph = buildSubgraphFromPath(citations, hops);
 
