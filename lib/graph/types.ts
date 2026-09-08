@@ -95,6 +95,8 @@ export interface ChatMessage {
   loading?: boolean;
 }
 
+export type ChatHistoryItem = { question: string; answer: string };
+
 export type ToastTone = "info" | "error" | "success";
 
 export interface Toast {

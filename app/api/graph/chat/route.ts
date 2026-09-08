@@ -3,6 +3,7 @@ import { sessionUid } from "@/lib/graph/session";
 import { embedText } from "@/lib/graph/embeddings";
 import { matchNodesByVector, fetchOneHopNeighbors } from "@/lib/graph/combined-search";
 import { synthesizeChat } from "@/lib/graph/chat-synthesis";
+import { normalizeHistory } from "@/lib/graph/chat-history";
 import { parseCitations, buildSubgraphFromPath } from "@/lib/graph/citations";
 import type { Citation } from "@/lib/graph/types";
 
@@ -11,12 +12,14 @@ export async function POST(request: NextRequest) {
   if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   let question: string;
+  let history: ReturnType<typeof normalizeHistory>;
   try {
-    const body = (await request.json()) as { question?: unknown };
+    const body = (await request.json()) as { question?: unknown; history?: unknown };
     if (typeof body.question !== "string" || body.question.trim().length === 0) {
       throw new Error("bad question");
     }
     question = body.question.trim();
+    history = normalizeHistory(body.history);
   } catch {
     return NextResponse.json({ error: "Question is required" }, { status: 400 });
   }
@@ -61,7 +64,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const answer = await synthesizeChat({ question, matches, hops });
+    const answer = await synthesizeChat({ question, matches, hops, history });
     const { text, citations } = parseCitations(answer, { retrieved, neighbors });
     const subgraph = buildSubgraphFromPath(citations, hops);
 

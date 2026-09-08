@@ -26,6 +26,24 @@ describe("buildChatContext", () => {
     const ctx = buildChatContext("Who was Yiannis?", matches, hops);
     expect(ctx).toContain("[Label](nodeId)");
   });
+
+  it("embeds previous conversation after the evidence and before the question", () => {
+    const context = buildChatContext("And his brother?", matches, hops, [
+      { question: "Who was Yiannis?", answer: "A poet." },
+    ]);
+    expect(context.indexOf("Previous conversation:")).toBeGreaterThan(context.indexOf("Observed relationships:"));
+    expect(context.indexOf("Previous conversation:")).toBeLessThan(context.indexOf("And his brother?"));
+    expect(context).toContain("Q: Who was Yiannis?");
+    expect(context).toContain("A: A poet.");
+    expect(context).toMatch(/Use the previous conversation for follow-up context/i);
+    expect(context).toContain("[Label](nodeId)");
+  });
+
+  it("produces the same prompt as before when no history is given", () => {
+    const withHistory = buildChatContext("And his brother?", matches, hops);
+    expect(withHistory).not.toContain("Previous conversation:");
+    expect(withHistory).toContain("And his brother?");
+  });
 });
 
 describe("synthesizeChat", () => {

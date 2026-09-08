@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 vi.mock("@/lib/graph/query-client", () => {
   return {
@@ -34,14 +34,22 @@ function streamResponse(text: string): Response {
 
 describe("sendChat GraphRAG", () => {
   beforeEach(() => {
-    useGraphStore.setState({ chatOpen: false, chatMessages: [], chatInput: "" });
+    useGraphStore.setState({
+      chatMessages: [],
+      chatInput: "",
+      focusNodeIds: [],
+      focusNonce: 0,
+      litIds: [],
+      litEdgeIds: [],
+      flashIds: [],
+    });
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("opens chat and parses citations and subgraph from the stream", async () => {
+  it("parses citations and subgraph from the stream", async () => {
     const payload = {
       citations: [
         { label: "The Mill", nodeId: "l-mill", nodeType: "landmark", slug: "l-mill", similarity: 0.9, origin: "retrieved" as const },
@@ -62,11 +70,10 @@ describe("sendChat GraphRAG", () => {
       expect.objectContaining({
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: "Tell me about the mill" }),
+        body: JSON.stringify({ question: "Tell me about the mill", history: [] }),
       }),
     );
     const state = useGraphStore.getState();
-    expect(state.chatOpen).toBe(true);
     expect(state.chatMessages).toHaveLength(2);
     expect(state.chatMessages[0]).toMatchObject({ role: "user", content: "Tell me about the mill" });
     expect(state.chatMessages[1].content).toBe("The mill was built in 1850.");
@@ -170,6 +177,23 @@ describe("sendChat GraphRAG", () => {
     expect(state.toast?.tone).toBe("error");
   });
 
+  it("includes the last 3 exchanges as history in the request", async () => {
+    useGraphStore.setState({ chatMessages: [
+      { id: "u1", role: "user", content: "first" },
+      { id: "a1", role: "assistant", content: "one" },
+      { id: "u2", role: "user", content: "second" },
+      { id: "a2", role: "assistant", content: "two" },
+    ], chatInput: "third" });
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ answer: "three", citations: [] }));
+    vi.stubGlobal("fetch", fetchMock);
+    await useGraphStore.getState().sendChat("third");
+    const [, init] = (fetch as unknown as Mock).mock.calls.at(-1) as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toEqual({ question: "third", history: [
+      { question: "first", answer: "one" },
+      { question: "second", answer: "two" },
+    ] });
+  });
+
   it("ignores empty input", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
@@ -180,30 +204,76 @@ describe("sendChat GraphRAG", () => {
     expect(useGraphStore.getState().chatMessages).toHaveLength(0);
   });
 
-  it("clears messages and input when closing the chat", () => {
-    useGraphStore.setState({
-      chatOpen: true,
-      chatInput: "draft",
-      chatMessages: [
-        { id: "u1", role: "user", content: "hi" },
-        { id: "a1", role: "assistant", content: "hello there" },
-      ],
-    });
-
-    useGraphStore.getState().toggleChat();
-
-    const state = useGraphStore.getState();
-    expect(state.chatOpen).toBe(false);
-    expect(state.chatMessages).toHaveLength(0);
-    expect(state.chatInput).toBe("");
+  it("clearChat empties messages and input", () => {
+    useGraphStore.setState({ chatMessages: [
+      { id: "u1", role: "user", content: "hi" },
+      { id: "a1", role: "assistant", content: "hello" },
+    ], chatInput: "draft" });
+    useGraphStore.getState().clearChat();
+    const s = useGraphStore.getState();
+    expect(s.chatMessages).toEqual([]);
+    expect(s.chatInput).toBe("");
   });
 
-  it("avoids clearing messages when opening the chat", () => {
-    useGraphStore.setState({ chatOpen: false, chatMessages: [], chatInput: "" });
+  it("autofocuses the cited subgraph once the stream answer completes", async () => {
+    const payload = {
+      citations: [
+        { label: "The Mill", nodeId: "l-mill", nodeType: "landmark", slug: "l-mill", similarity: 0.9, origin: "retrieved" as const },
+      ],
+      subgraph: { nodeIds: ["l-mill", "n-adjacent"], edgeIds: ["e1"], citedNodeIds: ["l-mill"] },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(streamResponse("Built in 1850.\n---SOURCES---\n" + JSON.stringify(payload))),
+    );
 
-    useGraphStore.getState().toggleChat();
+    await useGraphStore.getState().sendChat("Tell me about the mill");
 
-    expect(useGraphStore.getState().chatOpen).toBe(true);
-    expect(useGraphStore.getState().chatMessages).toHaveLength(0);
+    const s = useGraphStore.getState();
+    expect(s.litIds).toEqual(["l-mill", "n-adjacent"]);
+    expect(s.litEdgeIds).toEqual(["e1"]);
+    expect(s.focusNodeIds).toEqual(["l-mill", "n-adjacent"]);
+    expect(s.focusNonce).toBe(1);
+  });
+
+  it("autofocuses the citation nodes from a JSON response", async () => {
+    const citations = [
+      { label: "The Mill", nodeId: "l-mill", nodeType: "landmark", slug: "l-mill", similarity: 0.9, origin: "retrieved" as const },
+    ];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(jsonResponse({ answer: "I found the mill.", citations })),
+    );
+
+    await useGraphStore.getState().sendChat("something");
+
+    const s = useGraphStore.getState();
+    expect(s.litIds).toEqual(["l-mill"]);
+    expect(s.focusNodeIds).toEqual(["l-mill"]);
+    expect(s.focusNonce).toBe(1);
+  });
+
+  it("leaves the graph alone when the answer has no citations", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ answer: "No idea.", citations: [] })));
+
+    await useGraphStore.getState().sendChat("anything");
+
+    const s = useGraphStore.getState();
+    expect(s.litIds).toEqual([]);
+    expect(s.litEdgeIds).toEqual([]);
+    expect(s.focusNodeIds).toEqual([]);
+    expect(s.focusNonce).toBe(0);
+  });
+
+  it("focusSubgraph records ids and bumps the nonce; clearFocus resets", () => {
+    const s = useGraphStore.getState();
+    s.focusSubgraph(["a", "b"]);
+    const first = useGraphStore.getState();
+    expect(first.focusNodeIds).toEqual(["a", "b"]);
+    const nonce1 = first.focusNonce;
+    first.focusSubgraph(["a", "b"]);
+    expect(useGraphStore.getState().focusNonce).toBe(nonce1 + 1);
+    useGraphStore.getState().clearFocus();
+    expect(useGraphStore.getState().focusNodeIds).toEqual([]);
   });
 });

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { Mock } from "vitest";
 import { type NextRequest } from "next/server";
 import { POST } from "@/app/api/graph/chat/route";
 
@@ -72,6 +73,31 @@ describe("POST /api/graph/chat", () => {
     const payload = JSON.parse(body.split("---SOURCES---")[1]);
     expect(payload.citations[0]).toMatchObject({ nodeId: "n1", origin: "retrieved" });
     expect(payload.subgraph.citedNodeIds).toEqual(["n1"]);
+  });
+
+  it("passes sanitized history to synthesizeChat", async () => {
+    mocks.sessionUid.mockResolvedValue("u");
+    (mocks.embedText as Mock).mockResolvedValue(Array(1024).fill(0.1));
+    (mocks.matchNodesByVector as Mock).mockResolvedValue([
+      { nodeId: "n1", label: "Yiannis", nodeType: "person", similarity: 0.9, contentHash: "h" },
+    ]);
+    (mocks.fetchOneHopNeighbors as Mock).mockResolvedValue([]);
+    (mocks.synthesizeChat as Mock).mockResolvedValue("Yiannis [1] was a mason.");
+    const res = await POST(mreq({ question: "And his brother?", history: [
+      { question: "Who was Yiannis?", answer: "A poet." },
+      "garbage",
+      { question: "", answer: "bad" },
+    ] }));
+    expect(res.status).toBe(200);
+    expect(mocks.synthesizeChat).toHaveBeenCalledWith(
+      expect.objectContaining({ history: [{ question: "Who was Yiannis?", answer: "A poet." }] }),
+    );
+  });
+
+  it("errors on missing question even with history present", async () => {
+    mocks.sessionUid.mockResolvedValue("u");
+    const res = await POST(mreq({ history: [] }));
+    expect(res.status).toBe(400);
   });
 
   it("returns a graceful empty answer when no match meets the threshold", async () => {

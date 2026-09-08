@@ -1,4 +1,5 @@
 import type { MatchNode, OneHop } from "./combined-search";
+import type { ChatHistoryItem } from "./types";
 
 const CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
 const CHAT_MODEL = process.env.OPENROUTER_CHAT_MODEL || "openrouter/auto";
@@ -7,6 +8,7 @@ export function buildChatContext(
   question: string,
   matches: MatchNode[],
   hops: OneHop[],
+  history?: ChatHistoryItem[],
 ): string {
   const nodeLines = matches.map(
     (m) => `- ${m.label} [${m.nodeId}] (${m.nodeType ?? "unknown"}, relevance ${m.similarity.toFixed(2)})`,
@@ -14,6 +16,15 @@ export function buildChatContext(
   const hopLines = hops.map(
     (h) => `- ${h.sourceId} ${h.verb} ${h.targetId} (${h.neighborLabel})`,
   );
+
+  const historyBlock =
+    history && history.length > 0
+      ? [
+          "Previous conversation:",
+          ...history.flatMap((h) => [`Q: ${h.question}`, `A: ${h.answer}`]),
+          "Note: Use the previous conversation for follow-up context only (pronouns, \"the brother\", etc.) — the answer must be grounded in the retrieved content above.",
+        ]
+      : [];
 
   return [
     "You are an assistant for the VillageRoots heritage knowledge graph.",
@@ -27,6 +38,7 @@ export function buildChatContext(
     "Observed relationships:",
     hopLines.length ? hopLines.join("\n") : "(none)",
     "",
+    ...historyBlock,
     "",
     "User question:",
     question,
@@ -40,13 +52,14 @@ export async function synthesizeChat(params: {
   question: string;
   matches: MatchNode[];
   hops: OneHop[];
+  history?: ChatHistoryItem[];
   fetchImpl?: typeof fetch;
 }): Promise<string> {
   const fetchImpl = params.fetchImpl ?? fetch;
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error("OPENROUTER_API_KEY is not set");
 
-  const content = buildChatContext(params.question, params.matches, params.hops);
+  const content = buildChatContext(params.question, params.matches, params.hops, params.history);
   const body = {
     model: CHAT_MODEL,
     messages: [

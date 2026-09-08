@@ -4,6 +4,7 @@ import { pickFocalPerson } from "@/lib/graph/tree";
 import { toNodeRow, toEdgeRow } from "@/lib/graph/mappers";
 import { queryClient } from "@/lib/graph/query-client";
 import { invalidationKeys } from "@/lib/graph/queries";
+import { buildChatHistory } from "@/lib/graph/chat-history";
 import type { ForceConfig } from "@/lib/graph/force-config";
 import { DEFAULT_FORCE_CONFIG } from "@/lib/graph/force-config";
 import type { NodeRow, EdgeRow } from "@/drizzle/schema";
@@ -51,8 +52,6 @@ export interface GraphStore {
   // ui
   selectedId: string | null;
   sidepanelOpen: boolean;
-  chatOpen: boolean;
-  chatCollapsed: boolean;
   searchOpen: boolean;
   layersOpen: boolean;
   newNodeOpen: boolean;
@@ -90,8 +89,6 @@ export interface GraphStore {
   removeDraftEdge: (id: string) => void;
   clearDrafts: () => void;
   selectDraft: (id: string | null) => void;
-  toggleChat: () => void;
-  toggleCollapsed: () => void;
   setSearchOpen: (open: boolean) => void;
   setLayersOpen: (open: boolean) => void;
   setNewNodeOpen: (open: boolean) => void;
@@ -125,6 +122,7 @@ export interface GraphStore {
   chatMessages: ChatMessage[];
   setChatInput: (text: string) => void;
   sendChat: (text: string) => Promise<void>;
+  clearChat: () => void;
 
   // flash / lit
   flashIds: string[];
@@ -133,6 +131,11 @@ export interface GraphStore {
   flashNodes: (ids: string[]) => void;
   litPath: (path: { nodeIds: string[]; edgeIds: string[] }) => void;
   clearLit: () => void;
+
+  focusNodeIds: string[];
+  focusNonce: number;
+  focusSubgraph: (nodeIds: string[]) => void;
+  clearFocus: () => void;
 
   // derived
   countByType: () => Record<NodeType, number>;
@@ -257,8 +260,6 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
   // ui
   selectedId: null,
   sidepanelOpen: false,
-  chatOpen: false,
-  chatCollapsed: false,
   searchOpen: false,
   layersOpen: false,
   newNodeOpen: false,
@@ -315,13 +316,6 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
     })),
   selectDraft: (id) =>
     set({ selectedId: id, sidepanelOpen: id !== null, searchOpen: false, layersOpen: false }),
-  toggleChat: () =>
-    set((s) => ({
-      chatOpen: !s.chatOpen,
-      chatCollapsed: false,
-      ...(s.chatOpen ? { chatMessages: [], chatInput: "" } : {}),
-    })),
-  toggleCollapsed: () => set((s) => ({ chatCollapsed: !s.chatCollapsed })),
   setSearchOpen: (open) => set({ searchOpen: open }),
   setLayersOpen: (open) => set({ layersOpen: open }),
   setNewNodeOpen: (open) => set({ newNodeOpen: open }),
@@ -382,14 +376,14 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
   chatInput: "",
   chatMessages: [],
   setChatInput: (text) => set({ chatInput: text }),
+  clearChat: () => set({ chatMessages: [], chatInput: "" }),
   sendChat: async (text) => {
     const content = text.trim();
     if (!content) return;
+    const history = buildChatHistory(get().chatMessages, 3);
     const assistantId = uid();
     set((s) => ({
       chatInput: "",
-      chatOpen: true,
-      chatCollapsed: false,
       chatMessages: [
         ...s.chatMessages,
         { id: uid(), role: "user", content },
@@ -402,11 +396,23 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
         chatMessages: s.chatMessages.map((m) => (m.id === assistantId ? { ...m, ...patch } : m)),
       }));
 
+    const autoFocusAnswer = (citations: Citation[], path?: { nodeIds: string[]; edgeIds: string[] }) => {
+      const focusPath =
+        path && path.nodeIds.length
+          ? path
+          : citations.length
+            ? { nodeIds: citations.map((c) => c.nodeId), edgeIds: [] }
+            : undefined;
+      if (!focusPath) return;
+      get().litPath(focusPath);
+      get().focusSubgraph(focusPath.nodeIds);
+    };
+
     try {
       const res = await fetch("/api/graph/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: content }),
+        body: JSON.stringify({ question: content, history }),
       });
       if (!res.ok) {
         const error = new Error(`Chat request failed (${res.status})`) as Error & { status?: number };
@@ -417,7 +423,9 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
       const contentType = res.headers.get("content-type") ?? "";
       if (contentType.includes("application/json")) {
         const data = (await res.json()) as { answer?: string; citations?: Citation[] };
-        patchAssistant({ content: data.answer ?? "", citations: data.citations ?? [], loading: false });
+        const citations = data.citations ?? [];
+        patchAssistant({ content: data.answer ?? "", citations, loading: false });
+        autoFocusAnswer(citations);
         return;
       }
 
@@ -463,6 +471,7 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
         ...(path ? { path } : {}),
         loading: false,
       });
+      autoFocusAnswer(citations, path);
     } catch (err) {
       console.error("[chat] failed", err);
       patchAssistant({ content: CHAT_FALLBACK, citations: [], loading: false });
@@ -492,6 +501,12 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
     litTimer = setTimeout(() => set({ litIds: [], litEdgeIds: [] }), 6000);
   },
   clearLit: () => set({ litIds: [], litEdgeIds: [] }),
+
+  focusNodeIds: [],
+  focusNonce: 0,
+  focusSubgraph: (nodeIds) =>
+    set((s) => ({ focusNodeIds: nodeIds, focusNonce: s.focusNonce + 1 })),
+  clearFocus: () => set({ focusNodeIds: [] }),
 
   // derived
   countByType: () => countByTypeHelper(Object.values(get().nodesMap)),

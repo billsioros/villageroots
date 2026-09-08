@@ -1,0 +1,112 @@
+"use client";
+
+import { useState } from "react";
+import { Send, Trash2 } from "lucide-react";
+import { useGraphStore } from "@/store/graphStore";
+import { MarkdownAnswer } from "./markdown-answer";
+import { CitationGraphButton } from "./citation";
+
+export function ChatBar() {
+  const messages = useGraphStore((s) => s.chatMessages);
+  const setChatInput = useGraphStore((s) => s.setChatInput);
+  const sendChat = useGraphStore((s) => s.sendChat);
+  const clearChat = useGraphStore((s) => s.clearChat);
+  const litPath = useGraphStore((s) => s.litPath);
+  const flashNodes = useGraphStore((s) => s.flashNodes);
+  const focusSubgraph = useGraphStore((s) => s.focusSubgraph);
+  const [value, setValue] = useState("");
+
+  const latest = messages[messages.length - 1];
+  const previous = messages[messages.length - 2];
+  const question = previous?.role === "user" ? previous.content : "";
+  const expanded = Boolean(latest);
+
+  return (
+    <div className="pointer-events-none fixed inset-x-0 bottom-5 z-40 flex justify-center px-4">
+      <div
+        className={`pointer-events-auto grid transition-all duration-300 ease-vrr ${
+          expanded
+            ? "w-[42rem] max-w-[92vw] grid-rows-[1fr] rounded-2xl border bg-card/90 p-3 shadow-elev-raised backdrop-blur"
+            : "grid-rows-[0fr] w-full max-w-xl rounded-full border bg-card/90 px-3 py-2 shadow-elev-raised backdrop-blur"
+        }`}
+      >
+        <div className="min-h-0 overflow-hidden">
+          {expanded && (
+            <div className="mb-3 flex flex-col gap-2">
+              {question && <p className="text-xs font-medium text-muted-foreground">{question}</p>}
+              {latest.loading ? (
+                <div className="flex h-6 items-center gap-1.5" aria-label="Searching the graph">
+                  {[0, 1, 2].map((i) => (
+                    <span
+                      key={i}
+                      className="h-1.5 w-1.5 rounded-full bg-foreground/40 animate-[wave_0.9s_ease-in-out_infinite]"
+                      style={{ animationDelay: `${i * 0.15}s` }}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <>
+                  <MarkdownAnswer content={latest.content} citations={latest.citations ?? []} />
+                  <CitationGraphButton
+                    hasCitations={(latest.citations?.length ?? 0) > 0}
+                    onClick={() => {
+                      const path = latest.path ?? {
+                        nodeIds: (latest.citations ?? []).map((c) => c.nodeId),
+                        edgeIds: [],
+                      };
+                      if (path.nodeIds.length > 0) {
+                        litPath(path);
+                        focusSubgraph(path.nodeIds);
+                      } else if (latest.citations?.length) {
+                        flashNodes(latest.citations.map((c) => c.nodeId));
+                      }
+                    }}
+                  />
+                </>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={clearChat}
+            title="Clear conversation"
+            aria-label="Clear conversation"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-surface-warm hover:text-foreground"
+          >
+            <Trash2 size={15} />
+          </button>
+          <input
+            value={value}
+            onChange={(e) => {
+              setValue(e.target.value);
+              setChatInput(e.target.value);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && value.trim()) submit();
+            }}
+            placeholder="Ask about people, places, stories…"
+            className="h-10 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          />
+          <button
+            type="button"
+            disabled={!value.trim()}
+            onClick={() => submit()}
+            aria-label="Send"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground transition-opacity disabled:opacity-40"
+          >
+            <Send size={15} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  function submit() {
+    const text = value.trim();
+    if (!text) return;
+    sendChat(text);
+    setValue("");
+  }
+}

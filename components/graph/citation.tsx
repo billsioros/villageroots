@@ -1,49 +1,13 @@
 "use client";
 
 import { Network } from "lucide-react";
-import type { Citation } from "@/lib/graph/types";
-import { LOW_RELEVANCE_THRESHOLD } from "@/lib/graph/citations";
-
-export type Segment =
-  | { type: "text"; value: string }
-  | { type: "citation"; index: number; value: string };
 
 const CITATION_REF = /\[(\d+)\]/g;
 
-export function splitAnswerIntoSegments(content: string, count: number): Segment[] {
-  const segments: Segment[] = [];
-  let last = 0;
-  let match: RegExpExecArray | null;
-  CITATION_REF.lastIndex = 0;
-  while ((match = CITATION_REF.exec(content)) !== null) {
-    const index = Number(match[1]);
-    if (index < 1 || index > count) continue;
-    if (match.index > last) {
-      segments.push({ type: "text", value: content.slice(last, match.index) });
-    }
-    segments.push({ type: "citation", index, value: match[0] });
-    last = match.index + match[0].length;
-  }
-  if (last < content.length) {
-    segments.push({ type: "text", value: content.slice(last) });
-  }
-  if (segments.length === 0) segments.push({ type: "text", value: content });
-  return segments;
-}
-
-export type RenderSegment =
-  | Segment
-  | { type: "citation"; index: number; value: string; label: string; lowRelevance: boolean };
-
-export function renderAnswerWithCitations(content: string, citations: Citation[]): RenderSegment[] {
-  const segments = splitAnswerIntoSegments(content, citations.length);
-  return segments.map((seg) => {
-    if (seg.type !== "citation") return seg;
-    const citation = citations[seg.index - 1];
-    if (!citation) return { ...seg, label: "", lowRelevance: false };
-    const lowRelevance =
-      citation.origin === "retrieved" && citation.similarity < LOW_RELEVANCE_THRESHOLD;
-    return { ...seg, label: citation.label, lowRelevance };
+export function toMarkdownWithSentinels(content: string, count: number): string {
+  return content.replace(CITATION_REF, (marker: string, digits: string) => {
+    const index = Number(digits);
+    return index >= 1 && index <= count ? `<<CITE:${index}>>` : marker;
   });
 }
 

@@ -13,7 +13,7 @@ import { SearchPop } from "./search-pop";
 import { LayersPop } from "./layers-pop";
 import { PhysicsPop } from "./physics-pop";
 import { NodeEditorDialog } from "./node-editor-dialog";
-import { ChatPanel } from "./chat-panel";
+import { ChatBar } from "./chat-bar";
 import { OcrModal, AboutModal } from "./modals";
 import { ProfileModal } from "./profile-modal";
 import ContributePanel from "./contribute-panel";
@@ -28,7 +28,6 @@ export function GraphApp() {
   const newNodeOpen = useGraphStore((s) => s.newNodeOpen);
   const ocrOpen = useGraphStore((s) => s.ocrOpen);
   const aboutOpen = useGraphStore((s) => s.aboutOpen);
-  const chatOpen = useGraphStore((s) => s.chatOpen);
   const adminDialogOpen = useGraphStore((s) => s.adminDialogOpen);
   const profileOpen = useGraphStore((s) => s.profileOpen);
   const nodeCount = useGraphStore((s) => Object.keys(s.nodesMap).length);
@@ -42,7 +41,7 @@ export function GraphApp() {
         e.preventDefault();
         setSearchOpen(true);
       } else if (e.key === "Escape") {
-        if (aboutOpen || adminDialogOpen || chatOpen || profileOpen) return; // modal shells handle their own Escape
+        if (aboutOpen || adminDialogOpen || profileOpen) return; // modal shells handle their own Escape
         if (newNodeOpen) {
           setNewNodeOpen(false);
           return;
@@ -54,7 +53,7 @@ export function GraphApp() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [aboutOpen, adminDialogOpen, chatOpen, profileOpen, newNodeOpen, ocrOpen, clearSelection, setSearchOpen, setNewNodeOpen]);
+  }, [aboutOpen, adminDialogOpen, profileOpen, newNodeOpen, ocrOpen, clearSelection, setSearchOpen, setNewNodeOpen]);
 
   return (
     <GraphLoader>
@@ -73,7 +72,7 @@ export function GraphApp() {
           {physicsOpen && <PhysicsPop />}
           <NodeEditorDialog />
         </div>
-        <ChatPanel />
+        <ChatBar />
         <Toast />
         <OcrModal />
         <AboutModal />
