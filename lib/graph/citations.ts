@@ -13,6 +13,9 @@ export interface CitationPool {
 const MARKER =
   /\[([^\]]+)\]\(([a-zA-Z0-9-]{2,})\)|<<?CITE\s*:\s*(\d+)\s*>>?|\[(\d+)\]/gi;
 
+const ESCAPED_TAG = /&(?:lt|gt|#60|#62|#x3[cCeE]|#X3[CcEe]);/g;
+const UNESCAPE = (match: string) => (/lt|#60|#x3[cC]/.test(match) ? "<" : ">");
+
 export function parseCitations(
   answer: string,
   pools: CitationPool,
@@ -34,7 +37,7 @@ export function parseCitations(
     return `[${indexOf.get(citation.nodeId)! + 1}]`;
   };
 
-  const text = answer.replace(
+  const text = answer.replace(ESCAPED_TAG, UNESCAPE).replace(
     MARKER,
     (match: string, _label: string, nodeId: string, citeN: string, bracketN: string) => {
       if (nodeId) {

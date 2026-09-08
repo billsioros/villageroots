@@ -88,4 +88,30 @@ describe("parseCitations", () => {
     expect(citations).toEqual([]);
     expect(text).toBe("Talked to [Who?](made-up-id).");
   });
+
+  it("unescapes HTML-escaped CITE markers before reindexing", () => {
+    const { text, citations } = parseCitations(
+      "&lt;CITE:1&gt; and &#x3C;CITE:2&#x3E; also &amp; not a marker.",
+      { retrieved, neighbors },
+    );
+    expect(citations.map((c) => c.nodeId)).toEqual(["l-katsaris", "n-nikolas"]);
+    expect(text).toBe("[1] and [2] also &amp; not a marker.");
+  });
+
+  it("converts every CITE marker in a full paragraph answer", () => {
+    const five: Citation[] = Array.from({ length: 5 }, (_, i) => ({
+      label: `Node ${i + 1}`,
+      nodeId: `n-${i + 1}`,
+      nodeType: "person",
+      slug: `n-${i + 1}`,
+      similarity: 0.5,
+      origin: "retrieved" as const,
+    }));
+    const answer =
+      "The Katsaris family is one of the founding lineages of Kalyvia <CITE:1>. Notable members include Stavros Katsaris <CITE:2>; Maria Katsari, who was the household head of Kalyvia and married to Nikolas Katsaris <CITE:3>; Nikolas Katsaris, who ran the village mill for half a century and ground wheat for every household in the hollow, turning nobody away even during hungry years <CITE:4>; and Yiannis Katsaris, a second-generation miller who was interviewed in 1989 <CITE:5>.";
+    const { text, citations } = parseCitations(answer, { retrieved: five, neighbors: [] });
+    expect(text).not.toContain("CITE");
+    expect(citations).toHaveLength(5);
+    expect(text).toContain("[1]");
+  });
 });
