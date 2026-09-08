@@ -120,3 +120,18 @@
   .glow-orb { animation: none !important; }
   .seal-stamp { animation: none !important; }
 }
+
+[data-sonner-toast][data-type="success"] {
+  background: hsl(var(--success) / 0.12);
+  border-color: hsl(var(--success));
+}
+
+[data-sonner-toast][data-type="error"] {
+  background: hsl(var(--destructive) / 0.12);
+  border-color: hsl(var(--destructive));
+}
+
+[data-sonner-toast][data-type="info"] {
+  background: hsl(var(--primary) / 0.1);
+  border-color: hsl(var(--primary));
+}
