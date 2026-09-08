@@ -120,3 +120,15 @@
   .glow-orb { animation: none !important; }
   .seal-stamp { animation: none !important; }
 }
+
+[data-sonner-toaster] {
+  --success-bg: hsl(var(--success) / 0.14);
+  --success-border: hsl(var(--success));
+  --success-text: hsl(var(--foreground));
+  --error-bg: hsl(var(--destructive) / 0.14);
+  --error-border: hsl(var(--destructive));
+  --error-text: hsl(var(--foreground));
+  --info-bg: hsl(var(--meta) / 0.14);
+  --info-border: hsl(var(--meta));
+  --info-text: hsl(var(--foreground));
+}

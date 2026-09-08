@@ -37,7 +37,7 @@ export default function RootLayout({
           <main className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
             {children}
           </main>
-          <Toaster position="top-center" offset={72} />
+          <Toaster position="top-center" offset={72} richColors />
         </ThemeProvider>
       </body>
     </html>
