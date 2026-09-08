@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Send, Trash2 } from "lucide-react";
+import { ArrowUp, Trash2 } from "lucide-react";
 import { useGraphStore } from "@/store/graphStore";
 import type { ChatMessage } from "@/lib/graph/types";
 import { MarkdownAnswer } from "./markdown-answer";
@@ -120,7 +120,7 @@ export function ChatBar() {
             aria-label="Send"
             className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground transition-opacity disabled:opacity-40"
           >
-            <Send size={15} />
+            <ArrowUp size={15} />
           </button>
         </div>
       </div>
