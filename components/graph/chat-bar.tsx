@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Send, Trash2 } from "lucide-react";
 import { useGraphStore } from "@/store/graphStore";
 import type { ChatMessage } from "@/lib/graph/types";
@@ -26,10 +26,16 @@ export function ChatBar() {
   if (expanded) heldRef.current = { latest, question };
   const display = expanded ? { latest, question } : heldRef.current;
 
+  const [contentVisible, setContentVisible] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setContentVisible(expanded));
+    return () => cancelAnimationFrame(id);
+  }, [expanded]);
+
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-5 z-40 flex justify-center px-4">
       <div
-        className={`pointer-events-auto grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+        className={`pointer-events-auto grid transition-[grid-template-rows,border-radius] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
           expanded
             ? "w-[42rem] max-w-[92vw] max-h-[60vh] grid-rows-[1fr] rounded-2xl border bg-card/90 p-3 shadow-elev-raised backdrop-blur"
             : "grid-rows-[0fr] w-[42rem] max-w-[92vw] rounded-full border bg-card/90 px-3 py-2 shadow-elev-raised backdrop-blur"
@@ -38,8 +44,8 @@ export function ChatBar() {
         <div className="min-h-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {display && (
             <div
-              className={`mb-3 flex flex-col items-start gap-2 transition-opacity duration-100 ${
-                expanded ? "opacity-100" : "opacity-0"
+              className={`mb-3 flex flex-col items-start gap-2 transition-opacity duration-200 ${
+                contentVisible ? "opacity-100" : "opacity-0"
               }`}
             >
               {display.question && (
