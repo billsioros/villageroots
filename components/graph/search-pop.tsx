@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import { ModalShell } from "./modals";
 import { useGraphStore } from "@/store/graphStore";
+import { toast } from "sonner";
 import { useSearchNodes } from "@/lib/graph/queries";
 import { TYPE_META } from "@/lib/graph/helpers";
 
@@ -11,7 +12,6 @@ export function SearchPop() {
   const selectNode = useGraphStore((s) => s.selectNode);
   const flashNodes = useGraphStore((s) => s.flashNodes);
   const setPanIntent = useGraphStore((s) => s.setPanIntent);
-  const pushToast = useGraphStore((s) => s.pushToast);
   const setSearchOpen = useGraphStore((s) => s.setSearchOpen);
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
@@ -38,7 +38,7 @@ export function SearchPop() {
       setQ("");
     } else if (ids.length > 1) {
       flashNodes(ids);
-      pushToast({ tone: "info", message: `${ids.length} matches flash on the canvas` });
+      toast.info(`${ids.length} matches flash on the canvas`);
       setQ("");
     }
   };
@@ -54,7 +54,7 @@ export function SearchPop() {
   };
 
   return (
-    <ModalShell title="Search" onClose={() => setSearchOpen(false)} className="w-[640px] max-w-[95vw]">
+    <ModalShell title="Search" onClose={() => setSearchOpen(false)} className="w-full max-w-3xl">
       <div>
         <div className="flex items-center gap-3 rounded-xl border bg-surface-warm px-4 py-3">
           <Search size={16} className="text-muted-foreground" />

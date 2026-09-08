@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { ThemeProvider } from "next-themes";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -36,6 +37,7 @@ export default function RootLayout({
           <main className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
             {children}
           </main>
+          <Toaster position="top-center" offset={72} richColors theme="light" />
         </ThemeProvider>
       </body>
     </html>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Download, KeyRound, LoaderCircle, LogOut, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useGraphStore } from "@/store/graphStore";
+import { toast } from "sonner";
 import { getInitials, getDisplayName } from "@/lib/utils/user-profile";
 import {
   DropdownMenu,
@@ -18,7 +19,6 @@ import {
 export function AvatarMenu() {
   const router = useRouter();
   const setProfileOpen = useGraphStore((s) => s.setProfileOpen);
-  const pushToast = useGraphStore((s) => s.pushToast);
   const [email, setEmail] = useState<string>("");
   const [displayName, setDisplayName] = useState<string>("");
   const [initials, setInitials] = useState<string | null>(null);
@@ -56,7 +56,7 @@ export function AvatarMenu() {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
-        pushToast({ tone: "error", message: "We couldn't sign you out — please try again." });
+        toast.error("We couldn't sign you out — please try again.");
         return;
       }
       router.push("/auth/login");

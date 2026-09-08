@@ -7,6 +7,7 @@ import { invalidationKeys } from "@/lib/graph/queries";
 import { buildChatHistory } from "@/lib/graph/chat-history";
 import type { ForceConfig } from "@/lib/graph/force-config";
 import { DEFAULT_FORCE_CONFIG } from "@/lib/graph/force-config";
+import { toast } from "sonner";
 import type { NodeRow, EdgeRow } from "@/drizzle/schema";
 import type {
   GraphNode,
@@ -16,14 +17,12 @@ import type {
   EdgeKind,
   ChatMessage,
   Citation,
-  Toast,
   ZoomIntent,
   PanIntent,
   DraftNode,
   DraftEdge,
 } from "@/lib/graph/types";
 
-let toastTimer: ReturnType<typeof setTimeout> | null = null;
 let flashTimer: ReturnType<typeof setTimeout> | null = null;
 let litTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -62,7 +61,6 @@ export interface GraphStore {
   adminDialogTab: "users" | "review" | "audit";
   activeView: "GRAPH" | "TREE";
   focalPersonId: string | null;
-  toast: Toast | null;
   zoomPct: number;
   zoomIntent: ZoomIntent;
   panIntent: PanIntent | null;
@@ -100,8 +98,6 @@ export interface GraphStore {
   setActiveView: (view: "GRAPH" | "TREE") => void;
   setFocalPersonId: (id: string | null) => void;
   dismissHint: () => void;
-  pushToast: (t: Toast) => void;
-  clearToast: () => void;
   setZoomPct: (pct: number) => void;
   zoomIn: () => void;
   zoomOut: () => void;
@@ -270,7 +266,6 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
   adminDialogTab: "users",
   activeView: "GRAPH",
   focalPersonId: null,
-  toast: null,
   zoomPct: 100,
   zoomIntent: null,
   panIntent: null,
@@ -341,15 +336,6 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
     set({ activeView: "TREE" });
   },
   dismissHint: () => set({ hint: false }),
-  pushToast: (t) => {
-    if (toastTimer) clearTimeout(toastTimer);
-    set({ toast: t });
-    toastTimer = setTimeout(() => set({ toast: null }), 2500);
-  },
-  clearToast: () => {
-    if (toastTimer) clearTimeout(toastTimer);
-    set({ toast: null });
-  },
   setZoomPct: (pct) => set({ zoomPct: pct }),
   zoomIn: () => set({ zoomIntent: "in" }),
   zoomOut: () => set({ zoomIntent: "out" }),
@@ -476,13 +462,11 @@ export const useGraphStore = create<GraphStore>()((set, get) => ({
       console.error("[chat] failed", err);
       patchAssistant({ content: CHAT_FALLBACK, citations: [], loading: false });
       const status = err instanceof Error ? (err as Error & { status?: number }).status : undefined;
-      get().pushToast({
-        tone: "error",
-        message:
-          status === 429
-            ? "Too many requests — try again in a moment."
-            : "Chat is busy right now — try again shortly.",
-      });
+      toast.error(
+        status === 429
+          ? "Too many requests — try again in a moment."
+          : "Chat is busy right now — try again shortly.",
+      );
     }
   },
 

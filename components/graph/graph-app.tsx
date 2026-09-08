@@ -8,7 +8,6 @@ import { StageUi } from "./stage-ui";
 import { Dock } from "./dock";
 import { EmptyState } from "./empty-state";
 import { HintChip } from "./hint-chip";
-import { Toast } from "./toast";
 import { SearchPop } from "./search-pop";
 import { LayersPop } from "./layers-pop";
 import { PhysicsPop } from "./physics-pop";
@@ -75,7 +74,6 @@ export function GraphApp() {
           <NodeEditorDialog />
         </div>
         <ChatBar />
-        <Toast />
         <OcrModal />
         <AboutModal />
         <AdminDialog />

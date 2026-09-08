@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link2, Plus, Send, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { useGraphStore } from "@/store/graphStore";
 import { TYPE_META, VERB_KIND, VERBS, normalizeEditedLabel, uid } from "@/lib/graph/helpers";
 import { type NodeType, type Verb } from "@/lib/graph/types";
@@ -57,7 +58,6 @@ export default function ContributePanel() {
   const clearDrafts = useGraphStore((s) => s.clearDrafts);
   const canvasCenter = useGraphStore((s) => s.canvasCenter);
   const nodesMap = useGraphStore((s) => s.nodesMap);
-  const pushToast = useGraphStore((s) => s.pushToast);
 
   const [type, setType] = useState<NodeType>("person");
   const [name, setName] = useState("");
@@ -171,7 +171,7 @@ export default function ContributePanel() {
   const addNode = () => {
     const trimmed = name.trim();
     if (!trimmed) {
-      pushToast({ tone: "error", message: "Name is required" });
+      toast.error("Name is required");
       return;
     }
     const id = "draft-" + uid();
@@ -193,7 +193,7 @@ export default function ContributePanel() {
 
     const error = validateBeforeSubmit(draftNodes, draftEdges, connections);
     if (error) {
-      pushToast({ tone: "error", message: error });
+      toast.error(error);
       return;
     }
 
@@ -225,7 +225,7 @@ export default function ContributePanel() {
       });
       if (!res.ok) {
         const b = (await res.json().catch(() => null)) as { error?: string } | null;
-        pushToast({ tone: "error", message: b?.error ?? "Submission failed" });
+        toast.error(b?.error ?? "Submission failed");
         return;
       }
       clearDrafts();
@@ -234,9 +234,9 @@ export default function ContributePanel() {
       setOpen(false);
       queryClient.invalidateQueries({ queryKey: invalidationKeys.nodes });
       queryClient.invalidateQueries({ queryKey: invalidationKeys.edges });
-      pushToast({ tone: "success", message: isAdmin ? "Published" : "Queued for review" });
+      toast.success(isAdmin ? "Published" : "Queued for review");
     } catch {
-      pushToast({ tone: "error", message: "Could not reach the server — try again" });
+      toast.error("Could not reach the server — try again");
     } finally {
       setSubmitting(false);
     }
@@ -254,7 +254,7 @@ export default function ContributePanel() {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-[680px]">
+      <DialogContent className="w-full max-w-5xl">
         <DialogHeader>
           <DialogTitle>Add to the map</DialogTitle>
           <DialogDescription>Add entries and link each one to the map.</DialogDescription>

@@ -9,13 +9,13 @@ import { useGraphStore, selectAllNodes } from "@/store/graphStore";
 import { TYPE_META } from "@/lib/graph/helpers";
 import { invalidationKeys } from "@/lib/graph/queries";
 import type { GraphNode, Verb } from "@/lib/graph/types";
+import { toast } from "sonner";
 
 export function RelationsPanel({ node }: { node: GraphNode }) {
   const edges = useGraphStore((s) => s.edges);
   const nodes = useGraphStore(useShallow(selectAllNodes));
   const suggestedEdges = useGraphStore((s) => s.suggestedEdges);
   const selectNode = useGraphStore((s) => s.selectNode);
-  const pushToast = useGraphStore((s) => s.pushToast);
 
   const related = edges.filter((e) => e.source === node.id || e.target === node.id);
   const suggestions = suggestedEdges.filter((e) => e.source === node.id || e.target === node.id);
@@ -31,11 +31,11 @@ export function RelationsPanel({ node }: { node: GraphNode }) {
 
   const submit = async () => {
     if (!verb) {
-      pushToast({ tone: "error", message: "Pick a verb" });
+      toast.error("Pick a verb");
       return;
     }
     if (!target) {
-      pushToast({ tone: "error", message: "Pick a node" });
+      toast.error("Pick a node");
       return;
     }
     setSubmitting(true);
@@ -47,18 +47,17 @@ export function RelationsPanel({ node }: { node: GraphNode }) {
       });
       const data = await res.json();
       if (!res.ok) {
-        pushToast({ tone: "error", message: data.error || "Submission failed" });
+        toast.error(data.error || "Submission failed");
         return;
       }
-      pushToast({
-        tone: "success",
-        message: data.status === "approved" ? "Relation added" : "Relation submitted for review",
-      });
+      toast.success(
+        data.status === "approved" ? "Relation added" : "Relation submitted for review",
+      );
       queryClient.invalidateQueries({ queryKey: invalidationKeys.edges });
       setOpen(false);
       setTarget("");
     } catch {
-      pushToast({ tone: "error", message: "Network error — try again" });
+      toast.error("Network error — try again");
     } finally {
       setSubmitting(false);
     }
@@ -113,7 +112,7 @@ export function RelationsPanel({ node }: { node: GraphNode }) {
               <span className="text-[13px]">{e.verb.replaceAll("_", " ")}</span>
               <button
                 onClick={() =>
-                  pushToast({ tone: "info", message: "AI suggestion submitted for moderation" })
+                  toast.info("AI suggestion submitted for moderation")
                 }
                 className="ml-auto rounded-full bg-foreground px-3 py-1 text-[11px] font-medium text-background"
               >

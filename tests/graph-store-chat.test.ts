@@ -9,6 +9,12 @@ vi.mock("@/lib/graph/query-client", () => {
   };
 });
 
+const { toast } = vi.hoisted(() => ({
+  toast: { error: vi.fn(), success: vi.fn(), info: vi.fn(), loading: vi.fn() },
+}));
+
+vi.mock("sonner", () => ({ toast }));
+
 import { useGraphStore } from "@/store/graphStore";
 
 const encoder = new TextEncoder();
@@ -154,7 +160,7 @@ describe("sendChat GraphRAG", () => {
     expect(messages[1].content).toContain("I couldn't reach the graph");
     expect(messages[1].citations).toEqual([]);
     expect(messages[1].loading).toBe(false);
-    expect(useGraphStore.getState().toast?.tone).toBe("error");
+    expect(toast.error).toHaveBeenCalledWith("Chat is busy right now — try again shortly.");
   });
 
   it("shows an error toast when a rate limit response arrives", async () => {
@@ -164,7 +170,7 @@ describe("sendChat GraphRAG", () => {
 
     const state = useGraphStore.getState();
     expect(state.chatMessages[1].content).toContain("I couldn't reach the graph");
-    expect(state.toast?.tone).toBe("error");
+    expect(toast.error).toHaveBeenCalledWith("Too many requests — try again in a moment.");
   });
 
   it("shows an error toast when the network request throws", async () => {
@@ -174,7 +180,7 @@ describe("sendChat GraphRAG", () => {
 
     const state = useGraphStore.getState();
     expect(state.chatMessages[1].content).toContain("I couldn't reach the graph");
-    expect(state.toast?.tone).toBe("error");
+    expect(toast.error).toHaveBeenCalledWith("Chat is busy right now — try again shortly.");
   });
 
   it("includes the last 3 exchanges as history in the request", async () => {

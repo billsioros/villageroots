@@ -97,13 +97,6 @@ export interface ChatMessage {
 
 export type ChatHistoryItem = { question: string; answer: string };
 
-export type ToastTone = "info" | "error" | "success";
-
-export interface Toast {
-  tone: ToastTone;
-  message: string;
-}
-
 export type ZoomIntent = "in" | "out" | "fit" | null;
 
 export interface PanIntent {
