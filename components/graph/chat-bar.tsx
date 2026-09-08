@@ -26,14 +26,14 @@ export function ChatBar() {
       <div
         className={`pointer-events-auto grid transition-all duration-300 ease-vrr ${
           expanded
-            ? "w-[42rem] max-w-[92vw] grid-rows-[1fr] rounded-2xl border bg-card/90 p-3 shadow-elev-raised backdrop-blur"
+            ? "w-[42rem] max-w-[92vw] max-h-[60vh] grid-rows-[1fr] rounded-2xl border bg-card/90 p-3 shadow-elev-raised backdrop-blur"
             : "grid-rows-[0fr] w-full max-w-xl rounded-full border bg-card/90 px-3 py-2 shadow-elev-raised backdrop-blur"
         }`}
       >
-        <div className="min-h-0 overflow-hidden">
+        <div className="min-h-0 overflow-y-auto">
           {expanded && (
-            <div className="mb-3 flex flex-col gap-2">
-              {question && <p className="text-xs font-medium text-muted-foreground">{question}</p>}
+            <div className="mb-3 flex flex-col items-start gap-2">
+              {question && <p className="text-sm font-medium text-muted-foreground">{question}</p>}
               {latest.loading ? (
                 <div className="flex h-6 items-center gap-1.5" aria-label="Searching the graph">
                   {[0, 1, 2].map((i) => (

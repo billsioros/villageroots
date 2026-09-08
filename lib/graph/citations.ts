@@ -10,7 +10,8 @@ export interface CitationPool {
   neighbors: Citation[];
 }
 
-const MARKER = /\[([^\]]+)\]\(([a-zA-Z0-9-]{2,})\)/g;
+const MARKER =
+  /\[([^\]]+)\]\(([a-zA-Z0-9-]{2,})\)|<<?CITE\s*:\s*(\d+)\s*>>?|\[(\d+)\]/gi;
 
 export function parseCitations(
   answer: string,
@@ -25,16 +26,32 @@ export function parseCitations(
   const order: Citation[] = [];
   const indexOf = new Map<string, number>();
 
-  let text = answer;
-  text = text.replace(MARKER, (match, _label: string, nodeId: string) => {
-    const citation = byId.get(nodeId);
-    if (!citation) return match;
-    if (!indexOf.has(nodeId)) {
-      indexOf.set(nodeId, order.length);
+  const cite = (citation: Citation) => {
+    if (!indexOf.has(citation.nodeId)) {
+      indexOf.set(citation.nodeId, order.length);
       order.push(citation);
     }
-    return `[${indexOf.get(nodeId)! + 1}]`;
-  });
+    return `[${indexOf.get(citation.nodeId)! + 1}]`;
+  };
+
+  const text = answer.replace(
+    MARKER,
+    (match: string, _label: string, nodeId: string, citeN: string, bracketN: string) => {
+      if (nodeId) {
+        const citation = byId.get(nodeId);
+        return citation ? cite(citation) : match;
+      }
+      if (citeN) {
+        const citation = pools.retrieved[Number(citeN) - 1];
+        return citation ? cite(citation) : `[${citeN}]`;
+      }
+      if (bracketN) {
+        const citation = pools.retrieved[Number(bracketN) - 1];
+        return citation ? cite(citation) : match;
+      }
+      return match;
+    },
+  );
 
   return { text, citations: order };
 }

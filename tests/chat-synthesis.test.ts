@@ -17,14 +17,15 @@ describe("buildChatContext", () => {
     expect(ctx).toContain("married_to");
   });
 
-  it("includes the nodeId in each retrieved node line", () => {
+  it("numbers the retrieved nodes so citations can reference them by index", () => {
     const ctx = buildChatContext("Who was Yiannis?", matches, hops);
-    expect(ctx).toContain(`- ${matches[0].label} [${matches[0].nodeId}]`);
+    expect(ctx).toContain("1. Yiannis [n1] (person, relevance 0.90)");
   });
 
-  it("instructs inline citation format with nodeId", () => {
+  it("instructs square-bracket numeric citations and forbids inline ids", () => {
     const ctx = buildChatContext("Who was Yiannis?", matches, hops);
-    expect(ctx).toContain("[Label](nodeId)");
+    expect(ctx).toContain("[3]");
+    expect(ctx).toMatch(/Do not include node IDs or UUIDs/);
   });
 
   it("embeds previous conversation after the evidence and before the question", () => {
@@ -36,7 +37,7 @@ describe("buildChatContext", () => {
     expect(context).toContain("Q: Who was Yiannis?");
     expect(context).toContain("A: A poet.");
     expect(context).toMatch(/Use the previous conversation for follow-up context/i);
-    expect(context).toContain("[Label](nodeId)");
+    expect(context).toContain("[3]");
   });
 
   it("produces the same prompt as before when no history is given", () => {

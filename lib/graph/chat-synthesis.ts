@@ -11,7 +11,7 @@ export function buildChatContext(
   history?: ChatHistoryItem[],
 ): string {
   const nodeLines = matches.map(
-    (m) => `- ${m.label} [${m.nodeId}] (${m.nodeType ?? "unknown"}, relevance ${m.similarity.toFixed(2)})`,
+    (m, i) => `${i + 1}. ${m.label} [${m.nodeId}] (${m.nodeType ?? "unknown"}, relevance ${m.similarity.toFixed(2)})`,
   );
   const hopLines = hops.map(
     (h) => `- ${h.sourceId} ${h.verb} ${h.targetId} (${h.neighborLabel})`,
@@ -44,7 +44,7 @@ export function buildChatContext(
     question,
     "",
     "Answer using only the retrieved content. If the content is insufficient, say so. ",
-    "Cite each claim with an inline reference in the form [Label](nodeId), where Label is the exact label and nodeId is the exact node id from the Relevant nodes list.",
+    "Cite each claim with the number(s) of the sources from the Relevant nodes list, in square brackets right after the claim, e.g. \"The mill was built in 1892 [3]\". Use only numbers from that list. Do not include node IDs or UUIDs in your answer.",
   ].join("\n");
 }
 
