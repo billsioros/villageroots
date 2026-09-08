@@ -1,3 +1,10 @@
+# [1.28.0](https://github.com/billsioros/villageroots/compare/v1.27.0...v1.28.0) (2026-09-08)
+
+
+### Features
+
+* PTDN-63 replace toasts with Sonner and standardize dock dialogs ([#47](https://github.com/billsioros/villageroots/issues/47)) ([350ad1a](https://github.com/billsioros/villageroots/commit/350ad1a7ae921c00fcde1a025e2e84d625ee57f0))
+
 # [1.27.0](https://github.com/billsioros/villageroots/compare/v1.26.0...v1.27.0) (2026-09-08)
 
 
