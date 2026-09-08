@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Save } from "lucide-react";
 import { useGraphStore } from "@/store/graphStore";
+import { toast } from "sonner";
 import { type DraftNode, type RichTextJSON } from "@/lib/graph/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +35,6 @@ const FACT_FIELDS: Record<DraftNode["type"], { key: string; label: string }[]> =
 
 export default function DraftEditor({ draft }: { draft: DraftNode }) {
   const updateDraftNode = useGraphStore((s) => s.updateDraftNode);
-  const pushToast = useGraphStore((s) => s.pushToast);
 
   const [label, setLabel] = useState(draft.label);
   const [subtitle, setSubtitle] = useState(draft.subtitle ?? "");
@@ -58,7 +58,7 @@ export default function DraftEditor({ draft }: { draft: DraftNode }) {
       deceased,
     });
     latestDoc.current = null;
-    pushToast({ tone: "success", message: "Draft saved" });
+    toast.success("Draft saved");
   };
 
   const fields = FACT_FIELDS[draft.type];

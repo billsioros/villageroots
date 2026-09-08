@@ -26,7 +26,6 @@ beforeEach(() => {
     selectedId: null,
     activeView: 'GRAPH',
     focalPersonId: null,
-    toast: null,
   })
 })
 
@@ -49,7 +48,6 @@ describe('activeView / focalPersonId', () => {
     const s = useGraphStore.getState()
     expect(s.activeView).toBe('TREE')
     expect(s.focalPersonId).toBe('old')
-    expect(s.toast).toBeNull()
   })
 
   it('uses the selected person as the focal when present', () => {
@@ -82,11 +80,9 @@ describe('activeView / focalPersonId', () => {
       nodesMap: { old: person('old', 'Old', '1898–1978') },
       activeView: 'TREE',
       focalPersonId: 'old',
-      toast: null,
     })
     const { setActiveView } = useGraphStore.getState()
     setActiveView('TREE')
-    expect(useGraphStore.getState().toast).toBeNull()
   })
 
   it('setFocalPersonId sets the focal directly', () => {

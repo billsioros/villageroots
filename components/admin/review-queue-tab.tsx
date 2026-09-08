@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ModerationHistory } from "@/components/admin/moderation-history";
 import { invalidationKeys } from "@/lib/graph/queries";
-import { useGraphStore } from "@/store/graphStore";
+import { toast } from "sonner";
 
 type ApiType = "nodes" | "edges" | "scan_uploads";
 
@@ -63,7 +63,6 @@ async function fetchQueue(type: ApiType): Promise<ReviewQueueResponse> {
 
 export function ReviewQueueTab() {
   const queryClient = useQueryClient();
-  const pushToast = useGraphStore((s) => s.pushToast);
   const [tab, setTab] = useState<Tab>("nodes");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [active, setActive] = useState<{ type: string; id: string } | null>(
@@ -139,9 +138,9 @@ export function ReviewQueueTab() {
     const item = data?.items.find((i) => i.id === id);
     try {
       await moderate(id, "approve");
-      pushToast({ tone: "success", message: `Approved: ${item ? itemLabel(item) : "item"}` });
+      toast.success(`Approved: ${item ? itemLabel(item) : "item"}`);
     } catch {
-      pushToast({ tone: "error", message: `Couldn't approve${item ? ` ${itemLabel(item)}` : ""}. Try again.` });
+      toast.error(`Couldn't approve${item ? ` ${itemLabel(item)}` : ""}. Try again.`);
     }
   };
 
@@ -155,9 +154,9 @@ export function ReviewQueueTab() {
     const reason = rejectReason.trim() || undefined;
     try {
       await moderate(id, "reject", reason);
-      pushToast({ tone: "success", message: `Rejected: ${item ? itemLabel(item) : "item"}` });
+      toast.success(`Rejected: ${item ? itemLabel(item) : "item"}`);
     } catch {
-      pushToast({ tone: "error", message: `Couldn't reject${item ? ` ${itemLabel(item)}` : ""}. Try again.` });
+      toast.error(`Couldn't reject${item ? ` ${itemLabel(item)}` : ""}. Try again.`);
     } finally {
       setRejectFor(null);
       setRejectReason("");
@@ -185,10 +184,10 @@ export function ReviewQueueTab() {
     setSelected(new Set());
     const verb = action === "approve" ? "Approved" : "Rejected";
     if (ok > 0) {
-      pushToast({ tone: "success", message: `${verb} ${ok} item${ok === 1 ? "" : "s"}` });
+      toast.success(`${verb} ${ok} item${ok === 1 ? "" : "s"}`);
     }
     if (failed > 0) {
-      pushToast({ tone: "error", message: `Couldn't ${action} ${failed} item${failed === 1 ? "" : "s"}` });
+      toast.error(`Couldn't ${action} ${failed} item${failed === 1 ? "" : "s"}`);
     }
   };
 

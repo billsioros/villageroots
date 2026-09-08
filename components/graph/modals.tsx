@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { X, UploadCloud, Sparkles, LoaderCircle } from "lucide-react";
+import { toast } from "sonner";
 import { useGraphStore } from "@/store/graphStore";
 import { createClient } from "@/lib/supabase/client";
 import { validateScanFile } from "@/lib/ocr/validate-file";
@@ -44,7 +45,6 @@ export function OcrModal() {
   const addDraftEdge = useGraphStore((s) => s.addDraftEdge);
   const clearDrafts = useGraphStore((s) => s.clearDrafts);
   const canvasCenter = useGraphStore((s) => s.canvasCenter);
-  const pushToast = useGraphStore((s) => s.pushToast);
 
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -72,7 +72,7 @@ export function OcrModal() {
   };
 
   const handleError = (message: string) => {
-    pushToast({ tone: "error", message });
+    toast.error(message);
     reset();
   };
 
@@ -80,7 +80,7 @@ export function OcrModal() {
     if (!picked || busy) return;
     const problem = validateScanFile(picked);
     if (problem) {
-      pushToast({ tone: "error", message: problem });
+      toast.error(problem);
       return;
     }
     setFile(picked);
@@ -145,14 +145,13 @@ export function OcrModal() {
     setOpen(false);
     reset();
     setNewNodeOpen(true);
-    pushToast({
-      tone: "success",
-      message: `Extracted ${drafts.nodes.length} ${drafts.nodes.length === 1 ? "entry" : "entries"} — review them below`,
-    });
+    toast.success(
+      `Extracted ${drafts.nodes.length} ${drafts.nodes.length === 1 ? "entry" : "entries"} — review them below`,
+    );
   };
 
   return (
-    <ModalShell title="Import document" onClose={() => { if (!busy) { setOpen(false); reset(); } }}>
+    <ModalShell title="Import document" onClose={() => { if (!busy) { setOpen(false); reset(); } }} className="w-full max-w-5xl">
       <input
         ref={inputRef}
         type="file"

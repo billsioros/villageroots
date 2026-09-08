@@ -10,7 +10,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useGraphStore } from "@/store/graphStore";
+
+import { toast } from "sonner";
 
 interface Notification {
   id: string;
@@ -33,7 +34,6 @@ function timeAgo(dateStr: string): string {
 }
 
 export function NotificationBell() {
-  const pushToast = useGraphStore((s) => s.pushToast);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
@@ -89,14 +89,14 @@ export function NotificationBell() {
       const res = await fetch("/api/notifications", { method: "DELETE" });
       if (!res.ok) {
         setNotifications(before);
-        pushToast({ tone: "error", message: "Couldn't clear notifications. Try again." });
+        toast.error("Couldn't clear notifications. Try again.");
         return;
       }
       await fetchNotifications();
-      pushToast({ tone: "success", message: "Cleared read notifications" });
+      toast.success("Cleared read notifications");
     } catch {
       setNotifications(before);
-      pushToast({ tone: "error", message: "Couldn't clear notifications. Try again." });
+      toast.error("Couldn't clear notifications. Try again.");
     }
   };
 
@@ -112,15 +112,15 @@ export function NotificationBell() {
       if (!res.ok) {
         setNotifications(before);
         setUnreadCount(beforeUnread);
-        pushToast({ tone: "error", message: "Couldn't mark as read. Try again." });
+        toast.error("Couldn't mark as read. Try again.");
         return;
       }
       await fetchNotifications();
-      pushToast({ tone: "success", message: "Marked all as read" });
+      toast.success("Marked all as read");
     } catch {
       setNotifications(before);
       setUnreadCount(beforeUnread);
-      pushToast({ tone: "error", message: "Couldn't mark as read. Try again." });
+      toast.error("Couldn't mark as read. Try again.");
     }
   };
 
