@@ -5,7 +5,7 @@ import remarkGfm from "remark-gfm";
 import type { Citation } from "@/lib/graph/types";
 import { LOW_RELEVANCE_THRESHOLD } from "@/lib/graph/citations";
 import { useGraphStore } from "@/store/graphStore";
-import { toMarkdownWithCitations, CitationPill } from "./citation";
+import { toMarkdownWithCitations, CitationPill, openCitation } from "./citation";
 
 export function MarkdownAnswer({
   content,
@@ -16,6 +16,7 @@ export function MarkdownAnswer({
 }) {
   const focusSubgraph = useGraphStore((s) => s.focusSubgraph);
   const litPath = useGraphStore((s) => s.litPath);
+  const selectNode = useGraphStore((s) => s.selectNode);
   const source = toMarkdownWithCitations(content, citations.length);
 
   return (
@@ -38,10 +39,7 @@ export function MarkdownAnswer({
                 <CitationPill
                   label={citation.label}
                   lowRelevance={lowRelevance}
-                  onClick={() => {
-                    litPath({ nodeIds: [citation.nodeId], edgeIds: [] });
-                    focusSubgraph([citation.nodeId]);
-                  }}
+                  onClick={() => openCitation(citation, { selectNode, litPath, focusSubgraph })}
                 />
               );
             }

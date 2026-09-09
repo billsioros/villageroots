@@ -27,14 +27,20 @@ describe("matchNodesByVector", () => {
   const sqlValues = (arg: unknown): unknown[] =>
     (arg as { queryChunks: unknown[] }).queryChunks.filter((c: unknown) => c === null || typeof c !== "object");
 
-  it("passes the query vector with defaults", async () => {
+  it("joins nodes to normalize matches to canvas (slug) ids", async () => {
     mocks.dbExecute.mockResolvedValue([
-      { node_id: "n1", label: "Yiannis", node_type: "person", similarity: 0.9, content_hash: "h" },
+      { node_id: "uuid-1", node_slug: "yiannis", label: "Yiannis", node_type: "person", similarity: 0.9, content_hash: "h" },
     ]);
     const out = await matchNodesByVector(vector);
-    expect(out[0].nodeId).toBe("n1");
-    expect(out[0].nodeType).toBe("person");
-    expect(mocks.dbExecute).toHaveBeenCalled();
+    expect(out[0].slug).toBe("yiannis");
+    expect(out[0].nodeId).toBe("yiannis");
+    const sqlArg = mocks.dbExecute.mock.calls[0][0] as unknown;
+    expect(sqlText(sqlArg)).toContain("JOIN public.nodes");
+  });
+
+  it("passes the query vector with defaults", async () => {
+    mocks.dbExecute.mockResolvedValue([]);
+    await matchNodesByVector(vector);
     const sqlArg = mocks.dbExecute.mock.calls[0][0] as unknown;
     expect(sqlText(sqlArg)).toContain("match_nodes");
   });
@@ -53,51 +59,57 @@ describe("fetchOneHopNeighbors", () => {
   const edgeSelect = {
     from: () => ({
       innerJoin: () => ({
-        where: (whereArg: unknown) => {
-          capturedWhere = whereArg;
-          return {
-            limit: async () => [
-              {
-                edgeId: "e1",
-                sourceId: "n1",
-                targetId: "n2",
-                verb: "related_to",
-                sourceLabel: null,
-                sourceType: null,
-              },
-            ],
-          };
-        },
+        innerJoin: () => ({
+          where: (whereArg: unknown) => {
+            capturedWhere = whereArg;
+            return {
+              limit: async () => [
+                {
+                  edgeId: "e-uuid",
+                  edgeSlug: "edge-1",
+                  sourceId: "src-uuid",
+                  sourceSlug: "yiannis",
+                  targetId: "tgt-uuid",
+                  targetSlug: "marika",
+                  verb: "related_to",
+                  sourceLabel: "Yiannis",
+                  sourceType: "person",
+                  targetLabel: "Marika",
+                  targetType: "person",
+                },
+              ],
+            };
+          },
+        }),
       }),
     }),
   };
-  const nodeSelect = {
-    from: () => ({
-      where: () => ({
-        then: async (cb: (rows: unknown[]) => unknown) =>
-          cb([{ id: "n2", label: "Marika", type: "person" }]),
-      }),
-    }),
-  };
-
-  it("returns neighbor rows for a set of node ids", async () => {
+  it("returns neighbor rows keyed by canvas (slug) ids", async () => {
     mocks.dbSelect.mockReturnValueOnce(edgeSelect);
-    mocks.dbSelect.mockReturnValueOnce(nodeSelect);
-    const out = await fetchOneHopNeighbors(["n1"]);
+    const out = await fetchOneHopNeighbors(["yiannis"]);
+    expect(out[0].edgeId).toBe("edge-1");
+    expect(out[0].sourceId).toBe("yiannis");
+    expect(out[0].targetId).toBe("marika");
     expect(out[0].neighborLabel).toBe("Marika");
     expect(out[0].verb).toBe("related_to");
     expect(out[0].neighborType).toBe("person");
   });
 
+  it("resolves the neighbor label from the edge endpoints, not the wanted set", async () => {
+    // Regression: neighbors map was keyed by the wanted ids and probed with
+    // the neighbor id — it always missed, so neighborLabel came back "".
+    mocks.dbSelect.mockReturnValueOnce(edgeSelect);
+    const out = await fetchOneHopNeighbors(["yiannis"]);
+    expect(out[0].neighborLabel).toBe("Marika");
+  });
+
   it("filters edges by source or target in the node list using parametrized inArray, not a raw array literal", async () => {
     mocks.dbSelect.mockReturnValueOnce(edgeSelect);
-    mocks.dbSelect.mockReturnValueOnce(nodeSelect);
-    await fetchOneHopNeighbors(["n1", "n2"]);
+    await fetchOneHopNeighbors(["yiannis", "marika"]);
 
     const realDb = drizzle({ connection: { host: "x", port: 1, user: "x", password: "x", database: "x" } });
     const generated = (realDb.select().from(edges).where(capturedWhere as never).toSQL()).sql;
     expect(generated).toContain("in (");
-    expect(generated).toContain("$2, $3");
     expect(generated).not.toContain("::uuid[]");
     expect(generated).not.toContain("ANY(");
   });
@@ -110,7 +122,8 @@ describe("fetchNodeBodies", () => {
         then: async (cb: (rows: unknown[]) => unknown) =>
           cb([
             {
-              id: "n1",
+              id: "uuid-1",
+              slug: "n1",
               description: "Second-generation miller.",
               documentContent: {
                 type: "doc",
@@ -119,7 +132,7 @@ describe("fetchNodeBodies", () => {
                 ],
               },
             },
-            { id: "n2", description: null, documentContent: null },
+            { id: "uuid-2", slug: "n2", description: null, documentContent: null },
           ]),
       }),
     }),
@@ -131,6 +144,23 @@ describe("fetchNodeBodies", () => {
     expect(out.n1).toContain("Second-generation miller.");
     expect(out.n1).toContain("Test information");
     expect(out.n2).toBeUndefined();
+  });
+
+  it("queries and keys bodies by slug (the id the pipeline now passes)", async () => {
+    const slugSelect = {
+      from: () => ({
+        where: () => ({
+          then: async (cb: (rows: unknown[]) => unknown) =>
+            cb([
+              { id: "uuid-1", slug: "yiannis", description: "Miller.", documentContent: null },
+            ]),
+        }),
+      }),
+    };
+    mocks.dbSelect.mockReturnValueOnce(slugSelect);
+    const out = await fetchNodeBodies(["yiannis"]);
+    expect(out.yiannis).toBe("Miller.");
+    expect(out["uuid-1"]).toBeUndefined();
   });
 
   it("returns an empty map when no ids are given", async () => {

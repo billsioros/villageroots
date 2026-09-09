@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { toMarkdownWithCitations } from "@/components/graph/citation";
+import { describe, it, expect, vi } from "vitest";
+import { toMarkdownWithCitations, openCitation } from "@/components/graph/citation";
 
 describe("toMarkdownWithCitations", () => {
   it("replaces in-range citation markers with citation links", () => {
@@ -20,6 +20,31 @@ describe("toMarkdownWithCitations", () => {
   it("handles empty content and count 0", () => {
     expect(toMarkdownWithCitations("", 3)).toBe("");
     expect(toMarkdownWithCitations("plain [1]", 0)).toBe("plain [1]");
+  });
+});
+
+describe("openCitation", () => {
+  const citation = {
+    nodeId: "n-nikolas",
+    label: "Nikolas Katsaris",
+    similarity: 0.9,
+    origin: "retrieved" as const,
+    nodeType: "person",
+    slug: "n-nikolas",
+  };
+
+  it("opens the cited node (selectNode), lights it, and focuses it on the canvas", () => {
+    const actions = {
+      selectNode: vi.fn(),
+      litPath: vi.fn(),
+      focusSubgraph: vi.fn(),
+    };
+
+    openCitation(citation, actions);
+
+    expect(actions.selectNode).toHaveBeenCalledWith("n-nikolas");
+    expect(actions.litPath).toHaveBeenCalledWith({ nodeIds: ["n-nikolas"], edgeIds: [] });
+    expect(actions.focusSubgraph).toHaveBeenCalledWith(["n-nikolas"]);
   });
 });
 

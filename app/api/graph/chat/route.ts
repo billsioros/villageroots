@@ -39,11 +39,13 @@ export async function POST(request: NextRequest) {
     const hops = await fetchOneHopNeighbors(nodeIds);
     const nodeBodies = await fetchNodeBodies(nodeIds);
 
+    // Combined-search normalizes ids to slugs (the canvas id space), so
+    // citations and the subgraph resolve against nodes/edges on the canvas.
     const retrieved: Citation[] = matches.map((m) => ({
       label: m.label,
-      nodeId: m.nodeId,
+      nodeId: m.slug,
       nodeType: m.nodeType,
-      slug: m.nodeId,
+      slug: m.slug,
       similarity: m.similarity,
       origin: "retrieved",
     }));

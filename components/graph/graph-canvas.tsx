@@ -11,6 +11,11 @@ import { forceCollide, forceManyBody } from "d3-force-3d";
 import { useShallow } from "zustand/react/shallow";
 import { useGraphStore, selectVisibleNodes } from "@/store/graphStore";
 import { clanColor, hexToRgba, tokenColor, TYPE_META } from "@/lib/graph/helpers";
+import {
+  selectStrokeColor,
+  highlightStrokeColor,
+  highlightEdgeColor,
+} from "@/lib/graph/canvas-colors";
 import type { GraphNode } from "@/lib/graph/types";
 import { getEdgePanDelta } from "@/lib/graph/canvas-bounds";
 import {
@@ -674,7 +679,8 @@ export function GraphCanvas() {
     if (lit || selected) {
       ctx.beginPath();
       ctx.arc(x, y, pillW / 2 + (lit ? 6 : 3), 0, 2 * Math.PI);
-      ctx.strokeStyle = selected ? tokenColor("meta") : tokenColor("primary");
+      // Highlight ring uses the SAME color as manual selection (meta token).
+      ctx.strokeStyle = selected ? selectStrokeColor() : highlightStrokeColor();
       ctx.lineWidth = (lit ? 2.5 : 2) / globalScale;
       ctx.stroke();
     }
@@ -691,11 +697,11 @@ export function GraphCanvas() {
       ctx.setLineDash([6 / globalScale, 4 / globalScale]);
     } else if (isClan) {
       ctx.fillStyle = clan as string;
-      ctx.strokeStyle = selected ? tokenColor("meta") : lit ? tokenColor("primary") : (clan as string);
+      ctx.strokeStyle = selected ? selectStrokeColor() : lit ? highlightStrokeColor() : (clan as string);
       ctx.setLineDash([]);
     } else {
       ctx.fillStyle = tokenColor("surface-warm");
-      ctx.strokeStyle = selected ? tokenColor("meta") : lit ? tokenColor("primary") : tokenColor("border");
+      ctx.strokeStyle = selected ? selectStrokeColor() : lit ? highlightStrokeColor() : tokenColor("border");
       ctx.setLineDash([]);
     }
     ctx.lineWidth = (selected || lit ? 1.5 : 1) / globalScale;
@@ -842,7 +848,8 @@ export function GraphCanvas() {
           }}
           linkColor={(l: any) => {
             if (activeView === "TREE") return "rgba(0,0,0,0)";
-            if (litEdgeIds.includes(l.id)) return tokenColor("primary");
+            // Lit (chat/citation) edges share the manual-selection color.
+            if (litEdgeIds.includes(l.id)) return highlightEdgeColor();
             if (l.draft || l.status === "pending") return tokenColor("meta", 0.8);
             if (l.suggested) return tokenColor("primary", 0.8);
             if (l.kind === "geo") return tokenColor("success", 0.55);

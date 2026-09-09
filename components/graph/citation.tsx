@@ -1,6 +1,20 @@
 "use client";
 
 import { Network } from "lucide-react";
+import type { Citation } from "@/lib/graph/types";
+
+interface CitationActions {
+  selectNode: (id: string | null) => void;
+  litPath: (path: { nodeIds: string[]; edgeIds: string[] }) => void;
+  focusSubgraph: (nodeIds: string[]) => void;
+}
+
+/** Opens the cited node: selects it (side panel), lights it, glides to it. */
+export function openCitation(citation: Citation, actions: CitationActions) {
+  actions.selectNode(citation.nodeId);
+  actions.litPath({ nodeIds: [citation.nodeId], edgeIds: [] });
+  actions.focusSubgraph([citation.nodeId]);
+}
 
 const CITATION_MARKERS =
   /\[(\d+)\]|<<?CITE\s*:\s*(\d+)\s*>>?|\[CITE\s*:\s*(\d+)\]/gi;

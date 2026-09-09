@@ -59,20 +59,24 @@ export function parseCitations(
   return { text, citations: order };
 }
 
+/**
+ * Builds the canvas highlight from what the ANSWER actually cited — never
+ * the wider retrieved neighborhood. Neighbors only appear via edges whose
+ * BOTH endpoints were cited, so asking about one person highlights that
+ * person, not their whole family/places from vector retrieval.
+ */
 export function buildSubgraphFromPath(cited: Citation[], hops: OneHop[]): Subgraph {
   const citedIds = new Set(cited.map((c) => c.nodeId));
-  const nodeIds = new Set(citedIds);
   const edgeIds: string[] = [];
 
   for (const h of hops) {
-    if (!citedIds.has(h.sourceId) && !citedIds.has(h.targetId)) continue;
-    nodeIds.add(h.sourceId);
-    nodeIds.add(h.targetId);
-    edgeIds.push(h.edgeId);
+    if (citedIds.has(h.sourceId) && citedIds.has(h.targetId)) {
+      edgeIds.push(h.edgeId);
+    }
   }
 
   return {
-    nodeIds: [...nodeIds],
+    nodeIds: [...citedIds],
     edgeIds,
     citedNodeIds: [...citedIds],
   };
