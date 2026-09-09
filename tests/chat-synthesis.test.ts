@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { buildChatContext, synthesizeChat } from "@/lib/graph/chat-synthesis";
 
 const matches = [
-  { nodeId: "n1", label: "Yiannis", nodeType: "person", similarity: 0.9, contentHash: "h" },
+  { nodeId: "n1", slug: "n1", label: "Yiannis", nodeType: "person", similarity: 0.9, contentHash: "h" },
 ];
 const hops = [
   { edgeId: "e1", sourceId: "n1", targetId: "n2", verb: "married_to", neighborLabel: "Marika", neighborType: "person" },

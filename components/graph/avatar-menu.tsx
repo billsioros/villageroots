@@ -107,7 +107,7 @@ export function AvatarMenu() {
           {initials}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" side="bottom" sideOffset={18} className="w-56">
         <DropdownMenuLabel className="truncate">
           {displayName || email || "Account"}
         </DropdownMenuLabel>

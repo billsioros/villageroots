@@ -1,19 +1,77 @@
-import { describe, it, expect } from "vitest";
-import { toMarkdownWithSentinels } from "@/components/graph/citation";
+import { describe, it, expect, vi } from "vitest";
+import { toMarkdownWithCitations, openCitation } from "@/components/graph/citation";
 
-describe("toMarkdownWithSentinels", () => {
-  it("replaces in-range citation markers with sentinels", () => {
-    expect(toMarkdownWithSentinels("Yiannis [1] built [2] it.", 2))
-      .toBe("Yiannis <<CITE:1>> built <<CITE:2>> it.");
+describe("toMarkdownWithCitations", () => {
+  it("replaces in-range citation markers with citation links", () => {
+    expect(toMarkdownWithCitations("Yiannis [1] built [2] it.", 2))
+      .toBe("Yiannis [1](#cite-1) built [2](#cite-2) it.");
   });
 
   it("leaves out-of-range markers as literal text", () => {
-    expect(toMarkdownWithSentinels("Note [9] and [1].", 1))
-      .toBe("Note [9] and <<CITE:1>>.");
+    expect(toMarkdownWithCitations("Note [9] and [1].", 1))
+      .toBe("Note [9] and [1](#cite-1).");
+  });
+
+  it("converts CITE sentinel variations if present", () => {
+    expect(toMarkdownWithCitations("Found <<CITE:1>> and [CITE:2].", 2))
+      .toBe("Found [1](#cite-1) and [2](#cite-2).");
   });
 
   it("handles empty content and count 0", () => {
-    expect(toMarkdownWithSentinels("", 3)).toBe("");
-    expect(toMarkdownWithSentinels("plain [1]", 0)).toBe("plain [1]");
+    expect(toMarkdownWithCitations("", 3)).toBe("");
+    expect(toMarkdownWithCitations("plain [1]", 0)).toBe("plain [1]");
+  });
+});
+
+describe("openCitation", () => {
+  const citation = {
+    nodeId: "n-nikolas",
+    label: "Nikolas Katsaris",
+    similarity: 0.9,
+    origin: "retrieved" as const,
+    nodeType: "person",
+    slug: "n-nikolas",
+  };
+
+  it("opens the cited node (selectNode), lights it, and focuses it on the canvas", () => {
+    const actions = {
+      selectNode: vi.fn(),
+      litPath: vi.fn(),
+      focusSubgraph: vi.fn(),
+    };
+
+    openCitation(citation, actions);
+
+    expect(actions.selectNode).toHaveBeenCalledWith("n-nikolas");
+    expect(actions.litPath).toHaveBeenCalledWith({ nodeIds: ["n-nikolas"], edgeIds: [] });
+    expect(actions.focusSubgraph).toHaveBeenCalledWith(["n-nikolas"]);
+  });
+});
+
+describe("MarkdownAnswer rendering", () => {
+  it("renders citation pills without displaying CITE:1 sentinels", async () => {
+    const React = await import("react");
+    const { renderToStaticMarkup } = await import("react-dom/server");
+    const { MarkdownAnswer } = await import("@/components/graph/markdown-answer");
+
+    const html = renderToStaticMarkup(
+      React.createElement(MarkdownAnswer, {
+        content: "Nikolas [1] built the mill in 1892.",
+        citations: [
+          {
+            nodeId: "n-nikolas",
+            label: "Nikolas Katsaris",
+            similarity: 0.9,
+            origin: "retrieved",
+            nodeType: "person",
+            slug: "n-nikolas",
+          },
+        ],
+      }),
+    );
+
+    expect(html).not.toContain("CITE:1");
+    expect(html).not.toContain("&lt;");
+    expect(html).toContain("Nikolas Katsaris");
   });
 });

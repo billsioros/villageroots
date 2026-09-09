@@ -64,7 +64,7 @@ export function AdminDialog() {
           aria-orientation="vertical"
           aria-label="Admin sections"
           onKeyDown={onKeyDown}
-          className="flex w-[200px] shrink-0 flex-col gap-1 border-r border-border-soft bg-muted/30 p-3"
+          className="flex w-[200px] shrink-0 flex-col gap-1.5 border-r border-border-soft p-3"
         >
           {TABS.map((t, i) => {
             const Icon = t.icon;
@@ -84,10 +84,10 @@ export function AdminDialog() {
                 aria-controls={`admin-panel-${t.id}`}
                 tabIndex={selected ? 0 : -1}
                 onClick={() => animateTo(i)}
-                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
+                className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
                   selected
-                    ? "bg-card text-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    ? "border-primary/20 bg-primary/10 text-primary font-medium shadow-sm"
+                    : "border-transparent text-muted-foreground hover:bg-surface-warm hover:text-foreground"
                 }`}
               >
                 <Icon size={16} className="shrink-0" />

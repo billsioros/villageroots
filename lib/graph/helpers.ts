@@ -37,9 +37,14 @@ export const VERB_KIND: Record<Verb, EdgeKind> = {
 export const VERBS: Verb[] = Object.keys(VERB_KIND) as Verb[];
 
 export function hslToRgb(h: number, s: number, l: number, a = 1): string {
-  const c = (1 - Math.abs(2 * l - 1)) * (s / 100);
+  // s and l are CSS-style percentages (0–100), matching the token values
+  // parsed from "351 100% 61%". Normalizing l is essential: feeding a raw
+  // percentage into [0,1] math produces invalid rgba() (negative channels)
+  // for saturated colors, which canvas silently drops.
+  const ln = l / 100;
+  const c = (1 - Math.abs(2 * ln - 1)) * (s / 100);
   const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-  const m = l / 100 - c / 2;
+  const m = ln - c / 2;
   let r = 0, g = 0, b = 0;
   if (h < 60) [r, g, b] = [c, x, 0];
   else if (h < 120) [r, g, b] = [x, c, 0];

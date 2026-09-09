@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { parseCitations } from "@/lib/graph/citations";
+import { parseCitations, buildSubgraphFromPath } from "@/lib/graph/citations";
 import type { Citation } from "@/lib/graph/types";
+import type { OneHop } from "@/lib/graph/combined-search";
 
 const retrieved: Citation[] = [
   {
@@ -113,5 +114,70 @@ describe("parseCitations", () => {
     expect(text).not.toContain("CITE");
     expect(citations).toHaveLength(5);
     expect(text).toContain("[1]");
+  });
+
+  it("reindexes [CITE:N] markers against retrieved citations", () => {
+    const { text, citations } = parseCitations("Evidence [CITE:1] confirmed.", {
+      retrieved,
+      neighbors,
+    });
+    expect(citations.map((c) => c.nodeId)).toEqual(["l-katsaris"]);
+    expect(text).toBe("Evidence [1] confirmed.");
+  });
+
+  it("reindexes bare CITE:N markers against retrieved citations", () => {
+    const { text, citations } = parseCitations("Evidence CITE:2 confirmed.", {
+      retrieved,
+      neighbors,
+    });
+    expect(citations.map((c) => c.nodeId)).toEqual(["n-nikolas"]);
+    expect(text).toBe("Evidence [1] confirmed.");
+  });
+});
+
+describe("buildSubgraphFromPath", () => {
+  const cited: Citation[] = [retrieved[1], retrieved[2]]; // n-nikolas, n-yiannis
+
+  const hop = (edgeId: string, sourceId: string, targetId: string): OneHop => ({
+    edgeId,
+    sourceId,
+    targetId,
+    verb: "related_to",
+    neighborLabel: "",
+    neighborType: null,
+  });
+
+  it("includes ONLY the cited nodes — never the retrieved neighborhood", () => {
+    const hops = [
+      hop("e1", "n-nikolas", "l-katsaris"), // touches a cited node, but l-katsaris was NOT cited
+      hop("e2", "n-yiannis", "n-marika"), // n-marika not cited
+    ];
+    const sub = buildSubgraphFromPath(cited, hops);
+    expect(sub.nodeIds.sort()).toEqual(["n-nikolas", "n-yiannis"]);
+    expect(sub.citedNodeIds.sort()).toEqual(["n-nikolas", "n-yiannis"]);
+    expect(sub.edgeIds).toEqual([]);
+  });
+
+  it("lights an edge only when BOTH its endpoints were cited", () => {
+    const hops = [
+      hop("e-between", "n-nikolas", "n-yiannis"), // both cited
+      hop("e-out", "n-yiannis", "n-marika"), // n-marika not cited
+    ];
+    const sub = buildSubgraphFromPath(cited, hops);
+    expect(sub.edgeIds).toEqual(["e-between"]);
+    expect(sub.nodeIds.sort()).toEqual(["n-nikolas", "n-yiannis"]);
+  });
+
+  it("returns empty arrays when nothing was cited", () => {
+    const sub = buildSubgraphFromPath([], [hop("e1", "a", "b")]);
+    expect(sub.nodeIds).toEqual([]);
+    expect(sub.edgeIds).toEqual([]);
+    expect(sub.citedNodeIds).toEqual([]);
+  });
+
+  it("ignores hops that reference unknown nodes entirely", () => {
+    const sub = buildSubgraphFromPath(cited, [hop("e1", "n-marika", "l-katsaris")]);
+    expect(sub.nodeIds.sort()).toEqual(["n-nikolas", "n-yiannis"]);
+    expect(sub.edgeIds).toEqual([]);
   });
 });
