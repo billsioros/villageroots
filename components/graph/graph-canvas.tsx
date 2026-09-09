@@ -12,6 +12,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useGraphStore, selectVisibleNodes } from "@/store/graphStore";
 import { clanColor, hexToRgba, tokenColor, TYPE_META } from "@/lib/graph/helpers";
 import type { GraphNode } from "@/lib/graph/types";
+import { getEdgePanDelta } from "@/lib/graph/canvas-bounds";
 import {
   buildFamilyForest,
   clanMembers,
@@ -20,6 +21,18 @@ import {
 
 const CULL_THRESHOLD = 200;
 const CULL_BUFFER = 200;
+
+function makeCharge(
+  strength: number,
+  distanceMin: number,
+  distanceMax: number,
+) {
+  const charge = forceManyBody() as any;
+  charge.strength(strength);
+  charge.distanceMin(distanceMin);
+  charge.distanceMax(distanceMax);
+  return charge;
+}
 
 const GRID_MIN_SCREEN_PX = 8;
 const GRID_LEVELS: { step: number; color: string }[] = [
@@ -50,6 +63,8 @@ export function GraphCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<any>(null);
   const flyAnimRef = useRef<number | null>(null);
+  const dragPanFrameRef = useRef<number | null>(null);
+  const draggedNodeRef = useRef<any>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [graphReady, setGraphReady] = useState(false);
 
@@ -209,12 +224,13 @@ export function GraphCanvas() {
       nodes: nodes.filter((n) => n.type === "person"),
       links: personEdges,
     };
-  }, [activeView, nodes, edges, draftEdges]);
+  }, [activeView, graphData, nodes, edges, draftEdges]);
 
   const culledData = useMemo(() => {
     const source = displayData;
     const count = activeView === "TREE" ? source.nodes.length : nodeCount;
-    if (count < CULL_THRESHOLD) return source as unknown as GraphData;
+    if (count < CULL_THRESHOLD)
+      return source as unknown as GraphData;
     const { x1, y1, x2, y2 } = viewportBounds;
     const visible = new Set(
       source.nodes
@@ -243,7 +259,7 @@ export function GraphCanvas() {
           ),
       ),
     };
-  }, [activeView, displayData, graphData, viewportBounds, nodeCount]);
+  }, [activeView, displayData, viewportBounds, nodeCount]);
 
   const focusNode = useMemo(
     () => nodes.find((n) => n.id === selectedId),
@@ -291,11 +307,23 @@ export function GraphCanvas() {
   useEffect(() => {
     const fg = graphRef.current;
     if (!fg || focusNodeIds.length === 0) return;
-    fg.zoomToFit(600, 60, (node: { id?: string }) => focusNodeIds.includes(node.id ?? ""));
+    const bbox = fg.getGraphBbox((node: { id?: string }) =>
+      focusNodeIds.includes(node.id ?? ""),
+    );
+    if (bbox) {
+      const dx = bbox.x[1] - bbox.x[0];
+      const dy = bbox.y[1] - bbox.y[0];
+      const fit =
+        dx > 0 && dy > 0
+          ? Math.min((size.w - 120) / dx, (size.h - 120) / dy)
+          : Infinity;
+      fg.centerAt((bbox.x[0] + bbox.x[1]) / 2, (bbox.y[0] + bbox.y[1]) / 2, 600);
+      fg.zoom(Math.min(fit, 1.4), 600);
+    }
     clearFocus();
-  }, [focusNodeIds, focusNonce, clearFocus]);
+  }, [focusNodeIds, focusNonce, clearFocus, size]);
 
-  // --- custom forces, engine stop, initial fit ---
+  // --- custom forces ---
   useEffect(() => {
     const fg = graphRef.current;
     if (!fg) return;
@@ -309,20 +337,38 @@ export function GraphCanvas() {
       }),
     );
 
-    const charge = forceManyBody() as any;
-    charge.strength(forceConfig.chargeStrength);
-    charge.distanceMin(forceConfig.chargeDistanceMin);
-    charge.distanceMax(forceConfig.chargeDistanceMax);
+    const charge = makeCharge(
+      forceConfig.chargeStrength,
+      forceConfig.chargeDistanceMin,
+      forceConfig.chargeDistanceMax,
+    );
     fg.d3Force("charge", charge);
 
     const link = fg.d3Force("link");
     if (link) link.distance(forceConfig.linkDistance);
 
     fg.d3ReheatSimulation();
+  }, [forceConfig, graphReady, degreeMap]);
 
-    const t = setTimeout(() => fg.zoomToFit(400, 60), 150);
+  // --- initial fit (only when the layout itself changes; never on culling) ---
+  useEffect(() => {
+    const fg = graphRef.current;
+    if (!fg) return;
+
+    const t = setTimeout(() => {
+      const bbox = fg.getGraphBbox();
+      if (!bbox) return;
+      const dx = bbox.x[1] - bbox.x[0];
+      const dy = bbox.y[1] - bbox.y[0];
+      const fit =
+        dx > 0 && dy > 0
+          ? Math.min((size.w - 120) / dx, (size.h - 120) / dy)
+          : Infinity;
+      fg.centerAt((bbox.x[0] + bbox.x[1]) / 2, (bbox.y[0] + bbox.y[1]) / 2, 400);
+      fg.zoom(Math.min(fit, 1.4), 400);
+    }, 150);
     return () => clearTimeout(t);
-  }, [setCanvasCenter, size.w, forceConfig, degreeMap, graphReady]);
+  }, [size.w, size.h, forceConfig, graphReady]);
 
   // --- viewport bounds rAF poll ---
   useEffect(() => {
@@ -354,58 +400,99 @@ export function GraphCanvas() {
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [size.w, setViewportBounds]);
+  }, [size.w, size.h, setViewportBounds]);
+
+  const stopEdgePan = useCallback(() => {
+    draggedNodeRef.current = null;
+    if (dragPanFrameRef.current !== null) {
+      cancelAnimationFrame(dragPanFrameRef.current);
+      dragPanFrameRef.current = null;
+    }
+  }, []);
+
+  const startEdgePan = useCallback(() => {
+    if (dragPanFrameRef.current !== null) return;
+    const tick = () => {
+      const fg = graphRef.current;
+      const node = draggedNodeRef.current;
+      if (!fg || !node || size.w === 0 || size.h === 0) {
+        dragPanFrameRef.current = null;
+        return;
+      }
+      const screen = fg.graph2ScreenCoords?.({ x: node.x ?? 0, y: node.y ?? 0 });
+      if (screen) {
+        const delta = getEdgePanDelta(screen, { width: size.w, height: size.h });
+        if (delta.x !== 0 || delta.y !== 0) {
+          const zoom = fg.zoom();
+          const center = fg.centerAt();
+          const x = center.x + delta.x / zoom;
+          const y = center.y + delta.y / zoom;
+          fg.centerAt(x, y, 0);
+          node.x = (node.x ?? 0) + delta.x / zoom;
+          node.y = (node.y ?? 0) + delta.y / zoom;
+          if (typeof node.fx === "number") node.fx = node.x;
+          if (typeof node.fy === "number") node.fy = node.y;
+        }
+      }
+      dragPanFrameRef.current = requestAnimationFrame(tick);
+    };
+    dragPanFrameRef.current = requestAnimationFrame(tick);
+  }, [size]);
 
   // --- smooth camera glide to a node ---
-  // Pan and zoom are locked to one shared motion: the clicked node rides a
-  // straight screen-space line to the viewport centre while the scale eases in.
-  // Deriving the translation from the scaled node position each frame means the
-  // camera always ends exactly on the node, even if the simulation nudges it.
+  // Pan and zoom move on one shared easing: the target rides a straight
+  // screen-space line to the viewport centre while the scale eases in, so the
+  // two never desync into a zoom-then-translate snap.
+  const flyCameraTo = useCallback(
+    (targetX: number, targetY: number, targetZoom: number, duration = 850) => {
+      const fg = graphRef.current;
+      if (!fg) return;
+      const k0 = fg.zoom();
+      const c0 = fg.centerAt();
+      const k1 = Math.min(Math.max(targetZoom, 0.25), 2.6);
+      if (k0 === k1 && Math.abs(c0.x - targetX) < 0.5 && Math.abs(c0.y - targetY) < 0.5) return;
+      const w = size.w;
+      const h = size.h;
+      const tx0 = w / 2 - c0.x * k0;
+      const ty0 = h / 2 - c0.y * k0;
+      const sx0 = targetX * k0 + tx0;
+      const sy0 = targetY * k0 + ty0;
+      if (flyAnimRef.current !== null) cancelAnimationFrame(flyAnimRef.current);
+      const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+      const start = performance.now();
+      const step = (now: number) => {
+        const p = Math.min(1, (now - start) / duration);
+        const u = ease(p);
+        const k = k0 + (k1 - k0) * u;
+        const sx = sx0 + (w / 2 - sx0) * u;
+        const sy = sy0 + (h / 2 - sy0) * u;
+        const tx = sx - targetX * k;
+        const ty = sy - targetY * k;
+        fg.centerAt((w / 2 - tx) / k, (h / 2 - ty) / k, 0);
+        fg.zoom(k, 0);
+        if (p < 1) {
+          flyAnimRef.current = requestAnimationFrame(step);
+        } else {
+          flyAnimRef.current = null;
+        }
+      };
+      flyAnimRef.current = requestAnimationFrame(step);
+    },
+    [size],
+  );
+
   const flyToNode = (node: any) => {
     const fg = graphRef.current;
     if (!fg) return;
-    const k0 = fg.zoom();
-    const c0 = fg.centerAt();
-    const k1 = Math.max(k0, 1.4);
-    const nx = node.x ?? 0;
-    const ny = node.y ?? 0;
-    if (k0 === k1 && Math.abs(c0.x - nx) < 0.5 && Math.abs(c0.y - ny) < 0.5) return;
-    const w = size.w;
-    const h = size.h;
-    const tx0 = w / 2 - c0.x * k0;
-    const ty0 = h / 2 - c0.y * k0;
-    const nx0 = nx * k0 + tx0; // node's current screen position
-    const ny0 = ny * k0 + ty0;
-    if (flyAnimRef.current !== null) cancelAnimationFrame(flyAnimRef.current);
-    const duration = 850;
-    const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
-    const start = performance.now();
-    const step = (now: number) => {
-      const p = Math.min(1, (now - start) / duration);
-      const u = ease(p);
-      const k = k0 + (k1 - k0) * u;
-      const sx = nx0 + (w / 2 - nx0) * u; // node screen x rides straight to center
-      const sy = ny0 + (h / 2 - ny0) * u;
-      const tx = sx - (node.x ?? 0) * k;
-      const ty = sy - (node.y ?? 0) * k;
-      const cx = (w / 2 - tx) / k;
-      const cy = (h / 2 - ty) / k;
-      fg.centerAt(cx, cy, 0);
-      fg.zoom(k, 0);
-      if (p < 1) {
-        flyAnimRef.current = requestAnimationFrame(step);
-      } else {
-        flyAnimRef.current = null;
-      }
-    };
-    flyAnimRef.current = requestAnimationFrame(step);
+    flyCameraTo(node.x ?? 0, node.y ?? 0, Math.max(fg.zoom(), 1.4));
   };
 
   useEffect(
     () => () => {
       if (flyAnimRef.current !== null) cancelAnimationFrame(flyAnimRef.current);
+      stopEdgePan();
     },
-    [],
+    [stopEdgePan],
   );
 
   // --- Tree View: glide every node into its slot via fx/fy, then pin ---
@@ -463,12 +550,31 @@ export function GraphCanvas() {
           n.fx = b.x;
           n.fy = b.y;
         }
-        fg.zoomToFit(500, 80);
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        for (const s of treeResult.slots.values()) {
+          if (s.x < minX) minX = s.x;
+          if (s.x > maxX) maxX = s.x;
+          if (s.y < minY) minY = s.y;
+          if (s.y > maxY) maxY = s.y;
+        }
+        const cx = (minX + maxX) / 2;
+        const cy = (minY + maxY) / 2;
+        const dx = maxX - minX;
+        const dy = maxY - minY;
+        if (dx > 0 && dy > 0) {
+          const fit = Math.min((size.w - 160) / dx, (size.h - 160) / dy);
+          flyCameraTo(cx, cy, Math.min(fit, 0.9));
+        } else {
+          flyCameraTo(cx, cy, fg.zoom());
+        }
       }
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [activeView, treeResult, displayData, nodes]);
+  }, [activeView, treeResult, displayData, nodes, size, flyCameraTo]);
 
   const paintGrid = useCallback(
     (ctx: CanvasRenderingContext2D, globalScale: number) => {
@@ -745,7 +851,11 @@ export function GraphCanvas() {
               setFocalPersonId(node.id);
           }}
           onBackgroundClick={clearSelection}
-          onNodeDragEnd={() => {}}
+          onNodeDrag={(node: any) => {
+            draggedNodeRef.current = node;
+            startEdgePan();
+          }}
+          onNodeDragEnd={stopEdgePan}
           onEngineStop={() => {
             const bbox = graphRef.current?.getGraphBbox(() => true);
             if (!bbox) return;

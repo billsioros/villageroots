@@ -41,8 +41,10 @@ export function LayersPop() {
                 <button
                   key={t}
                   onClick={() => toggleType(t)}
-                  className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12px] font-medium transition-colors ${
-                    hiddenTypes[t] ? "bg-surface-warm text-muted-foreground" : "bg-foreground text-background"
+                  className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[12px] font-medium transition-colors ${
+                    hiddenTypes[t]
+                      ? "border-transparent bg-surface-warm text-muted-foreground"
+                      : "border-foreground/15 bg-fg-soft-2 text-foreground"
                   }`}
                 >
                   <span

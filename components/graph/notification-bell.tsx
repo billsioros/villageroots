@@ -139,7 +139,7 @@ export function NotificationBell() {
           )}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[92vw] max-w-[420px] sm:w-[400px] max-h-[70vh] sm:max-h-[560px] overflow-y-auto">
+      <DropdownMenuContent align="end" side="bottom" sideOffset={18} className="w-[92vw] max-w-[420px] sm:w-[400px] max-h-[70vh] sm:max-h-[560px] overflow-y-auto">
         {(hasRead || hasUnread) && (
           <>
             <DropdownMenuLabel className="flex items-center justify-between gap-2 py-2">

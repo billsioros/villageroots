@@ -12,6 +12,16 @@ declare module "d3-force-3d" {
 
   export function forceManyBody<N = any>(): Force<N> & {
     strength(value: number): Force<N>;
+    distanceMin(value: number): Force<N>;
+    distanceMax(value: number): Force<N>;
+  };
+
+  export function forceCenter<N = any>(
+    x?: number,
+    y?: number,
+    z?: number
+  ): Force<N> & {
+    strength(value: number): Force<N>;
   };
 
   export function forceLink<N = any>(

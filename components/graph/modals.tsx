@@ -151,7 +151,7 @@ export function OcrModal() {
   };
 
   return (
-    <ModalShell title="Import document" onClose={() => { if (!busy) { setOpen(false); reset(); } }} className="w-full max-w-3xl">
+    <ModalShell title="Import document" onClose={() => { if (!busy) { setOpen(false); reset(); } }} className="w-full max-w-lg">
       <input
         ref={inputRef}
         type="file"

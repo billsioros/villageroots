@@ -254,14 +254,14 @@ export default function ContributePanel() {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="w-full max-w-5xl">
+      <DialogContent className="w-full max-w-3xl grid-rows-[auto_minmax(0,1fr)_auto] h-[600px] max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Add to the map</DialogTitle>
           <DialogDescription>Add entries and link each one to the map.</DialogDescription>
         </DialogHeader>
 
         {/* Roster */}
-        <div className="space-y-5">
+        <div className="flex min-h-0 flex-col gap-5 overflow-y-auto pr-1">
           <div>
             <div className="mb-2 text-xs font-medium text-muted-foreground">Category</div>
             <div className="flex flex-wrap gap-2">
@@ -272,7 +272,7 @@ export default function ContributePanel() {
                   className={
                     "rounded-full border px-3 py-1.5 text-xs " +
                     (type === t
-                      ? "border-foreground bg-foreground text-background"
+                      ? "border-foreground/15 bg-fg-soft-2 text-foreground"
                       : "text-muted-foreground hover:bg-muted")
                   }
                 >
@@ -351,9 +351,9 @@ export default function ContributePanel() {
             </div>
           )}
 
-          <div>
+          <div className="flex min-h-0 flex-1 flex-col">
             <div className="mb-2 text-xs font-medium text-muted-foreground">Drafted entries</div>
-            <div className="max-h-[40vh] overflow-y-auto rounded-lg border p-3">
+            <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border p-3">
               {draftNodes.length === 0 ? (
                 <p className="py-8 text-center text-[13px] text-muted-foreground">
                   Add at least one entry to continue.
