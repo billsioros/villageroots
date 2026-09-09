@@ -1,3 +1,10 @@
+# [1.29.0](https://github.com/billsioros/villageroots/compare/v1.28.0...v1.29.0) (2026-09-09)
+
+
+### Features
+
+* canvas edge pan, glide camera easing, and UI polish ([#48](https://github.com/billsioros/villageroots/issues/48)) ([b9219e1](https://github.com/billsioros/villageroots/commit/b9219e17d9706a4958f49c267be5c0fb634e8492))
+
 # [1.28.0](https://github.com/billsioros/villageroots/compare/v1.27.0...v1.28.0) (2026-09-08)
 
 
