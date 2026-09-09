@@ -114,4 +114,22 @@ describe("parseCitations", () => {
     expect(citations).toHaveLength(5);
     expect(text).toContain("[1]");
   });
+
+  it("reindexes [CITE:N] markers against retrieved citations", () => {
+    const { text, citations } = parseCitations("Evidence [CITE:1] confirmed.", {
+      retrieved,
+      neighbors,
+    });
+    expect(citations.map((c) => c.nodeId)).toEqual(["l-katsaris"]);
+    expect(text).toBe("Evidence [1] confirmed.");
+  });
+
+  it("reindexes bare CITE:N markers against retrieved citations", () => {
+    const { text, citations } = parseCitations("Evidence CITE:2 confirmed.", {
+      retrieved,
+      neighbors,
+    });
+    expect(citations.map((c) => c.nodeId)).toEqual(["n-nikolas"]);
+    expect(text).toBe("Evidence [1] confirmed.");
+  });
 });

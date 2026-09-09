@@ -11,7 +11,7 @@ export interface CitationPool {
 }
 
 const MARKER =
-  /\[([^\]]+)\]\(([a-zA-Z0-9-]{2,})\)|<<?CITE\s*:\s*(\d+)\s*>>?|\[(\d+)\]/gi;
+  /\[([^\]]+)\]\(([a-zA-Z0-9-]{2,})\)|(?:<<?|\[|\b)CITE\s*:\s*(\d+)(?:>>?|\]|\b)|\[(\d+)\]/gi;
 
 const ESCAPED_TAG = /&(?:lt|gt|#60|#62|#x3[cCeE]|#X3[CcEe]);/g;
 const UNESCAPE = (match: string) => (/lt|#60|#x3[cC]/.test(match) ? "<" : ">");

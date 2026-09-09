@@ -18,6 +18,10 @@ import {
   clanMembers,
   TREE_EDGE_VERBS,
 } from "@/lib/graph/tree";
+import {
+  computeSubgraphFitCamera,
+  computeTreeFitCamera,
+} from "@/lib/graph/canvas-camera";
 
 const CULL_THRESHOLD = 200;
 const CULL_BUFFER = 200;
@@ -90,6 +94,7 @@ export function GraphCanvas() {
   const forceConfig = useGraphStore((s) => s.forceConfig);
   const activeView = useGraphStore((s) => s.activeView);
   const setFocalPersonId = useGraphStore((s) => s.setFocalPersonId);
+  const preTreeCameraRef = useRef<{ x: number; y: number; zoom: number } | null>(null);
   const viewportRef = useRef({ x1: -500, y1: -500, x2: 500, y2: 500 });
   const lastViewportUpdate = useRef(0);
   const setViewportBounds = useGraphStore((s) => s.setViewportBounds);
@@ -304,25 +309,6 @@ export function GraphCanvas() {
     setPanIntent(null);
   }, [panIntent, setPanIntent, nodes]);
 
-  useEffect(() => {
-    const fg = graphRef.current;
-    if (!fg || focusNodeIds.length === 0) return;
-    const bbox = fg.getGraphBbox((node: { id?: string }) =>
-      focusNodeIds.includes(node.id ?? ""),
-    );
-    if (bbox) {
-      const dx = bbox.x[1] - bbox.x[0];
-      const dy = bbox.y[1] - bbox.y[0];
-      const fit =
-        dx > 0 && dy > 0
-          ? Math.min((size.w - 120) / dx, (size.h - 120) / dy)
-          : Infinity;
-      fg.centerAt((bbox.x[0] + bbox.x[1]) / 2, (bbox.y[0] + bbox.y[1]) / 2, 600);
-      fg.zoom(Math.min(fit, 1.4), 600);
-    }
-    clearFocus();
-  }, [focusNodeIds, focusNonce, clearFocus, size]);
-
   // --- custom forces ---
   useEffect(() => {
     const fg = graphRef.current;
@@ -487,6 +473,21 @@ export function GraphCanvas() {
     flyCameraTo(node.x ?? 0, node.y ?? 0, Math.max(fg.zoom(), 1.4));
   };
 
+  // --- focus subgraph of citations / search results ---
+  useEffect(() => {
+    const fg = graphRef.current;
+    if (!fg || focusNodeIds.length === 0) return;
+    const target = computeSubgraphFitCamera(
+      (displayData?.nodes ?? nodes) as Array<{ id: string; x?: number; y?: number }>,
+      focusNodeIds,
+      { width: size.w, height: size.h },
+    );
+    if (target) {
+      flyCameraTo(target.x, target.y, target.zoom);
+    }
+    clearFocus();
+  }, [focusNodeIds, focusNonce, clearFocus, size.w, size.h, displayData, nodes, flyCameraTo]);
+
   useEffect(
     () => () => {
       if (flyAnimRef.current !== null) cancelAnimationFrame(flyAnimRef.current);
@@ -506,8 +507,23 @@ export function GraphCanvas() {
         delete n.fy;
       });
       fg.d3ReheatSimulation();
+      if (preTreeCameraRef.current) {
+        const pre = preTreeCameraRef.current;
+        preTreeCameraRef.current = null;
+        flyCameraTo(pre.x, pre.y, pre.zoom);
+      }
       return;
     }
+
+    if (preTreeCameraRef.current === null) {
+      const center = fg.centerAt();
+      preTreeCameraRef.current = {
+        x: center.x,
+        y: center.y,
+        zoom: fg.zoom(),
+      };
+    }
+
     const duration = 600;
     const ease = (t: number) => 1 - Math.pow(1 - t, 3);
     const from = new Map<string, { x: number; y: number }>();
@@ -560,21 +576,17 @@ export function GraphCanvas() {
           if (s.y < minY) minY = s.y;
           if (s.y > maxY) maxY = s.y;
         }
-        const cx = (minX + maxX) / 2;
-        const cy = (minY + maxY) / 2;
-        const dx = maxX - minX;
-        const dy = maxY - minY;
-        if (dx > 0 && dy > 0) {
-          const fit = Math.min((size.w - 160) / dx, (size.h - 160) / dy);
-          flyCameraTo(cx, cy, Math.min(fit, 0.9));
-        } else {
-          flyCameraTo(cx, cy, fg.zoom());
-        }
+        const target = computeTreeFitCamera(
+          { minX, maxX, minY, maxY },
+          { width: size.w, height: size.h },
+          fg.zoom(),
+        );
+        flyCameraTo(target.x, target.y, target.zoom);
       }
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [activeView, treeResult, displayData, nodes, size, flyCameraTo]);
+  }, [activeView, treeResult, displayData, nodes, size.w, size.h, flyCameraTo]);
 
   const paintGrid = useCallback(
     (ctx: CanvasRenderingContext2D, globalScale: number) => {

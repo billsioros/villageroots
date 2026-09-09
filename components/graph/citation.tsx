@@ -2,21 +2,39 @@
 
 import { Network } from "lucide-react";
 
-const CITATION_REF = /\[(\d+)\]/g;
+const CITATION_MARKERS =
+  /\[(\d+)\]|<<?CITE\s*:\s*(\d+)\s*>>?|\[CITE\s*:\s*(\d+)\]/gi;
 
-export function toMarkdownWithSentinels(content: string, count: number): string {
-  return content.replace(CITATION_REF, (marker: string, digits: string) => {
-    const index = Number(digits);
-    return index >= 1 && index <= count ? `<<CITE:${index}>>` : marker;
-  });
+export function toMarkdownWithCitations(content: string, count: number): string {
+  if (!content) return "";
+  return content.replace(
+    CITATION_MARKERS,
+    (marker: string, bDigits?: string, cDigits?: string, bcDigits?: string) => {
+      const raw = bDigits ?? cDigits ?? bcDigits;
+      if (!raw) return marker;
+      const index = Number(raw);
+      return index >= 1 && index <= count ? `[${index}](#cite-${index})` : marker;
+    },
+  );
 }
 
-export function CitationPill({ label, lowRelevance }: { label: string; lowRelevance: boolean }) {
+export const toMarkdownWithSentinels = toMarkdownWithCitations;
+
+export function CitationPill({
+  label,
+  lowRelevance,
+  onClick,
+}: {
+  label: string;
+  lowRelevance: boolean;
+  onClick?: () => void;
+}) {
   return (
     <button
       type="button"
+      onClick={onClick}
       title={lowRelevance ? "Low evidence confidence" : label}
-      className={`mx-0.5 inline-flex max-w-[140px] items-center gap-1 rounded-full border px-1.5 py-0.5 align-baseline text-[11px] font-medium ${
+      className={`mx-0.5 inline-flex max-w-[140px] items-center gap-1 rounded-full border px-1.5 py-0.5 align-baseline text-[11px] font-medium transition-colors hover:border-primary/50 ${
         lowRelevance
           ? "border-amber-300 bg-amber-50 text-amber-700"
           : "border-primary/30 bg-primary/5 text-primary"
