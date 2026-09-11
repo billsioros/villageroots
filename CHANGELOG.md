@@ -1,3 +1,10 @@
+## [1.30.2](https://github.com/billsioros/villageroots/compare/v1.30.1...v1.30.2) (2026-09-11)
+
+
+### Bug Fixes
+
+* make invite form collapsible by default ([#53](https://github.com/billsioros/villageroots/issues/53)) ([ccfc2e6](https://github.com/billsioros/villageroots/commit/ccfc2e62d7d9270aeae18bb814a9b3c56a552b45))
+
 ## [1.30.1](https://github.com/billsioros/villageroots/compare/v1.30.0...v1.30.1) (2026-09-11)
 
 
