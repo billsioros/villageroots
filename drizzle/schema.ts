@@ -222,10 +222,10 @@ export const auditLogs = pgTable(
     actorId: uuid("actor_id")
       .notNull()
       .references(() => authUsers.id),
-    entityType: text("entity_type", { enum: ["node", "edge"] }).notNull(),
+    entityType: text("entity_type", { enum: ["node", "edge", "user"] }).notNull(),
     entityId: text("entity_id").notNull(),
     entitySlug: text("entity_slug").notNull(),
-    action: text("action", { enum: ["create", "update", "status_change"] }).notNull(),
+    action: text("action", { enum: ["create", "update", "status_change", "role_change"] }).notNull(),
     statusBefore: statusEnum("status_before"),
     statusAfter: statusEnum("status_after"),
     metadata: jsonb("metadata").$type<Record<string, unknown>>(),

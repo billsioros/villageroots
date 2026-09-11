@@ -5,12 +5,16 @@ import { validateEmail } from "@/lib/auth/validation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { ShieldCheck } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export function InviteForm() {
   const [visible, setVisible] = useState<boolean | null>(null);
   const [name, setName] = useState("");
   const [surname, setSurname] = useState("");
   const [email, setEmail] = useState("");
+  const [role, setRole] = useState<"admin" | "contributor">("contributor");
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [password, setPassword] = useState<string | null>(null);
@@ -55,13 +59,14 @@ export function InviteForm() {
       const res = await fetch("/api/admin/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, name: name.trim(), surname: surname.trim() }),
+        body: JSON.stringify({ email, name: name.trim(), surname: surname.trim(), role }),
       });
       const body = (await res.json().catch(() => ({}))) as { error?: string; password?: string };
       if (res.ok) {
         setName("");
         setSurname("");
         setEmail("");
+        setRole("contributor");
         setMessage(`Invitation sent to ${email}.`);
         setPassword(body.password ?? null);
       } else {
@@ -128,6 +133,42 @@ export function InviteForm() {
             aria-describedby={error ? "invite-error" : undefined}
             onChange={(e) => setEmail(e.target.value)}
           />
+        </div>
+
+        <div className="grid gap-1.5">
+          <Label>Role</Label>
+          <RadioGroup
+            value={role}
+            onValueChange={(v) => setRole(v as "admin" | "contributor")}
+            disabled={isLoading}
+            className="grid grid-cols-2 gap-2"
+          >
+            <RadioGroupItem value="contributor" id="invite-role-contributor" className="sr-only" />
+            <Label
+              htmlFor="invite-role-contributor"
+              className={cn(
+                "flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors cursor-pointer",
+                role === "contributor"
+                  ? "border-primary/40 bg-primary/10 text-primary"
+                  : "border-border-soft text-muted-foreground",
+              )}
+            >
+              Contributor
+            </Label>
+            <RadioGroupItem value="admin" id="invite-role-admin" className="sr-only" />
+            <Label
+              htmlFor="invite-role-admin"
+              className={cn(
+                "flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors cursor-pointer",
+                role === "admin"
+                  ? "border-primary/40 bg-primary/10 text-primary"
+                  : "border-border-soft text-muted-foreground",
+              )}
+            >
+              <ShieldCheck size={14} />
+              Administrator
+            </Label>
+          </RadioGroup>
         </div>
 
         <Button type="submit" disabled={isLoading} className="w-full">

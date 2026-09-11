@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { sessionUid } from "@/lib/graph/session";
 import { isAdminUid } from "@/lib/graph/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getRoleForUser } from "@/lib/graph/rbac";
+import { getRoleForUser, countAdmins, setRoleForUser, isRole, type Role } from "@/lib/graph/rbac";
+import { logAudit } from "@/lib/graph/audit";
 
 export async function GET() {
   const uid = await sessionUid();
@@ -29,7 +30,7 @@ export async function GET() {
       email: u.email ?? "",
       name: u.user_metadata?.name ?? null,
       surname: u.user_metadata?.surname ?? null,
-      role: await getRoleForUser(u.id),
+      role: (await getRoleForUser(u.id)) ?? "contributor",
       is_active: !u.banned_until,
       last_sign_in_at: u.last_sign_in_at ?? null,
       created_at: u.created_at ?? null,
@@ -37,6 +38,39 @@ export async function GET() {
   );
 
   return NextResponse.json({ users });
+}
+
+async function applyRoleChange(
+  actorUid: string,
+  userId: string,
+  role: Role,
+  email: string,
+): Promise<NextResponse> {
+  if (userId === actorUid) {
+    return NextResponse.json({ error: "Cannot change your own role." }, { status: 400 });
+  }
+
+  const effectiveRole = (await getRoleForUser(userId)) ?? "contributor";
+
+  if (effectiveRole === role) {
+    return NextResponse.json({ ok: true });
+  }
+
+  if (
+    effectiveRole === "admin" &&
+    role === "contributor" &&
+    (await countAdmins()) <= 1
+  ) {
+    return NextResponse.json({ error: "Cannot demote the last admin." }, { status: 400 });
+  }
+
+  await setRoleForUser(userId, role);
+  await logAudit("role_change", "user", email || userId, {
+    roleBefore: effectiveRole,
+    roleAfter: role,
+  });
+
+  return NextResponse.json({ ok: true });
 }
 
 export async function POST(request: Request) {
@@ -48,14 +82,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  let body: { userId?: unknown; isActive?: unknown; name?: unknown; surname?: unknown };
+  let body: {
+    userId?: unknown;
+    isActive?: unknown;
+    name?: unknown;
+    surname?: unknown;
+    role?: unknown;
+    email?: unknown;
+  };
   try {
-    body = (await request.json()) as {
-      userId?: unknown;
-      isActive?: unknown;
-      name?: unknown;
-      surname?: unknown;
-    };
+    body = (await request.json()) as typeof body;
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
@@ -65,16 +101,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const name = typeof body.name === "string" ? body.name.trim() : "";
-  const surname = typeof body.surname === "string" ? body.surname.trim() : "";
-  const hasEdit = body.name !== undefined || body.surname !== undefined;
+  const hasNames = body.name !== undefined || body.surname !== undefined;
+  const hasToggle = body.isActive !== undefined;
+  const hasRole = body.role !== undefined;
+  const operations = [hasNames, hasToggle, hasRole].filter(Boolean).length;
+  if (operations !== 1) {
+    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+  }
 
   const admin = createAdminClient();
   if (!admin) {
     return NextResponse.json({ error: "Server is not configured." }, { status: 500 });
   }
 
-  if (hasEdit) {
+  if (hasNames) {
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    const surname = typeof body.surname === "string" ? body.surname.trim() : "";
     if (!name || !surname) {
       return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
     }
@@ -87,9 +129,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
   }
 
+  if (hasRole) {
+    if (typeof body.role !== "string" || !isRole(body.role)) {
+      return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+    }
+    const email = typeof body.email === "string" ? body.email : "";
+    return applyRoleChange(uid, userId, body.role, email);
+  }
+
   const isActive = typeof body.isActive === "boolean" ? body.isActive : null;
   if (isActive === null) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+  }
+  if (!isActive && userId === uid) {
+    return NextResponse.json({ error: "Cannot deactivate your own account." }, { status: 400 });
   }
 
   const { error } = await admin.auth.admin.updateUserById(userId, {
