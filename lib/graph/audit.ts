@@ -2,8 +2,8 @@ import { db } from "./db";
 import { sessionUid } from "./session";
 import { auditLogs } from "@/drizzle/schema";
 
-type AuditAction = "create" | "update" | "status_change";
-type AuditEntityType = "node" | "edge";
+type AuditAction = "create" | "update" | "status_change" | "role_change";
+type AuditEntityType = "node" | "edge" | "user";
 type StatusValue = "pending" | "approved" | "rejected";
 
 interface AuditMetadata extends Record<string, unknown> {
