@@ -4,6 +4,7 @@ import { isAdminUid } from "@/lib/graph/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { validateEmail } from "@/lib/auth/validation";
 import { generateInitialPassword } from "@/lib/auth/password";
+import { setRoleForUser, isRole, type Role } from "@/lib/graph/rbac";
 
 export async function POST(request: NextRequest) {
   const uid = await sessionUid();
@@ -14,9 +15,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  let body: { email?: unknown; name?: unknown; surname?: unknown };
+  let body: { email?: unknown; name?: unknown; surname?: unknown; role?: unknown };
   try {
-    body = (await request.json()) as { email?: unknown; name?: unknown; surname?: unknown };
+    body = (await request.json()) as { email?: unknown; name?: unknown; surname?: unknown; role?: unknown };
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
@@ -34,6 +35,9 @@ export async function POST(request: NextRequest) {
   if (!surname) {
     return NextResponse.json({ error: "Surname is required." }, { status: 400 });
   }
+
+  const role: Role =
+    typeof body.role === "string" && isRole(body.role) ? body.role : "contributor";
 
   const admin = createAdminClient();
   if (!admin) {
@@ -72,6 +76,12 @@ export async function POST(request: NextRequest) {
   });
   if (updateError) {
     return NextResponse.json({ error: "Invite sent but could not set password. Please try again." }, { status: 500 });
+  }
+
+  try {
+    await setRoleForUser(newUser.id, role);
+  } catch (error) {
+    console.error("Failed to assign role on invite", { userId: newUser.id, role, error });
   }
 
   return NextResponse.json({ ok: true, password });
