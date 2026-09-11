@@ -1,3 +1,10 @@
+## [1.30.3](https://github.com/billsioros/villageroots/compare/v1.30.2...v1.30.3) (2026-09-11)
+
+
+### Bug Fixes
+
+* remove orphaned heading from invite form ([861feb1](https://github.com/billsioros/villageroots/commit/861feb13bfda4978af98b9b1565874e563df9185))
+
 ## [1.30.2](https://github.com/billsioros/villageroots/compare/v1.30.1...v1.30.2) (2026-09-11)
 
 
