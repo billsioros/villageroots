@@ -130,6 +130,22 @@ Supabase RLS is critical for handling the Moderation Queue and Living vs. Deceas
 * Upon confirmation, the UI executes bulk `INSERT` statements to the `nodes` and `edges` tables (with `status = 'pending'`).
 
 
+* **Storage cleanup (PTDN-36):**
+* Uploads die with their request, so orphaned scans are purged by a scheduled sweep.
+* Mechanism: a pg_cron job (via `pg_net`) POSTs daily at 04:00 UTC to the
+  `archive-scan-cleanup` Edge Function, which deletes `archive-scans` objects older
+  than 24h (TTL) using the Storage Admin API. Supabase Storage has no native
+  lifecycle rules, so this scheduled sweep is the supported expiry mechanism.
+* The sweep only ever touches objects older than 24h — an OCR request lasts minutes
+  (`REQUEST_TIMEOUT_MS`), so legitimate in-flight scans are never at risk.
+* Config lives in `supabase/migrations/0012_archive_scan_cleanup.sql`:
+  idempotent helpers `public.vr_archive_scan_cleanup_schedule(function_url, apikey,
+  cleanup_secret)` / `public.vr_archive_scan_cleanup_unschedule()` register/remove the
+  job and are run once per environment (URL differs local vs prod; see migration comment).
+* Deploy: `supabase functions deploy archive-scan-cleanup --no-verify-jwt`, then
+  `supabase secrets set CRON_SECRET=...` (the handler gates on the `x-cleanup-secret`
+  header).
+
 
 ### Phase 4: GraphRAG & Linkage Prediction
 
