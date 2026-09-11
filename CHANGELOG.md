@@ -1,3 +1,10 @@
+# [1.30.0](https://github.com/billsioros/villageroots/compare/v1.29.1...v1.30.0) (2026-09-11)
+
+
+### Features
+
+* allow admins to promote and demote users ([#51](https://github.com/billsioros/villageroots/issues/51)) ([8d4591b](https://github.com/billsioros/villageroots/commit/8d4591bf49b12f9466211eadd6c8bbbeabc35ead))
+
 ## [1.29.1](https://github.com/billsioros/villageroots/compare/v1.29.0...v1.29.1) (2026-09-11)
 
 
