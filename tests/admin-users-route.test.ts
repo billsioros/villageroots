@@ -8,12 +8,21 @@ const mocks = vi.hoisted(() => ({
   listUsers: vi.fn(),
   updateUserById: vi.fn(),
   getRoleForUser: vi.fn(),
+  countAdmins: vi.fn(),
+  setRoleForUser: vi.fn(),
+  logAudit: vi.fn(),
 }));
 
 vi.mock("@/lib/graph/session", () => ({ sessionUid: mocks.sessionUid }));
 vi.mock("@/lib/graph/admin", () => ({ isAdminUid: mocks.isAdminUid }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }));
-vi.mock("@/lib/graph/rbac", () => ({ getRoleForUser: mocks.getRoleForUser }));
+vi.mock("@/lib/graph/rbac", () => ({
+  getRoleForUser: mocks.getRoleForUser,
+  countAdmins: mocks.countAdmins,
+  setRoleForUser: mocks.setRoleForUser,
+  isRole: (v: unknown) => v === "admin" || v === "contributor",
+}));
+vi.mock("@/lib/graph/audit", () => ({ logAudit: mocks.logAudit }));
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -29,6 +38,9 @@ beforeEach(() => {
     error: null,
   } as never);
   mocks.getRoleForUser.mockResolvedValue("contributor");
+  mocks.countAdmins.mockResolvedValue(1 as never);
+  mocks.setRoleForUser.mockResolvedValue(undefined as never);
+  mocks.logAudit.mockResolvedValue(undefined as never);
 });
 
 describe("GET /api/admin/users", () => {
@@ -87,6 +99,15 @@ describe("GET /api/admin/users", () => {
     const res = await GET();
     const body = await res.json();
     expect(body.users[0]).toMatchObject({ id: "u2", name: null, surname: null });
+  });
+
+  it("normalises a missing role row to contributor", async () => {
+    mocks.sessionUid.mockResolvedValue("user-1");
+    mocks.isAdminUid.mockResolvedValue(true);
+    mocks.getRoleForUser.mockResolvedValue(null as never);
+    const res = await GET();
+    const body = await res.json();
+    expect(body.users[0].role).toBe("contributor");
   });
 });
 
@@ -149,5 +170,81 @@ describe("POST /api/admin/users", () => {
     mocks.updateUserById.mockResolvedValue({ data: { user: null }, error: { message: "boom" } } as never);
     const res = await POST(req({ userId: "u1", name: "Eleni", surname: "Katsari" }));
     expect(res.status).toBe(500);
+  });
+
+  it("returns 400 when role is not a valid role", async () => {
+    mocks.sessionUid.mockResolvedValue("user-1");
+    mocks.isAdminUid.mockResolvedValue(true);
+    const res = await POST(req({ userId: "u1", role: "superadmin" }));
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when more than one operation is provided", async () => {
+    mocks.sessionUid.mockResolvedValue("user-1");
+    mocks.isAdminUid.mockResolvedValue(true);
+    const res = await POST(req({ userId: "u1", role: "admin", name: "Eleni", surname: "Katsari" }));
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when an admin tries to change their own role", async () => {
+    mocks.sessionUid.mockResolvedValue("self");
+    mocks.isAdminUid.mockResolvedValue(true);
+    const res = await POST(req({ userId: "self", role: "contributor" }));
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/own role/i);
+  });
+
+  it("returns 400 when demoting the last admin", async () => {
+    mocks.sessionUid.mockResolvedValue("user-1");
+    mocks.isAdminUid.mockResolvedValue(true);
+    mocks.getRoleForUser.mockResolvedValue("admin");
+    mocks.countAdmins.mockResolvedValue(1);
+    const res = await POST(req({ userId: "u1", role: "contributor" }));
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/last admin/i);
+    expect(mocks.setRoleForUser).not.toHaveBeenCalled();
+  });
+
+  it("promotes a contributor to admin and records an audit entry", async () => {
+    mocks.sessionUid.mockResolvedValue("user-1");
+    mocks.isAdminUid.mockResolvedValue(true);
+    mocks.getRoleForUser.mockResolvedValue("contributor");
+    const res = await POST(req({ userId: "u2", role: "admin", email: "u2@example.com" }));
+    expect(res.status).toBe(200);
+    expect(mocks.setRoleForUser).toHaveBeenCalledWith("u2", "admin");
+    expect(mocks.logAudit).toHaveBeenCalledWith(
+      "role_change",
+      "user",
+      "u2@example.com",
+      { roleBefore: "contributor", roleAfter: "admin" },
+    );
+  });
+
+  it("demotes an admin to contributor when another admin remains", async () => {
+    mocks.sessionUid.mockResolvedValue("user-1");
+    mocks.isAdminUid.mockResolvedValue(true);
+    mocks.getRoleForUser.mockResolvedValue("admin");
+    mocks.countAdmins.mockResolvedValue(2);
+    const res = await POST(req({ userId: "u2", role: "contributor", email: "u2@example.com" }));
+    expect(res.status).toBe(200);
+    expect(mocks.setRoleForUser).toHaveBeenCalledWith("u2", "contributor");
+    expect(mocks.logAudit).toHaveBeenCalledWith(
+      "role_change",
+      "user",
+      "u2@example.com",
+      { roleBefore: "admin", roleAfter: "contributor" },
+    );
+  });
+
+  it("is a no-op (200) when the role is already the requested one", async () => {
+    mocks.sessionUid.mockResolvedValue("user-1");
+    mocks.isAdminUid.mockResolvedValue(true);
+    mocks.getRoleForUser.mockResolvedValue("admin");
+    const res = await POST(req({ userId: "u2", role: "admin" }));
+    expect(res.status).toBe(200);
+    expect(mocks.setRoleForUser).not.toHaveBeenCalled();
+    expect(mocks.logAudit).not.toHaveBeenCalled();
   });
 });
