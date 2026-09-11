@@ -72,6 +72,8 @@ export default {
       },
       transitionTimingFunction: {
         vrr: "cubic-bezier(0.2, 0, 0, 1)",
+        "out-cubic": "cubic-bezier(0.33, 1, 0.68, 1)",
+        "out-quint": "cubic-bezier(0.22, 1, 0.36, 1)",
       },
     },
   },

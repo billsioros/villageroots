@@ -93,7 +93,6 @@ export function ReviewQueueTab() {
   const data = activeQuery.data;
   const isLoading = activeQuery.isLoading;
   const isError = activeQuery.isError;
-  const refetch = activeQuery.refetch;
   const apiKey = API_KEY_BY_TAB[tab];
 
   const selectedIds = Array.from(selected);
@@ -129,7 +128,24 @@ export function ReviewQueueTab() {
     });
     if (!res.ok) throw new Error(`Moderation failed: ${res.status}`);
     await res.json();
-    await refetch();
+    queryClient.setQueryData<ReviewQueueResponse>(
+      ["admin-review", apiKey],
+      (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          items: old.items.filter((item) => item.id !== id),
+          counts: {
+            ...old.counts,
+            [apiKey]: Math.max(0, old.counts[apiKey] - 1),
+          },
+        };
+      },
+    );
+  };
+
+  const syncAfterModeration = async () => {
+    await queryClient.invalidateQueries({ queryKey: invalidationKeys.review });
     await queryClient.invalidateQueries({ queryKey: invalidationKeys.nodes });
     await queryClient.invalidateQueries({ queryKey: invalidationKeys.edges });
   };
@@ -138,6 +154,7 @@ export function ReviewQueueTab() {
     const item = data?.items.find((i) => i.id === id);
     try {
       await moderate(id, "approve");
+      await syncAfterModeration();
       toast.success(`Approved: ${item ? itemLabel(item) : "item"}`);
     } catch {
       toast.error(`Couldn't approve${item ? ` ${itemLabel(item)}` : ""}. Try again.`);
@@ -154,6 +171,7 @@ export function ReviewQueueTab() {
     const reason = rejectReason.trim() || undefined;
     try {
       await moderate(id, "reject", reason);
+      await syncAfterModeration();
       toast.success(`Rejected: ${item ? itemLabel(item) : "item"}`);
     } catch {
       toast.error(`Couldn't reject${item ? ` ${itemLabel(item)}` : ""}. Try again.`);
@@ -181,6 +199,7 @@ export function ReviewQueueTab() {
         }
       }),
     );
+    await syncAfterModeration();
     setSelected(new Set());
     const verb = action === "approve" ? "Approved" : "Rejected";
     if (ok > 0) {
@@ -188,6 +207,30 @@ export function ReviewQueueTab() {
     }
     if (failed > 0) {
       toast.error(`Couldn't ${action} ${failed} item${failed === 1 ? "" : "s"}`);
+    }
+  };
+
+  const approveAll = async () => {
+    const items = data?.items ?? [];
+    if (items.length === 0) return;
+    let ok = 0;
+    let failed = 0;
+    await Promise.all(
+      items.map(async (item) => {
+        try {
+          await moderate(item.id, "approve");
+          ok++;
+        } catch {
+          failed++;
+        }
+      }),
+    );
+    await syncAfterModeration();
+    if (ok > 0) {
+      toast.success(`Approved ${ok} item${ok === 1 ? "" : "s"}`);
+    }
+    if (failed > 0) {
+      toast.error(`Couldn't approve ${failed} item${failed === 1 ? "" : "s"}. Try again.`);
     }
   };
 
@@ -214,7 +257,7 @@ export function ReviewQueueTab() {
         </p>
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex items-center gap-3">
         {TABS.map((t) => (
           <Button
             key={t}
@@ -228,6 +271,16 @@ export function ReviewQueueTab() {
             </Badge>
           </Button>
         ))}
+        {data && data.items.length > 0 && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="ml-auto"
+            onClick={approveAll}
+          >
+            Approve all
+          </Button>
+        )}
       </div>
 
       {selectedIds.length > 0 && (

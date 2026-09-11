@@ -45,8 +45,12 @@ export function ChatBar() {
   useEffect(() => {
     if (!boxOpen || !contentRef.current) return;
     const el = contentRef.current;
-    const measure = () =>
-      setContentH(Math.min(el.offsetHeight, window.innerHeight * 0.6));
+    const measure = () => {
+      const marginBottom = parseFloat(getComputedStyle(el).marginBottom) || 0;
+      setContentH(
+        Math.min(el.offsetHeight + marginBottom, window.innerHeight * 0.6),
+      );
+    };
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     measure();
@@ -56,18 +60,18 @@ export function ChatBar() {
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-5 z-40 flex justify-center px-4">
       <div
-        className={`pointer-events-auto w-[42rem] max-w-[92vw] border bg-card/90 p-3 shadow-elev-raised backdrop-blur transition-[border-radius] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+        className={`pointer-events-auto w-[42rem] max-w-[92vw] border bg-card/90 p-3 shadow-elev-raised backdrop-blur transition-[border-radius] duration-300 ease-out-quint ${
           boxOpen ? "rounded-2xl" : "rounded-[1.8rem]"
         }`}
       >
         <div
-          className="overflow-y-auto overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden transition-[height] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+          className="overflow-y-auto overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden transition-[height] duration-300 ease-out-quint"
           style={{ height: boxOpen ? (contentH ?? 0) : 0 }}
         >
           {display && (
             <div
               ref={contentRef}
-              className={`mb-3 flex flex-col items-start gap-2 transition-opacity duration-300 ease-[cubic-bezier(0.33,1,0.68,1)] ${
+              className={`mb-3 flex flex-col items-start gap-2 transition-opacity duration-300 ease-out-cubic ${
                 textVisible ? "opacity-100" : "opacity-0"
               }`}
             >
