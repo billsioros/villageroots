@@ -1,3 +1,10 @@
+## [1.29.1](https://github.com/billsioros/villageroots/compare/v1.29.0...v1.29.1) (2026-09-11)
+
+
+### Bug Fixes
+
+* review queue bulk actions, chat bar scroll, tailwind easing warnings ([#49](https://github.com/billsioros/villageroots/issues/49)) ([9acb8fb](https://github.com/billsioros/villageroots/commit/9acb8fb42e6a16d02577d8cc856bee7a5cc06253))
+
 # [1.29.0](https://github.com/billsioros/villageroots/compare/v1.28.0...v1.29.0) (2026-09-09)
 
 
