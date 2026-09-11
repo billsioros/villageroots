@@ -28,6 +28,23 @@ export interface UserPatch {
   isActive?: boolean;
 }
 
+export function buildUserPatch(
+  name: string,
+  surname: string,
+  role: Role,
+  active: boolean,
+  user: ManagedUser,
+): UserPatch {
+  const patch: UserPatch = {};
+  if (name !== user.name || surname !== user.surname) {
+    patch.name = name;
+    patch.surname = surname;
+  }
+  if (role !== user.role) patch.role = role;
+  if (active !== user.is_active) patch.isActive = active;
+  return patch;
+}
+
 export function UserEditDialog({
   user,
   isSelf,
@@ -62,12 +79,7 @@ export function UserEditDialog({
     }
     setError(null);
 
-    const patch: UserPatch = {};
-    if (trimmedName !== user.name) patch.name = trimmedName;
-    if (trimmedSurname !== user.surname) patch.surname = trimmedSurname;
-    if (role !== user.role) patch.role = role;
-    if (active !== user.is_active) patch.isActive = active;
-
+    const patch = buildUserPatch(trimmedName, trimmedSurname, role, active, user);
     if (Object.keys(patch).length === 0) {
       onClose();
       return;

@@ -238,6 +238,25 @@ describe("POST /api/admin/users", () => {
     );
   });
 
+  it("returns 400 when an admin deactivates their own account", async () => {
+    mocks.sessionUid.mockResolvedValue("self");
+    mocks.isAdminUid.mockResolvedValue(true);
+    const res = await POST(req({ userId: "self", isActive: false }));
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/own account/i);
+    expect(mocks.updateUserById).not.toHaveBeenCalled();
+  });
+
+  it("allows an admin to reactivate their own account", async () => {
+    mocks.sessionUid.mockResolvedValue("self");
+    mocks.isAdminUid.mockResolvedValue(true);
+    mocks.updateUserById.mockResolvedValue({ data: { user: { id: "self" } }, error: null } as never);
+    const res = await POST(req({ userId: "self", isActive: true }));
+    expect(res.status).toBe(200);
+    expect(mocks.updateUserById).toHaveBeenCalledWith("self", { ban_duration: "none" });
+  });
+
   it("is a no-op (200) when the role is already the requested one", async () => {
     mocks.sessionUid.mockResolvedValue("user-1");
     mocks.isAdminUid.mockResolvedValue(true);

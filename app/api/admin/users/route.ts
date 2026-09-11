@@ -141,6 +141,9 @@ export async function POST(request: Request) {
   if (isActive === null) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
+  if (!isActive && userId === uid) {
+    return NextResponse.json({ error: "Cannot deactivate your own account." }, { status: 400 });
+  }
 
   const { error } = await admin.auth.admin.updateUserById(userId, {
     ban_duration: isActive ? "none" : "876000h",
