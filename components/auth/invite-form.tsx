@@ -105,9 +105,7 @@ export function InviteForm() {
           noValidate
           className="flex flex-col gap-4 rounded-xl border border-border-soft bg-card p-4"
         >
-          <h4 className="text-sm font-semibold text-foreground">Invite a user</h4>
-
-        <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3">
           <div className="grid gap-1.5">
             <Label htmlFor="invite-name">First name</Label>
             <Input
