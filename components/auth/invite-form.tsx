@@ -6,11 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ShieldCheck } from "lucide-react";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { ShieldCheck, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function InviteForm() {
   const [visible, setVisible] = useState<boolean | null>(null);
+  const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [surname, setSurname] = useState("");
   const [email, setEmail] = useState("");
@@ -80,18 +82,30 @@ export function InviteForm() {
   };
 
   return (
-    <div className="flex flex-col gap-3">
-      <form
-        onSubmit={onSubmit}
-        noValidate
-        className="flex flex-col gap-4 rounded-xl border border-border-soft bg-card p-4"
-      >
-        <div className="flex flex-col gap-1">
-          <h4 className="text-sm font-semibold text-foreground">Invite a contributor</h4>
-          <p className="text-xs text-muted-foreground">
-            All fields are required — the invite is created only once the form is complete.
-          </p>
-        </div>
+    <Collapsible open={open} onOpenChange={setOpen} className="flex flex-col gap-3">
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="flex items-center gap-2 rounded-xl border border-border-soft bg-card px-4 py-3 text-left text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+        >
+          <ChevronRight
+            size={14}
+            className={cn("text-muted-foreground transition-transform", open && "rotate-90")}
+          />
+          Invite a user
+        </button>
+      </CollapsibleTrigger>
+
+      <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+        <p className="text-xs text-muted-foreground mb-2">
+          All fields are required — the invite is created only once the form is complete.
+        </p>
+        <form
+          onSubmit={onSubmit}
+          noValidate
+          className="flex flex-col gap-4 rounded-xl border border-border-soft bg-card p-4"
+        >
+          <h4 className="text-sm font-semibold text-foreground">Invite a user</h4>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="grid gap-1.5">
@@ -174,7 +188,9 @@ export function InviteForm() {
         <Button type="submit" disabled={isLoading} className="w-full">
           {isLoading ? "Sending…" : "Invite"}
         </Button>
-      </form>
+        </form>
+      </CollapsibleContent>
+
       <div className="min-h-[1.25rem]">
         {error && (
           <p id="invite-error" className="text-[13px] text-destructive">
@@ -192,6 +208,6 @@ export function InviteForm() {
           </div>
         )}
       </div>
-    </div>
+    </Collapsible>
   );
 }
