@@ -1,3 +1,10 @@
+## [1.30.1](https://github.com/billsioros/villageroots/compare/v1.30.0...v1.30.1) (2026-09-11)
+
+
+### Bug Fixes
+
+* allow combined user edits in admin API ([#52](https://github.com/billsioros/villageroots/issues/52)) ([d769c02](https://github.com/billsioros/villageroots/commit/d769c029631c38a8b40548dce986d3c1e08ad4af))
+
 # [1.30.0](https://github.com/billsioros/villageroots/compare/v1.29.1...v1.30.0) (2026-09-11)
 
 
