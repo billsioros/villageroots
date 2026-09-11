@@ -179,11 +179,53 @@ describe("POST /api/admin/users", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns 400 when more than one operation is provided", async () => {
+  it("returns 400 when the request contains no operation", async () => {
     mocks.sessionUid.mockResolvedValue("user-1");
     mocks.isAdminUid.mockResolvedValue(true);
-    const res = await POST(req({ userId: "u1", role: "admin", name: "Eleni", surname: "Katsari" }));
+    const res = await POST(req({ userId: "u1" }));
     expect(res.status).toBe(400);
+  });
+
+  it("applies a combined name and role update in one request", async () => {
+    mocks.sessionUid.mockResolvedValue("user-1");
+    mocks.isAdminUid.mockResolvedValue(true);
+    mocks.updateUserById.mockResolvedValue({ data: { user: { id: "u2" } }, error: null } as never);
+    const res = await POST(
+      req({ userId: "u2", name: "Maria", surname: "Katsari", role: "admin", email: "u2@example.com" }),
+    );
+    expect(res.status).toBe(200);
+    expect(mocks.updateUserById).toHaveBeenCalledWith("u2", {
+      user_metadata: { name: "Maria", surname: "Katsari" },
+    });
+    expect(mocks.setRoleForUser).toHaveBeenCalledWith("u2", "admin");
+    expect(mocks.logAudit).toHaveBeenCalledWith("role_change", "user", "u2@example.com", {
+      roleBefore: "contributor",
+      roleAfter: "admin",
+    });
+  });
+
+  it("rejects a combined update that demotes yourself before any write", async () => {
+    mocks.sessionUid.mockResolvedValue("self");
+    mocks.isAdminUid.mockResolvedValue(true);
+    const res = await POST(req({ userId: "self", name: "X", surname: "Y", role: "contributor" }));
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/own role/i);
+    expect(mocks.updateUserById).not.toHaveBeenCalled();
+    expect(mocks.setRoleForUser).not.toHaveBeenCalled();
+  });
+
+  it("applies a combined name and deactivation in one request", async () => {
+    mocks.sessionUid.mockResolvedValue("user-1");
+    mocks.isAdminUid.mockResolvedValue(true);
+    mocks.updateUserById.mockResolvedValue({ data: { user: { id: "u2" } }, error: null } as never);
+    const res = await POST(req({ userId: "u2", name: "Maria", surname: "Katsari", isActive: false }));
+    expect(res.status).toBe(200);
+    expect(mocks.updateUserById).toHaveBeenCalledTimes(2);
+    expect(mocks.updateUserById).toHaveBeenCalledWith("u2", {
+      user_metadata: { name: "Maria", surname: "Katsari" },
+    });
+    expect(mocks.updateUserById).toHaveBeenCalledWith("u2", { ban_duration: "876000h" });
   });
 
   it("returns 400 when an admin tries to change their own role", async () => {
